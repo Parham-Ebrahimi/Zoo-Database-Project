@@ -12,7 +12,7 @@ $stmt = $pdo->prepare("INSERT INTO employees
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 $stmt->execute([1, 'Admin', 50000, '2024-01-01', 'Admin', 'User', 'M', '123 Zoo St', '1990-01-01', 'N/A']);
 
-// Then insert the system user
+// Then insert into system user
 $stmt2 = $pdo->prepare("INSERT INTO systemuser (EmployeeID, Username, PasswordHash, Role) 
     VALUES (?, ?, ?, ?)");
 $stmt2->execute([$employeeID, $username, $password, $role]);

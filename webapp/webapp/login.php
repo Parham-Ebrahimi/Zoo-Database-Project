@@ -6,6 +6,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim($_POST['username']);
     $password = $_POST['password'];
 
+
+// username & password is required, error if left empty
     if (empty($username) || empty($password)) {
         header('Location: login.html?error=All fields are required');
         exit;
@@ -21,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['user_id']   = $user['UserID'];
         $_SESSION['firstname'] = $user['FirstName'];
         $_SESSION['role']      = $user['Role'];
-        header('Location: admin-dashboard.php');
+        header('Location: admin-dashboard.php'); // takes you to admin dashboard
         exit;
     }
 
