@@ -110,9 +110,9 @@ if (!isset($_SESSION['user_id'])) {
 
             <div class="card">
                 <h2>Reports</h2>
-                <a href="report-animals.php">View Animals</a>
-                <a href="report-employees.php">View Employees</a>
-                <a href="report-tickets.php">View Tickets</a>
+                <a href="animals_report.php">View Animals</a>
+                <a href="employees_report.php">View Employees</a>
+                <a href="tickets_report.php">View Tickets</a>
             </div>
         </div>
     </div>

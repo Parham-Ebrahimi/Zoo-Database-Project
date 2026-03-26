@@ -13,6 +13,7 @@ form.addEventListener('submit', (e) => {
     }
 })
 
+//make sure something is put down
 function getLoginFormErrors(username, password) {
     let errors = []
 
