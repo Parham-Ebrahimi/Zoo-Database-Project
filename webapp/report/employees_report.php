@@ -1,6 +1,6 @@
 <?php
-require '../db.php';
-$result = $db->query("SELECT * FROM employees");
+require_once __DIR__ . '/../db.php';
+$stmt = $pdo->query("SELECT * FROM employees");
 ?>
 
 <h2>Employees Report</h2>
@@ -14,7 +14,7 @@ $result = $db->query("SELECT * FROM employees");
     </tr>
 
     <?php
-    while ($row = $result->fetch_assoc()) {
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         echo "<tr>";
 
         echo "<td>" . $row['EmployeeID'] . "</td>";

@@ -1,11 +1,10 @@
 <?php
-require '../db.php';
+require_once __DIR__ . '/../db.php';
 
 $id = $_GET["id"];
 
-$stmt = $db->prepare("DELETE FROM animals WHERE AnimalID = ?");
-$stmt->bind_param("i", $id);
-$stmt->execute();
+$stmt = $pdo->prepare("DELETE FROM animals WHERE AnimalID = ?");
+$stmt->execute([(int)$id]);
 
 header("Location: animals_report.php");
 exit();
