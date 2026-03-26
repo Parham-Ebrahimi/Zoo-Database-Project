@@ -1,10 +1,11 @@
 <?php
-require '../db.php';
+require_once __DIR__ . '/../db.php';
 
-$id = $_GET["id"];
+$id = (int)($_GET["id"] ?? 0);
 
-$result = $db->query("SELECT * FROM animals WHERE AnimalID = $id");
-$animal = $result->fetch_assoc();
+$stmt = $pdo->prepare("SELECT * FROM animals WHERE AnimalID = ?");
+$stmt->execute([$id]);
+$animal = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
@@ -12,9 +13,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $species = $_POST["species"];
     $enclosure = $_POST["enclosure"];
 
-    $stmt = $db->prepare("UPDATE animals SET Name=?, Species=?, EnclosureID=? WHERE AnimalID=?");
-    $stmt->bind_param("ssii", $name, $species, $enclosure, $id);
-    $stmt->execute();
+    $stmt = $pdo->prepare("UPDATE animals SET Name=?, Species=?, EnclosureID=? WHERE AnimalID=?");
+    $stmt->execute([$name, $species, (int)$enclosure, $id]);
 
     header("Location: animals_report.php");
     exit();
