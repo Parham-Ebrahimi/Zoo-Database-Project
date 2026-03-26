@@ -6,19 +6,14 @@ if (!isset($_SESSION['user_id'])) {
 }
 require 'db.php';
  
-$result = $pdo->query("
-    SELECT a.Animal_ID, a.Name, a.Species, a.Categeory, a.Age, a.Sex, 
-           e.Enclosure_Name
-    FROM animal a
-    LEFT JOIN enclosure e ON a.Enclosure_ID = e.Enclosure_ID
-");
-$animals = $result->fetchAll();
+$result = $pdo->query("SELECT EmployeeID, FirstName, MidInitial, LastName, Role, Salary, HireDate, Sex FROM employees");
+$employees = $result->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Animals Report</title>
+    <title>Employees Report</title>
     <link rel="stylesheet" href="style.css">
     <style>
         .dashboard-wrapper { box-sizing: border-box; min-height: 100vh; padding: 40px; background-color: rgba(187, 223, 158, 0.95); }
@@ -41,38 +36,40 @@ $animals = $result->fetchAll();
 <body>
     <div class="dashboard-wrapper">
         <div class="dashboard-header">
-            <h1>Animals Report</h1>
+            <h1>Employees Report</h1>
             <a href="logout.php" class="logout-btn">Logout</a>
         </div>
  
         <a href="admin-dashboard.php" class="back-btn">← Back to Dashboard</a>
  
-        <?php if (count($animals) === 0): ?>
-            <p>No animals found in the database.</p>
+        <?php if (count($employees) === 0): ?>
+            <p>No employees found in the database.</p>
         <?php else: ?>
         <table>
             <tr>
                 <th>ID</th>
-                <th>Name</th>
-                <th>Species</th>
-                <th>Category</th>
-                <th>Age</th>
+                <th>First Name</th>
+                <th>M.I.</th>
+                <th>Last Name</th>
+                <th>Role</th>
+                <th>Salary</th>
+                <th>Hire Date</th>
                 <th>Sex</th>
-                <th>Enclosure</th>
                 <th>Actions</th>
             </tr>
-            <?php foreach ($animals as $row): ?>
+            <?php foreach ($employees as $row): ?>
             <tr>
-                <td><?= $row['Animal_ID'] ?></td>
-                <td><?= $row['Name'] ?></td>
-                <td><?= $row['Species'] ?></td>
-                <td><?= $row['Categeory'] ?></td>
-                <td><?= $row['Age'] ?></td>
+                <td><?= $row['EmployeeID'] ?></td>
+                <td><?= $row['FirstName'] ?></td>
+                <td><?= $row['MidInitial'] ?></td>
+                <td><?= $row['LastName'] ?></td>
+                <td><?= $row['Role'] ?></td>
+                <td>$<?= number_format($row['Salary'], 2) ?></td>
+                <td><?= $row['HireDate'] ?></td>
                 <td><?= $row['Sex'] ?></td>
-                <td><?= $row['Enclosure_Name'] ?? 'N/A' ?></td>
                 <td>
-                    <a href="edit_animal.php?id=<?= $row['Animal_ID'] ?>" class="btn btn-edit">Edit</a>
-                    <a href="delete_animal.php?id=<?= $row['Animal_ID'] ?>" class="btn btn-delete" onclick="return confirm('Are you sure?')">Delete</a>
+                    <a href="edit_employee.php?id=<?= $row['EmployeeID'] ?>" class="btn btn-edit">Edit</a>
+                    <a href="delete_employee.php?id=<?= $row['EmployeeID'] ?>" class="btn btn-delete" onclick="return confirm('Are you sure?')">Delete</a>
                 </td>
             </tr>
             <?php endforeach; ?>
@@ -81,3 +78,4 @@ $animals = $result->fetchAll();
     </div>
 </body>
 </html>
+ 
