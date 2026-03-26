@@ -16,6 +16,7 @@ $tickets = $result->fetchAll();
     <title>Tickets Report</title>
     <link rel="stylesheet" href="style.css">
     <style>
+        body { overflow: auto; }
         .dashboard-wrapper { 
             box-sizing: border-box; 
             min-height: 100vh; 

@@ -16,6 +16,7 @@ $employees = $result->fetchAll();
     <title>Employees Report</title>
     <link rel="stylesheet" href="style.css">
     <style>
+        body { overflow: auto; }
         .dashboard-wrapper { box-sizing: border-box; min-height: 100vh; padding: 40px; background-color: rgba(187, 223, 158, 0.95); }
         .dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 3px solid var(--accent-color); padding-bottom: 20px; }
         table { width: 100%; border-collapse: collapse; background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }

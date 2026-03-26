@@ -21,6 +21,7 @@ $animals = $result->fetchAll();
     <title>Animals Report</title>
     <link rel="stylesheet" href="style.css">
     <style>
+        body { overflow: auto; }
         .dashboard-wrapper { 
             box-sizing: border-box; 
             min-height: 100vh; 
