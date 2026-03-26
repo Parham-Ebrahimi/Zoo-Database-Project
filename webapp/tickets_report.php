@@ -1,7 +1,7 @@
 <?php
 session_start();
-if (!isset($_SESSION['user_id'])) {
-    header('Location: login.html');
+if (!isset($_SESSION['user_id']) && !isset($_SESSION['customer_id'])) {
+    header('Location: customer-login.html');
     exit;
 }
 require 'db.php';
