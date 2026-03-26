@@ -1,11 +1,10 @@
 <?php
-require '../db.php';
+require_once __DIR__ . '/../db.php';
 
-$id = $_GET["id"];
+$id = (int)($_GET["id"] ?? 0);
 
-$stmt = $db->prepare("DELETE FROM tickets WHERE TicketID = ?");
-$stmt->bind_param("i", $id);
-$stmt->execute();
+$stmt = $pdo->prepare("DELETE FROM tickets WHERE TicketID = ?");
+$stmt->execute([$id]);
 
 header("Location: tickets_report.php");
 exit();

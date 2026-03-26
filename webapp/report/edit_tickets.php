@@ -1,19 +1,19 @@
 <?php
-require '../db.php';
+require_once __DIR__ . '/../db.php';
 
-$id = $_GET["id"];
+$id = (int)($_GET["id"] ?? 0);
 
-$result = $db->query("SELECT * FROM tickets WHERE TicketID = $id");
-$ticket = $result->fetch_assoc();
+$stmt = $pdo->prepare("SELECT * FROM tickets WHERE TicketID = ?");
+$stmt->execute([$id]);
+$ticket = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     $customerID = $_POST["customerID"];
     $price = $_POST["price"];
 
-    $stmt = $db->prepare("UPDATE tickets SET CustomerID=?, Price=? WHERE TicketID=?");
-    $stmt->bind_param("idi", $customerID, $price, $id);
-    $stmt->execute();
+    $stmt = $pdo->prepare("UPDATE tickets SET CustomerID=?, Price=? WHERE TicketID=?");
+    $stmt->execute([(int)$customerID, (float)$price, $id]);
 
     header("Location: tickets_report.php");
     exit();
