@@ -84,8 +84,8 @@ $animals = $result->fetchAll();
             border-radius: 1000px; 
             font: inherit; 
             font-weight: 600; 
-            cursor: pointer; c
-            olor: var(--text-color); 
+            cursor: pointer;
+            color: var(--text-color); 
             text-decoration: none; 
         }
         .logout-btn:hover { 
