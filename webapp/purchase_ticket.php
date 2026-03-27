@@ -8,22 +8,39 @@ if (!isset($_SESSION['customer_id'])) {
 
 require 'db.php';
 
-$prices = [
-    'Adult' => 29.99,
-    'Child' => 18.99,
-    'Senior' => 22.99,
-    'Student' => 21.99,
-];
+/** @var array<int, array{id:int, name:string, price:float}> */
+$categories = [];
+$categoriesError = null;
+
+try {
+    $stmt = $pdo->query('SELECT OrderCategoryID, CategoryName, Price FROM ordercategories ORDER BY OrderCategoryID');
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($rows as $row) {
+        $id = (int) ($row['OrderCategoryID'] ?? 0);
+        if ($id < 1) {
+            continue;
+        }
+        $categories[$id] = [
+            'id' => $id,
+            'name' => (string) ($row['CategoryName'] ?? 'Ticket'),
+            'price' => (float) ($row['Price'] ?? 0),
+        ];
+    }
+} catch (PDOException $e) {
+    $categoriesError = 'Ticket categories could not be loaded. Please try again later.';
+}
+
+const STUDENT_CATEGORY_ID = 4;
 
 $error = '';
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $ticketType = trim($_POST['ticket_type'] ?? '');
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $categoriesError === null && count($categories) > 0) {
+    $categoryId = (int) ($_POST['order_category_id'] ?? 0);
     $visitDate = trim($_POST['visit_date'] ?? '');
     $paymentType = trim($_POST['payment_type'] ?? '');
 
-    if ($ticketType === '' || !isset($prices[$ticketType])) {
-        $error = 'Please choose a valid ticket type.';
+    if ($categoryId < 1 || !isset($categories[$categoryId])) {
+        $error = 'Please choose a valid ticket category.';
     } elseif ($visitDate === '') {
         $error = 'Please choose a visit date.';
     } elseif ($paymentType === '') {
@@ -38,7 +55,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($error === '') {
-        $price = $prices[$ticketType];
+        $cat = $categories[$categoryId];
+        $ticketType = $cat['name'];
+        $price = $cat['price'];
         $purchaseDate = date('Y-m-d');
         $cid = (int) $_SESSION['customer_id'];
 
@@ -79,7 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link rel="stylesheet" href="customer-reports.css">
     <style>
         .cr-form-card { padding: 1.5rem clamp(1rem, 3vw, 2rem) 2rem; }
-        .cr-form { max-width: 420px; }
+        .cr-form { max-width: 480px; }
         .cr-field { margin-bottom: 1.15rem; }
         .cr-field label { display: block; font-weight: 600; font-size: 0.88rem; margin-bottom: 0.35rem; color: var(--cr-text); }
         .cr-field select, .cr-field input[type="date"] {
@@ -93,7 +112,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             background: var(--cr-accent); color: #fff; font: inherit; font-weight: 700; cursor: pointer;
         }
         .cr-submit:hover { filter: brightness(1.08); }
+        .cr-submit:disabled { opacity: 0.55; cursor: not-allowed; filter: none; }
         .cr-note { font-size: 0.8rem; color: var(--cr-muted); margin-top: 1.25rem; line-height: 1.45; }
+        .cr-callout {
+            display: none;
+            margin-top: 0.75rem;
+            padding: 0.9rem 1rem;
+            border-radius: 10px;
+            border: 1px solid #c4d9f0;
+            background: linear-gradient(180deg, #f0f7ff 0%, #e8f2fc 100%);
+            color: #1e3a5f;
+            font-size: 0.88rem;
+            line-height: 1.5;
+        }
+        .cr-callout.is-visible { display: block; }
+        .cr-callout strong { display: block; margin-bottom: 0.25rem; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.04em; color: #0f3460; }
+        .cr-db-fallback { background: #fff8e6; border: 1px solid #f0d78c; color: #6b4f00; padding: 1rem; border-radius: 10px; font-size: 0.9rem; }
     </style>
 </head>
 <body class="cr-body">
@@ -111,24 +145,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <main>
             <div class="cr-hero">
                 <h1>Purchase tickets</h1>
-                <p>Choose a ticket type and visit date. Your purchase is saved to your account.</p>
+                <p>Select a category, date, and payment method. Prices match our current ticket catalog.</p>
             </div>
 
             <div class="cr-card cr-form-card">
+                <?php if ($categoriesError !== null): ?>
+                    <p class="cr-db-fallback"><?= htmlspecialchars($categoriesError) ?></p>
+                <?php elseif (count($categories) === 0): ?>
+                    <p class="cr-db-fallback">No ticket categories are available right now. Please check back later.</p>
+                <?php else: ?>
                 <?php if ($error !== ''): ?>
                     <p class="cr-error"><?= htmlspecialchars($error) ?></p>
                 <?php endif; ?>
 
-                <form class="cr-form" method="post" action="purchase_ticket.php" novalidate>
+                <form class="cr-form" method="post" action="purchase_ticket.php" novalidate id="purchase-form">
                     <div class="cr-field">
-                        <label for="ticket_type">Ticket type</label>
-                        <select id="ticket_type" name="ticket_type" required>
-                            <option value="">— Select —</option>
-                            <?php foreach ($prices as $label => $amt): ?>
-                                <option value="<?= htmlspecialchars($label) ?>"><?= htmlspecialchars($label) ?> — $<?= number_format($amt, 2) ?></option>
+                        <label for="order_category_id">Ticket category</label>
+                        <select id="order_category_id" name="order_category_id" required>
+                            <option value="">— Select a category —</option>
+                            <?php foreach ($categories as $c): ?>
+                                <option
+                                    value="<?= (int) $c['id'] ?>"
+                                    data-student="<?= $c['id'] === STUDENT_CATEGORY_ID ? '1' : '0' ?>"
+                                    <?= (isset($_POST['order_category_id']) && (int) $_POST['order_category_id'] === $c['id']) ? 'selected' : '' ?>
+                                >
+                                    <?= htmlspecialchars($c['name']) ?> — $<?= number_format($c['price'], 2) ?>
+                                </option>
                             <?php endforeach; ?>
                         </select>
-                        <p class="cr-price-hint">Prices include general zoo admission for one day.</p>
+                        <p class="cr-price-hint">Prices are set by the zoo and pulled from our catalog.</p>
+                        <div id="student-callout" class="cr-callout" role="note">
+                            <strong>Student verification</strong>
+                            Please bring valid student identification (ID card or enrollment) on the day of your visit. Staff may verify your ticket type at the entrance.
+                        </div>
                     </div>
 
                     <div class="cr-field">
@@ -142,18 +191,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <label for="payment_type">Payment method</label>
                         <select id="payment_type" name="payment_type" required>
                             <option value="">— Select —</option>
-                            <option value="Credit card">Credit card</option>
-                            <option value="Debit card">Debit card</option>
-                            <option value="PayPal">PayPal</option>
+                            <option value="Credit card" <?= (($_POST['payment_type'] ?? '') === 'Credit card') ? 'selected' : '' ?>>Credit card</option>
+                            <option value="Debit card" <?= (($_POST['payment_type'] ?? '') === 'Debit card') ? 'selected' : '' ?>>Debit card</option>
+                            <option value="PayPal" <?= (($_POST['payment_type'] ?? '') === 'PayPal') ? 'selected' : '' ?>>PayPal</option>
                         </select>
                     </div>
 
                     <button type="submit" class="cr-submit">Complete purchase</button>
                 </form>
 
-                <p class="cr-note">This is a demo checkout. No real payment is processed. The ticket is stored in the zoo database for your account.</p>
+                <p class="cr-note">This is a demo checkout: no real payment is processed. Your ticket is stored in the zoo database under your account.</p>
+                <?php endif; ?>
             </div>
         </main>
     </div>
+    <script>
+(function () {
+    var sel = document.getElementById('order_category_id');
+    var note = document.getElementById('student-callout');
+    if (!sel || !note) return;
+    function sync() {
+        var opt = sel.options[sel.selectedIndex];
+        var isStudent = opt && opt.getAttribute('data-student') === '1';
+        note.classList.toggle('is-visible', isStudent);
+    }
+    sel.addEventListener('change', sync);
+    sync();
+})();
+    </script>
 </body>
 </html>
