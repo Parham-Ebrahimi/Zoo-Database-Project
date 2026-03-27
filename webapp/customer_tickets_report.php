@@ -36,6 +36,8 @@ try {
         $ticketLoadError = 'We could not load your tickets right now. Please try again later or contact guest services.';
     }
 }
+
+$purchasedOk = isset($_GET['purchased']) && $_GET['purchased'] === '1';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -52,6 +54,7 @@ try {
             <span class="cr-brand">Greenwood Zoo</span>
             <nav class="cr-nav" aria-label="Report navigation">
                 <a href="customer-dashboard.php">Dashboard</a>
+                <a href="purchase_ticket.php">Buy tickets</a>
                 <a href="customer_animals_report.php">Animals</a>
                 <a class="cr-btn-outline" href="logout.php">Sign out</a>
             </nav>
@@ -62,6 +65,10 @@ try {
                 <h1>My tickets</h1>
                 <p>Your ticket purchases and visit details. Only tickets linked to your account are shown.</p>
             </div>
+
+            <?php if ($purchasedOk): ?>
+                <p class="cr-success" role="status">Your ticket was added to your account. See the details below.</p>
+            <?php endif; ?>
 
             <div class="cr-card">
                 <?php if ($ticketLoadError !== null): ?>
