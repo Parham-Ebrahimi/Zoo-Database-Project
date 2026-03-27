@@ -98,8 +98,8 @@ if (!isset($_SESSION['customer_id'])) {
         <div class="card-grid">
             <div class="card">
                 <h2>Browse</h2>
-                <a href="animals_report.php">View Animals</a>
-                <a href="tickets_report.php">View Tickets</a>
+                <a href="customer_animals_report.php">View Animals</a>
+                <a href="customer_tickets_report.php">View My Tickets</a>
             </div>
         </div>
     </div>
