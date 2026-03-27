@@ -11,7 +11,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     $first = $_POST["firstname"];
     $last = $_POST["lastname"];
-    $role = $_POST["position"];
+    $role = $_POST["role"];
 
     $stmt = $pdo->prepare("UPDATE employees SET FirstName=?, LastName=?, Role=? WHERE EmployeeID=?");
     $stmt->execute([$first, $last, $role, $id]);
