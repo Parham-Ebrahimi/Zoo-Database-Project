@@ -86,8 +86,8 @@ $enclosures = $pdo->query("SELECT Enclosure_ID, Enclosure_Name FROM enclosure")-
                     <div class="form-group">
                         <label>Sex</label>
                         <select name="sex">
-                            <option value="M" <?= $animal['Sex'] === 'M' ? 'selected' : '' ?>>Male</option>
-                            <option value="F" <?= $animal['Sex'] === 'F' ? 'selected' : '' ?>>Female</option>
+                            <option value="Male" <?= $animal['Sex'] === 'Male' ? 'selected' : '' ?>>Male</option>
+                            <option value="Female" <?= $animal['Sex'] === 'Female' ? 'selected' : '' ?>>Female</option>
                         </select>
                     </div>
                     <div class="form-group">
