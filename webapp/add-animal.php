@@ -92,8 +92,8 @@ $enclosures = $pdo->query("SELECT Enclosure_ID, Enclosure_Name FROM enclosure")-
                         <label>Sex *</label>
                         <select name="sex" required>
                             <option value="">-- Select --</option>
-                            <option value="M">Male</option>
-                            <option value="F">Female</option>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
                         </select>
                     </div>
                     <div class="form-group">
