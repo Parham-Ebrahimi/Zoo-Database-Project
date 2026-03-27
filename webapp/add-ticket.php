@@ -14,14 +14,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $price          = $_POST['price'];
     $payment_type   = trim($_POST['payment_type']);
     $visit_date     = $_POST['visit_date'];
-    $purchase_date  = $_POST['purchase_date'];
 
     if (empty($ticket_type) || empty($price) || empty($payment_type) || empty($visit_date)) {
         $error = 'Please fill in all required fields.';
     } else {
-        $stmt = $pdo->prepare("INSERT INTO tickets (Ticket_type, Price, Payment_type, Visit_date, Purchase_date) VALUES (?, ?, ?, ?, ?)");
-        $stmt->execute([$ticket_type, (float)$price, $payment_type, $visit_date, $purchase_date ?: null]);
-        $success = 'Ticket added successfully!';
+        try {
+            $stmt = $pdo->prepare("INSERT INTO tickets (Ticket_type, Price, Payment_type, Visit_date) VALUES (?, ?, ?, ?)");
+            $stmt->execute([$ticket_type, (float)$price, $payment_type, $visit_date]);
+            $success = 'Ticket added successfully!';
+        } catch (PDOException $e) {
+            $error = $e->errorInfo[2];
+        }
     }
 }
 ?>
@@ -95,10 +98,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <div class="form-group">
                         <label>Visit Date *</label>
                         <input type="date" name="visit_date" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Purchase Date</label>
-                        <input type="date" name="purchase_date">
                     </div>
                 </div>
                 <button type="submit" class="submit-btn">Add Ticket</button>
