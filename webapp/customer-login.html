@@ -3,19 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Customer Login</title>
+    <title>Login</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="wrapper">
-        <h1>Customer Login</h1>
+        <h1>Login</h1>
         <p id="error-message"></p>
         <form id="form" action="customer_login.php" method="POST">
             <div>
                 <label for="email-input">
                     <span>@</span>
                 </label>
-                <input type="email" name="email" id="email-input" placeholder="Email">
+                <input type="text" name="email" id="email-input" placeholder="Email or staff username" autocomplete="username">
             </div>
 
             <div>
@@ -30,9 +30,6 @@
 
         <p>Don't have an account?
             <a href="signup.html">Sign up</a>
-        </p>
-        <p>Are you an admin?
-            <a href="login.html">Admin Login</a>
         </p>
     </div>
 
