@@ -2,7 +2,7 @@
 session_start();
 
 if (!isset($_SESSION['customer_id'])) {
-    header('Location: customer-login.html');
+    header('Location: sign-in.html');
     exit;
 }
 ?>
