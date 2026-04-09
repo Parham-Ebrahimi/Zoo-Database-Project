@@ -7,7 +7,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = $_POST['password'];
 
     if (empty($email) || empty($password)) {
-        header('Location: customer-login.html?error=All fields are required');
+        header('Location: sign-in.html?error=' . rawurlencode('All fields are required'));
         exit;
     }
 
@@ -23,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    header('Location: customer-login.html?error=Invalid email or password');
+    header('Location: sign-in.html?error=' . rawurlencode('Invalid email or password'));
     exit;
 }
 ?>

@@ -48,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $phone
     ]);
 
-    header('Location: customer-login.html?success=Account created! Please log in');
+    header('Location: sign-in.html?success=' . rawurlencode('Account created! Please sign in.'));
     exit;
 }
 ?>

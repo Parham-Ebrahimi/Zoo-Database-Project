@@ -9,7 +9,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // username & password is required, error if left empty
     if (empty($username) || empty($password)) {
-        header('Location: login.html?error=All fields are required');
+        header('Location: sign-in.html?error=' . rawurlencode('All fields are required'));
         exit;
     }
 
@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    header('Location: login.html?error=Invalid username or password');
+    header('Location: sign-in.html?error=' . rawurlencode('Invalid email/username or password'));
     exit;
 }
 ?>
