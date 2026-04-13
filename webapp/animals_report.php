@@ -1,12 +1,8 @@
 <?php
 session_start();
-if (!isset($_SESSION['user_id']) && !isset($_SESSION['customer_id'])) {
-    header('Location: login.html');
+if (!isset($_SESSION['user_id'])) {
+    header('Location: sign-in.html');
     exit;
-}
-
-if (!in_array($_SESSION['role'], ['admin', 'caretaker', 'vet'])) {
-    die("Access denied");
 }
 require 'db.php';
  
@@ -25,7 +21,6 @@ $animals = $result->fetchAll();
     <title>Animals Report</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        body { overflow: auto; }
         .dashboard-wrapper { 
             box-sizing: border-box; 
             min-height: 100vh; 
@@ -120,7 +115,7 @@ $animals = $result->fetchAll();
             <a href="logout.php" class="logout-btn">Logout</a>
         </div>
  
-        <a href="dashboard.php" class="back-btn">← Back to Dashboard</a>
+        <a href="admin-dashboard.php" class="back-btn">← Back to Dashboard</a>
  
         <?php if (count($animals) === 0): ?>
             <p>No animals found in the database.</p>

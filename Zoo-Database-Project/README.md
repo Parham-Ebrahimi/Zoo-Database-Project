@@ -1,2 +1,3 @@
 # Zoo-Database-Project
-A full stack implementation of a modern zoo database.
+
+Project documentation and notes. **The web application code is in [`/webapp`](../webapp) at the repository root** (not in this folder).

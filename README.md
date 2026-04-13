@@ -11,8 +11,11 @@ URL: https://team9zooproject-ctfjc8b7fzhcggeh.eastus2-01.azurewebsites.net/webap
 - **Password:** admin123
 
 ## Customer Access
-- **Customer Login Page:** /customer-login.html
+- **Sign in (staff or member):** /sign-in.html
 - **Sign Up Page:** /signup.html
+
+## Repository layout
+- All PHP and static assets for the site live in **`/webapp`** at the repository root (there is no second copy under `Zoo-Database-Project/webapp`).
 
 ## Database MySQL
 - **Host:** team9zoodb.mysql.database.azure.com
@@ -28,7 +31,7 @@ URL: https://team9zooproject-ctfjc8b7fzhcggeh.eastus2-01.azurewebsites.net/webap
 ### Data Entry (Admin)
 - Add, edit, and delete Animals
 - Add, edit, and delete Employees
-- Add, edit, and delete Tickets
+- Ticket orders are created by customers via **buy-tickets.php** (orders / order_tickets tables)
 
 ### Reports
 - Animals report with enclosure info

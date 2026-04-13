@@ -1,5 +1,5 @@
 <?php
-require_once 'db.php';
+require_once __DIR__ . '/../db.php';
 
 $id = (int)($_GET["id"] ?? 0);
 
@@ -11,10 +11,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     $first = $_POST["firstname"];
     $last = $_POST["lastname"];
-    $role = $_POST["role"];
+    $position = $_POST["position"];
 
-    $stmt = $pdo->prepare("UPDATE employees SET FirstName=?, LastName=?, Role=? WHERE EmployeeID=?");
-    $stmt->execute([$first, $last, $role, $id]);
+    $stmt = $pdo->prepare("UPDATE employees SET FirstName=?, LastName=?, Position=? WHERE EmployeeID=?");
+    $stmt->execute([$first, $last, $position, $id]);
 
     header("Location: employees_report.php");
     exit();

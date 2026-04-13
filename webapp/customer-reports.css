@@ -154,6 +154,17 @@
     color: var(--cr-muted);
 }
 
+.cr-success {
+    background: #ecfdf3;
+    border: 1px solid #a7f3d0;
+    color: #065f46;
+    padding: 0.85rem 1.1rem;
+    border-radius: var(--cr-radius);
+    margin-bottom: 1.25rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
 @media (max-width: 640px) {
     .cr-table thead {
         display: none;
