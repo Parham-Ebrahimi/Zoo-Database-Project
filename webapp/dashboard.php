@@ -2,17 +2,18 @@
 session_start();
 
 if (!isset($_SESSION['user_id'])) {
-    header('Location: customer-login.html');
+    header('Location: login.html');
     exit;
 }
+
+$role = $_SESSION['role'];
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard</title>
+    <title>Dashboard</title>
     <link rel="stylesheet" href="style.css">
     <style>
         body {
@@ -91,30 +92,66 @@ if (!isset($_SESSION['user_id'])) {
     </style>
 </head>
 <body>
-    <div class="dashboard-wrapper">
-        <div class="dashboard-header">
-            <div>
-                <h1>Admin Dashboard</h1>
-                <p>Welcome back, <?php echo $_SESSION['firstname']; ?>! &nbsp;|&nbsp; Role: <?php echo $_SESSION['role']; ?></p>
-            </div>
-            <a href="logout.php" class="logout-btn">Logout</a>
-        </div>
 
-        <div class="card-grid">
-            <div class="card">
-                <h2>Data Entry</h2>
+<div class="dashboard-wrapper">
+    <div class="dashboard-header">
+        <div>
+            <h1>Dashboard</h1>
+            <p>
+                Welcome, <?php echo $_SESSION['firstname']; ?> |
+                Role: <?php echo $role; ?>
+            </p>
+        </div>
+        <a href="logout.php" class="logout-btn">Logout</a>
+    </div>
+
+    <div class="card-grid">
+        <div class="card">
+            <h2>Data Entry</h2>
+
+            <?php if ($role === 'admin' || $role === 'caretaker'): ?>
                 <a href="add-animal.php">Add Animal</a>
+            <?php endif; ?>
+
+            <?php if ($role === 'admin'): ?>
                 <a href="add-employee.php">Add Employee</a>
                 <a href="add-ticket.php">Add Ticket</a>
-            </div>
+            <?php endif; ?>
 
-            <div class="card">
-                <h2>Reports</h2>
+            <?php if ($role === 'vet'): ?>
+                <a href="add-health-record.php">Add Health Record</a>
+            <?php endif; ?>
+
+            <?php if ($role === 'giftshop'): ?>
+                <a href="add-order.php">Record Sale</a>
+            <?php endif; ?>
+
+        </div>
+
+        <div class="card">
+            <h2>Reports</h2>
+
+            <?php if ($role === 'admin' || $role === 'caretaker' || $role === 'vet'): ?>
                 <a href="animals_report.php">View Animals</a>
+            <?php endif; ?>
+
+            <?php if ($role === 'admin'): ?>
                 <a href="employees_report.php">View Employees</a>
                 <a href="tickets_report.php">View Tickets</a>
-            </div>
+            <?php endif; ?>
+
+            <?php if ($role === 'vet'): ?>
+                <a href="health-reports.php">Health Records</a>
+            <?php endif; ?>
+
+            <?php if ($role === 'giftshop'): ?>
+                <a href="sales_report.php">Sales Report</a>
+            <?php endif; ?>
+
         </div>
+
     </div>
+</div>
+
 </body>
 </html>

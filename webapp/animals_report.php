@@ -1,8 +1,12 @@
 <?php
 session_start();
 if (!isset($_SESSION['user_id']) && !isset($_SESSION['customer_id'])) {
-    header('Location: customer-login.html');
+    header('Location: login.html');
     exit;
+}
+
+if (!in_array($_SESSION['role'], ['admin', 'caretaker', 'vet'])) {
+    die("Access denied");
 }
 require 'db.php';
  
@@ -116,7 +120,7 @@ $animals = $result->fetchAll();
             <a href="logout.php" class="logout-btn">Logout</a>
         </div>
  
-        <a href="admin-dashboard.php" class="back-btn">← Back to Dashboard</a>
+        <a href="dashboard.php" class="back-btn">← Back to Dashboard</a>
  
         <?php if (count($animals) === 0): ?>
             <p>No animals found in the database.</p>
