@@ -25,7 +25,8 @@ $animals = $result->fetchAll();
             box-sizing: border-box; 
             min-height: 100vh; 
             padding: 40px; 
-            background-color: rgba(187, 223, 158, 0.95); 
+            background-color: rgba(187, 223, 158, 0.95);
+            overflow-y: auto;
         }
         .dashboard-header { 
             display: flex; 
@@ -40,19 +41,19 @@ $animals = $result->fetchAll();
             border-collapse: collapse; 
             background: white; 
             border-radius: 15px; 
-            overflow: hidden; 
+            overflow: visible;
             box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
         }
         th { 
             background-color: var(--accent-color); 
             color: white; 
             padding: 12px 15px; 
-            text-align: center; /* CHANGED */
+            text-align: center;
         }
         td { 
             padding: 10px 15px; 
             border-bottom: 1px solid #e0e0e0;
-            text-align: center; /* ADDED */
+            text-align: center;
         }
         tr:hover { 
             background-color: var(--base-color); 
@@ -106,8 +107,6 @@ $animals = $result->fetchAll();
         .back-btn:hover { 
             background-color: var(--accent-color); 
         }
-
-        /* ADDED — sort bar */
         .sort-bar {
             display: flex;
             align-items: center;
@@ -145,7 +144,6 @@ $animals = $result->fetchAll();
             <p>No animals found in the database.</p>
         <?php else: ?>
 
-        <!-- ADDED — sort controls -->
         <div class="sort-bar">
             <label>Sort by:</label>
             <select id="sortField">
@@ -160,44 +158,47 @@ $animals = $result->fetchAll();
             <button id="dirBtn" onclick="toggleDir()">↑ Asc</button>
         </div>
 
-        <table>
-            <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Species</th>
-                <th>Category</th>
-                <th>Age</th>
-                <th>Sex</th>
-                <th>Enclosure</th>
-                <th>Actions</th>
-            </tr>
-            <?php foreach ($animals as $row): ?>
-            <tr>
-                <td><?= $row['Animal_ID'] ?></td>
-                <td><?= $row['Name'] ?></td>
-                <td><?= $row['Species'] ?></td>
-                <td><?= $row['Category'] ?></td>
-                <td><?= $row['Age'] ?></td>
-                <td><?= $row['Sex'] ?></td>
-                <td><?= $row['Enclosure_Name'] ?? 'N/A' ?></td>
-                <td>
-                    <a href="edit_animal.php?id=<?= $row['Animal_ID'] ?>" class="btn btn-edit">Edit</a>
-                    <a href="delete_animal.php?id=<?= $row['Animal_ID'] ?>" class="btn btn-delete" onclick="return confirm('Are you sure?')">Delete</a>
-                </td>
-            </tr>
-            <?php endforeach; ?>
+        <table id="animalTable">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Species</th>
+                    <th>Category</th>
+                    <th>Age</th>
+                    <th>Sex</th>
+                    <th>Enclosure</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($animals as $row): ?>
+                <tr>
+                    <td><?= $row['Animal_ID'] ?></td>
+                    <td><?= $row['Name'] ?></td>
+                    <td><?= $row['Species'] ?></td>
+                    <td><?= $row['Category'] ?></td>
+                    <td><?= $row['Age'] ?></td>
+                    <td><?= $row['Sex'] ?></td>
+                    <td><?= $row['Enclosure_Name'] ?? 'N/A' ?></td>
+                    <td>
+                        <a href="edit_animal.php?id=<?= $row['Animal_ID'] ?>" class="btn btn-edit">Edit</a>
+                        <a href="delete_animal.php?id=<?= $row['Animal_ID'] ?>" class="btn btn-delete" onclick="return confirm('Are you sure?')">Delete</a>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
         </table>
         <?php endif; ?>
     </div>
 
-    <!-- ADDED — sort script -->
     <script>
         let sortDir = 1;
 
         function sortTable() {
             const col = parseInt(document.getElementById('sortField').value);
-            const table = document.querySelector('table');
-            const rows = Array.from(table.querySelectorAll('tr:not(:first-child)'));
+            const tbody = document.querySelector('#animalTable tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
             rows.sort((a, b) => {
                 const av = a.cells[col].innerText.trim();
                 const bv = b.cells[col].innerText.trim();
@@ -205,7 +206,7 @@ $animals = $result->fetchAll();
                 if (!isNaN(an) && !isNaN(bn)) return (an - bn) * sortDir;
                 return av.localeCompare(bv) * sortDir;
             });
-            rows.forEach(r => table.appendChild(r));
+            rows.forEach(r => tbody.appendChild(r));
         }
 
         function toggleDir() {
