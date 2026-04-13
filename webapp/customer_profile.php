@@ -31,7 +31,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
 }
 
 // Fetch their tickets
-$tickets = $pdo->prepare("SELECT * FROM tickets WHERE CustomerID = ? ORDER BY Purchase_date DESC");
+$tickets = $pdo->prepare("
+    SELECT o.OrderID, oc.CategoryName, o.TransactionAmount, 
+           o.PaymentMode, o.ScheduledDate, o.OrderDate,
+           ot.Quantity
+    FROM orders o
+    JOIN ordercategories oc ON o.OrderCategoryID = oc.OrderCategoryID
+    JOIN order_tickets ot ON ot.OrderID = o.OrderID
+    WHERE o.CustomerID = ?
+    ORDER BY o.OrderDate DESC
+");
 $tickets->execute([$id]);
 $myTickets = $tickets->fetchAll();
 ?>
@@ -207,21 +216,23 @@ $myTickets = $tickets->fetchAll();
             <?php else: ?>
             <table>
                 <tr>
-                    <th>Ticket #</th>
+                    <th>Order #</th>
                     <th>Type</th>
-                    <th>Price</th>
+                    <th>Quantity</th>
+                    <th>Total Paid</th>
                     <th>Payment</th>
                     <th>Visit Date</th>
-                    <th>Purchased</th>
+                    <th>Ordered</th>
                 </tr>
                 <?php foreach ($myTickets as $t): ?>
                 <tr>
-                    <td>#<?= $t['Ticket_ID'] ?></td>
-                    <td><span class="badge"><?= htmlspecialchars($t['Ticket_type']) ?></span></td>
-                    <td>$<?= number_format($t['Price'], 2) ?></td>
-                    <td><?= htmlspecialchars($t['Payment_type']) ?></td>
-                    <td><?= $t['Visit_date'] ?></td>
-                    <td><?= $t['Purchase_date'] ?></td>
+                    <td>#<?= $t['OrderID'] ?></td>
+                    <td><span class="badge"><?= htmlspecialchars($t['CategoryName']) ?></span></td>
+                    <td><?= $t['Quantity'] ?></td>
+                    <td>$<?= number_format($t['TransactionAmount'], 2) ?></td>
+                    <td><?= htmlspecialchars($t['PaymentMode']) ?></td>
+                    <td><?= $t['ScheduledDate'] ?></td>
+                    <td><?= $t['OrderDate'] ?></td>
                 </tr>
                 <?php endforeach; ?>
             </table>
