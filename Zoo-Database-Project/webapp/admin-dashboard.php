@@ -105,7 +105,7 @@ if (!isset($_SESSION['user_id'])) {
                 <h2>Data Entry</h2>
                 <a href="add-animal.php">Add Animal</a>
                 <a href="add-employee.php">Add Employee</a>
-                <a href="add-ticket.php">Add Ticket</a>
+                <a href="buy-tickets.php">Buy tickets</a>
             </div>
 
             <div class="card">
