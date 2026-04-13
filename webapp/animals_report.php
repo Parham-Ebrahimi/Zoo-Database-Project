@@ -47,11 +47,12 @@ $animals = $result->fetchAll();
             background-color: var(--accent-color); 
             color: white; 
             padding: 12px 15px; 
-            text-align: left; 
+            text-align: center; /* CHANGED */
         }
         td { 
             padding: 10px 15px; 
-            border-bottom: 1px solid #e0e0e0; 
+            border-bottom: 1px solid #e0e0e0;
+            text-align: center; /* ADDED */
         }
         tr:hover { 
             background-color: var(--base-color); 
@@ -84,8 +85,8 @@ $animals = $result->fetchAll();
             border-radius: 1000px; 
             font: inherit; 
             font-weight: 600; 
-            cursor: pointer; c
-            olor: var(--text-color); 
+            cursor: pointer;
+            color: var(--text-color); 
             text-decoration: none; 
         }
         .logout-btn:hover { 
@@ -106,6 +107,29 @@ $animals = $result->fetchAll();
             background-color: var(--accent-color); 
         }
 
+        /* ADDED — sort bar */
+        .sort-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+        .sort-bar label {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-color);
+        }
+        .sort-bar select,
+        .sort-bar button {
+            padding: 7px 12px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            font: inherit;
+            font-size: 0.9rem;
+            cursor: pointer;
+            background: white;
+        }
     </style>
 </head>
 <body>
@@ -120,6 +144,22 @@ $animals = $result->fetchAll();
         <?php if (count($animals) === 0): ?>
             <p>No animals found in the database.</p>
         <?php else: ?>
+
+        <!-- ADDED — sort controls -->
+        <div class="sort-bar">
+            <label>Sort by:</label>
+            <select id="sortField">
+                <option value="0">ID</option>
+                <option value="1">Name</option>
+                <option value="2">Species</option>
+                <option value="3">Category</option>
+                <option value="4">Age</option>
+                <option value="5">Sex</option>
+                <option value="6">Enclosure</option>
+            </select>
+            <button id="dirBtn" onclick="toggleDir()">↑ Asc</button>
+        </div>
+
         <table>
             <tr>
                 <th>ID</th>
@@ -149,5 +189,32 @@ $animals = $result->fetchAll();
         </table>
         <?php endif; ?>
     </div>
+
+    <!-- ADDED — sort script -->
+    <script>
+        let sortDir = 1;
+
+        function sortTable() {
+            const col = parseInt(document.getElementById('sortField').value);
+            const table = document.querySelector('table');
+            const rows = Array.from(table.querySelectorAll('tr:not(:first-child)'));
+            rows.sort((a, b) => {
+                const av = a.cells[col].innerText.trim();
+                const bv = b.cells[col].innerText.trim();
+                const an = parseFloat(av), bn = parseFloat(bv);
+                if (!isNaN(an) && !isNaN(bn)) return (an - bn) * sortDir;
+                return av.localeCompare(bv) * sortDir;
+            });
+            rows.forEach(r => table.appendChild(r));
+        }
+
+        function toggleDir() {
+            sortDir *= -1;
+            document.getElementById('dirBtn').textContent = sortDir === 1 ? '↑ Asc' : '↓ Desc';
+            sortTable();
+        }
+
+        document.getElementById('sortField').addEventListener('change', sortTable);
+    </script>
 </body>
 </html>
