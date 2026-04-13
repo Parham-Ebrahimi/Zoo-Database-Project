@@ -1,21 +1,34 @@
+<?php
+session_start();
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Greenwood Wildlife Zoo — Welcome</title>
+    <title>Greenwood Wildlife Zoo</title>
     <link rel="stylesheet" href="index.css">
 </head>
 <body>
     <header class="site-header">
-        <a class="logo" href="index.html">Greenwood Zoo</a>
+        <a class="logo" href="index.php">Greenwood Zoo</a>
+
         <nav aria-label="Main">
             <ul class="nav-links">
+
+                <?php if (isset($_SESSION['customer_id'])): ?>
+                    <li><span>Welcome, <?= $_SESSION['firstname'] ?></span></li>
+                    <li><a href="customer_profile.php">Profile</a></li>
+                    <li><a href="logout.php">Logout</a></li>
+                <?php else: ?>
+                    <li><a href="login.html">Login</a></li>
+                    <li><a href="signup.html">Sign Up</a></li>
+                <?php endif; ?>
+
                 <li><a href="#about">About</a></li>
                 <li><a href="#hours">Hours</a></li>
                 <li><a href="#gallery">Animals</a></li>
                 <li><a href="#visit">Visit</a></li>
-                <li><a class="nav-cta" href="customer-login.html">Member login</a></li>
             </ul>
         </nav>
     </header>
@@ -41,22 +54,6 @@
                 Founded to connect people with nature, Greenwood combines accredited animal care with research and
                 community programs. Every ticket helps fund habitat restoration and breeding programs for threatened species.
             </p>
-            <div class="grid-2">
-                <article class="card">
-                    <h3>Conservation</h3>
-                    <p>
-                        We partner with global programs to protect wildlife and reintroduce animals where it is safe
-                        and ecologically sound.
-                    </p>
-                </article>
-                <article class="card">
-                    <h3>Education</h3>
-                    <p>
-                        Daily keeper talks, a discovery center for families, and school field trips make learning
-                        hands-on and memorable.
-                    </p>
-                </article>
-            </div>
         </section>
 
         <section id="hours" aria-labelledby="hours-heading">
@@ -82,22 +79,18 @@
                             <td>5:00 p.m.</td>
                         </tr>
                         <tr>
-                            <td>Holidays (see calendar)</td>
+                            <td>Holidays </td>
                             <td>8:00 a.m.</td>
                             <td>4:00 p.m.</td>
                         </tr>
                     </tbody>
                 </table>
-                <p class="note">
-                    The zoo is closed Thanksgiving Day and Christmas Day. Summer hours (June–August) may extend on
-                    weekends; check our calendar before you travel.
-                </p>
             </div>
         </section>
 
         <section id="gallery" aria-labelledby="gallery-heading">
             <h2 id="gallery-heading">Meet some of our residents</h2>
-            <p class="lead">A few highlights from our habitats—see them in person on your next visit.</p>
+            <p class="lead">A few highlights from our habitats, see them in person on your next visit!</p>
             <div class="gallery">
                 <figure>
                     <img src="https://images.unsplash.com/photo-1771341398737-b2467b6776a7?auto=format&fit=crop&w=800&q=80" alt="Baby elephant in a grassy field" width="800" height="600" loading="lazy">
@@ -120,25 +113,38 @@
 
         <section id="visit" aria-labelledby="visit-heading">
             <h2 id="visit-heading">Plan your visit</h2>
+
             <div class="visit-info">
                 <div class="card">
                     <strong>Address</strong>
-                    <span>1200 Nature Trail, Greenwood, ST 00000</span>
+                    <span>1234 Greenwood Street,00000</span>
                 </div>
                 <div class="card">
                     <strong>Phone</strong>
-                    <span>(555) 123-ZOOO</span>
+                    <span>(123) 456 -ZOOO</span>
                 </div>
                 <div class="card">
                     <strong>Parking</strong>
                     <span>Free general parking; EV spots in Lot B</span>
                 </div>
             </div>
+
+            <!-- Buy Tickets button with login check -->
+            <div style="margin-top:20px;">
+                <?php if (isset($_SESSION['customer_id'])): ?>
+                    <a class="btn btn-primary" href="buy-tickets.php">Buy Tickets</a>
+                <?php else: ?>
+                    <a class="btn btn-primary" href="login.html"
+                       onclick="alert('You must login or create an account first')">
+                       Buy Tickets
+                    </a>
+                <?php endif; ?>
+            </div>
         </section>
     </main>
 
     <footer class="site-footer">
-        <p>&copy; 2026 Greenwood Wildlife Zoo. All rights reserved.</p>
+        <p>&copy; 2026 Team 8 COSC 3380 Zoo Database Systems Project.</p>
         <p>
             <a href="login.html">Login</a>
             ·
@@ -147,4 +153,3 @@
     </footer>
 </body>
 </html>
-

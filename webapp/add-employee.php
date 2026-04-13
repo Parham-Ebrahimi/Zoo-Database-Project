@@ -1,8 +1,12 @@
 <?php
 session_start();
 if (!isset($_SESSION['user_id'])) {
-    header('Location: customer-login.html');
+    header('Location: login.html');
     exit;
+}
+
+if (!in_array($_SESSION['role'], ['admin'])) {
+    die("Access denied");
 }
 require_once 'db.php';
 
@@ -66,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <a href="logout.php" class="logout-btn">Logout</a>
         </div>
 
-        <a href="admin-dashboard.php" class="back-btn">← Back to Dashboard</a>
+        <a href="dashboard.php" class="back-btn">← Back to Dashboard</a>
 
         <div class="form-card">
             <?php if ($error): ?><p class="msg-error"><?= $error ?></p><?php endif; ?>
