@@ -313,16 +313,23 @@ $animalSpotlightImages = [
         .logout-area a:hover { color: var(--cr-accent); text-decoration: underline; }
     </style>
 </head>
-<body class="cr-body">
-    <div class="cr-shell cr-shell--dash">
-        <header class="cr-topbar">
-            <span class="cr-brand">Greenwood Zoo</span>
-            <nav class="cr-nav">
-                <a class="cr-btn-outline" href="logout.php">Sign out</a>
+<body>
+    <div class="profile-wrapper">
+        <header class="site-header">
+            <a class="logo" href="index.php">Greenwood Zoo</a>
+            <nav aria-label="Main">
+                <ul class="nav-links">
+                    <li><a href="index.php">Home</a></li>
+                    <li><a href="buy-tickets.php">Buy Tickets</a></li>
+                    <li><a href="customer_animals_report.php">Animals</a></li>
+                    <li><a href="customer_profile.php">Profile</a></li>
+                    <li><span>Welcome, <?= htmlspecialchars($_SESSION['firstname']) ?></span></li>
+                    <li><a href="logout.php">Logout</a></li>
+                </ul>
             </nav>
         </header>
 
-        <main>
+        <div class="profile-card">
             <div class="welcome-banner">
                 <div>
                     <h1>Welcome back, <?= htmlspecialchars($_SESSION['firstname']) ?>!</h1>
@@ -464,7 +471,7 @@ $animalSpotlightImages = [
             <div class="logout-area">
                 <a href="logout.php">Sign out of your account</a>
             </div>
-        </main>
+       </div>
     </div>
 </body>
 </html>
