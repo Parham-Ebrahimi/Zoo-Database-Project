@@ -53,7 +53,16 @@ if ($user && password_verify($password, $user['PasswordHash'])) {
     $_SESSION['firstname'] = $user['FirstName'];
     $_SESSION['role'] = $user['Role'];
 
-    header('Location: dashboard.php');
+    if ($user['Role'] === 'admin') {
+        header('location: dashboard.php');
+    }
+    else if ($user['Role'] === 'caretaker') {
+        header('location: caretaker.php');
+    }
+    else {
+        header ('Location: dashboard.php');
+    }
+
     exit;
 }
 
