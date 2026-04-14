@@ -156,7 +156,7 @@ session_start();
     </main>
 
     <footer class="site-footer">
-        <p>&copy; 2026 Team 8 COSC 3380 Zoo Database Systems Project.</p>
+        <p>&copy; 2026 Team 9 COSC 3380 Zoo Database Systems Project.</p>
         <p>
             <a href="login.html">Login</a>
             ·
