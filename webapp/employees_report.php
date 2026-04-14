@@ -41,7 +41,7 @@ $employees = $result->fetchAll();
             <a href="logout.php" class="logout-btn">Logout</a>
         </div>
  
-        <a href="admin-dashboard.php" class="back-btn">← Back to Dashboard</a>
+        <a href="dashboard.php" class="back-btn">← Back to Dashboard</a>
  
         <?php if (count($employees) === 0): ?>
             <p>No employees found in the database.</p>
