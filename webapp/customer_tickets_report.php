@@ -33,33 +33,115 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My tickets — Greenwood Zoo</title>
-    <link rel="stylesheet" href="customer-reports.css">
+    <link rel="stylesheet" href="index.css">
+
+    <style>
+        .page-wrapper {
+            max-width: 1000px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .page-header {
+            margin-bottom: 1.5rem;
+        }
+
+        .page-header h1 {
+            font-size: 1.5rem;
+            font-weight: 800;
+            margin-bottom: 0.25rem;
+        }
+
+        .page-header p {
+            color: #666;
+            margin: 0;
+        }
+
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 1.8rem;
+            box-shadow: var(--shadow);
+            margin-bottom: 1.5rem;
+        }
+
+        .empty-msg {
+            font-size: 0.95rem;
+            color: #666;
+        }
+
+        .empty-msg a {
+            color: var(--accent-color);
+            font-weight: 600;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        th {
+            background: var(--accent-color);
+            color: white;
+            padding: 10px 14px;
+            text-align: left;
+        }
+
+        td {
+            padding: 9px 14px;
+            border-bottom: 1px solid #eee;
+        }
+
+        tr:hover td {
+            background: #f9fff9;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 1rem;
+            color: var(--text-color);
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        .footnote {
+            font-size: 0.85rem;
+            color: #777;
+        }
+    </style>
 </head>
+
 <body class="cr-body">
     <a class="cr-skip" href="#main">Skip to content</a>
-    <div class="cr-shell">
-        <header class="cr-topbar">
-            <span class="cr-brand">Greenwood Zoo</span>
-            <nav class="cr-nav">
+    <div class="page-wrapper">
+        <header class="site-header">
+            <a class="logo" href="index.php">Greenwood Zoo</a>
+            <nav>
                 <a href="customer-dashboard.php">Dashboard</a>
                 <a href="customer_animals_report.php">Animals</a>
                 <a href="buy-tickets.php">Buy tickets</a>
-                <a class="cr-btn-outline" href="logout.php">Sign out</a>
+                <a href="logout.php">Logout</a>
             </nav>
         </header>
 
         <main id="main">
-            <div class="cr-hero">
+            <div class="page-header">
+                <a class="back-link" href="index.php">← Back to Home</a>
                 <h1>My tickets</h1>
                 <p>Your ticket purchase history and upcoming visit dates.</p>
             </div>
 
-            <div class="cr-card">
+            <div class="card">
                 <?php if (count($tickets) === 0): ?>
-                    <p class="cr-empty">You have not purchased any tickets yet. <a href="buy-tickets.php">Buy tickets</a> to plan your visit.</p>
+                    <p class="empty">You have not purchased any tickets yet. <a href="buy-tickets.php">Buy tickets</a> to plan your visit.</p>
                 <?php else: ?>
-                    <div class="cr-table-wrap">
-                        <table class="cr-table">
+                    <div>
+                        <table>
                             <thead>
                                 <tr>
                                     <th>Order #</th>
@@ -90,7 +172,7 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     </div>
                 <?php endif; ?>
             </div>
-            <p class="cr-footnote">Questions about a ticket? Contact guest services with your order number.</p>
+            <p class="footnote">Questions about a ticket? Contact guest services with your order number.</p>
         </main>
     </div>
 </body>

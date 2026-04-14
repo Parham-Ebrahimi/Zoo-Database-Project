@@ -139,6 +139,7 @@ $role = $_SESSION['role'];
             <?php endif; ?>
 
             <?php if ($role === 'admin'): ?>
+                <a href="tickets_report.php"> View Tickets</a>
                 <a href="employees_report.php">View Employees</a>
                 <a href="revenue_report.php">View Revenue Reports</a>
             <?php endif; ?>
