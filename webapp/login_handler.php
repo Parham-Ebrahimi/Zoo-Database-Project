@@ -32,7 +32,7 @@ if ($customer && password_verify($password, $customer['Password_Hash'])) {
     $_SESSION['firstname'] = $customer['FirstName'];
     $_SESSION['role'] = 'customer';
 
-    header('Location: index.php');
+    header('Location: customer-dashboard.php');
     exit;
 }
 

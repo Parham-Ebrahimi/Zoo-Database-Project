@@ -47,7 +47,7 @@ $animalSpotlightImages = [
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard — Greenwood Zoo</title>
-    <link rel="stylesheet" href="customer-reports.css">
+    <link rel="stylesheet" href="index.css">
     <style>
         .cr-shell--dash {
             max-width: 1200px;

@@ -1,64 +1,75 @@
 <?php
 session_start();
 if (!isset($_SESSION['customer_id'])) {
-    header('Location: login.html');
+    header('Location: sign-in.html');
     exit;
 }
-require 'db.php';
+require_once 'db.php';
 
-$error = '';
+$error   = '';
 $success = '';
 
-// Zoo tickets only (order_tickets allows categories 1–4; not Food/Shop)
+// Zoo visit ticket types only (must match order_tickets CHECK: categories 1–4; not Food/Shop)
 $categories = $pdo->query("
-    SELECT * FROM ordercategories
+    SELECT OrderCategoryID, CategoryName, Price
+    FROM ordercategories
     WHERE OrderCategoryID BETWEEN 1 AND 4
-    ORDER BY Price
+    ORDER BY OrderCategoryID
 ")->fetchAll();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $categoryID    = (int)$_POST['category_id'];
-    $quantity      = (int)$_POST['quantity'];
-    $payment       = $_POST['payment_type'];
-    $visit_date    = $_POST['visit_date'];
-    $customerID    = $_SESSION['customer_id'];
+    $customerID  = (int) $_SESSION['customer_id'];
+    $categoryID  = (int) $_POST['category_id'];
+    $quantity    = (int) $_POST['quantity'];
+    $paymentMode = trim($_POST['payment_mode']);
+    $visitDate   = $_POST['visit_date'];
 
-    if (!$categoryID || !$quantity || !$payment || !$visit_date) {
+    // Validate
+    if (!$categoryID || !$quantity || !$paymentMode || !$visitDate) {
         $error = 'Please fill in all fields.';
     } elseif ($categoryID < 1 || $categoryID > 4) {
         $error = 'Please select a valid zoo ticket type (Adult, Child, Senior, or Student).';
+    } elseif ($quantity < 1 || $quantity > 20) {
+        $error = 'Quantity must be between 1 and 20.';
+    } elseif (strtotime($visitDate) < strtotime('today')) {
+        $error = 'Visit date cannot be in the past.';
     } else {
-        try {
-            // Get price from ordercategories
-            $cat = $pdo->prepare("SELECT * FROM ordercategories WHERE OrderCategoryID = ?");
-            $cat->execute([$categoryID]);
-            $category = $cat->fetch();
+        // Get price for selected category
+        $stmt = $pdo->prepare("SELECT Price FROM ordercategories WHERE OrderCategoryID = ?");
+        $stmt->execute([$categoryID]);
+        $price = $stmt->fetchColumn();
 
-            $total = $category['Price'] * $quantity;
+        if (!$price) {
+            $error = 'Invalid ticket type selected.';
+        } else {
+            $total = $price * $quantity;
 
-            // Insert into orders
-            $stmt = $pdo->prepare("INSERT INTO orders 
-                (OrderDate, CustomerID, OrderCategoryID, PaymentMode, TransactionAmount, ScheduledDate) 
-                VALUES (?, ?, ?, ?, ?, ?)");
-            $stmt->execute([
-                date('Y-m-d'),
-                $customerID,
-                $categoryID,
-                $payment,
-                $total,
-                $visit_date
-            ]);
+            try {
+                $pdo->beginTransaction();
 
-            $orderID = $pdo->lastInsertId();
+                // Insert into orders
+                $stmt = $pdo->prepare("
+                    INSERT INTO orders (OrderDate, CustomerID, OrderCategoryID, PaymentMode, TransactionAmount, ScheduledDate)
+                    VALUES (CURDATE(), ?, ?, ?, ?, ?)
+                ");
+                $stmt->execute([$customerID, $categoryID, $paymentMode, $total, $visitDate]);
+                $orderID = $pdo->lastInsertId();
 
-            // Insert into order_tickets
-            $stmt2 = $pdo->prepare("INSERT INTO order_tickets (OrderID, OrderCategoryID, Quantity) 
-                VALUES (?, ?, ?)");
-            $stmt2->execute([$orderID, $categoryID, $quantity]);
+                // Insert into order_tickets
+                $stmt = $pdo->prepare("
+                    INSERT INTO order_tickets (OrderID, OrderCategoryID, Quantity)
+                    VALUES (?, ?, ?)
+                ");
+                $stmt->execute([$orderID, $categoryID, $quantity]);
 
-            $success = "Successfully purchased $quantity {$category['CategoryName']} ticket(s) for $visit_date! Total: $" . number_format($total, 2);
-        } catch (PDOException $e) {
-            $error = 'Purchase failed: ' . $e->getMessage();
+                $pdo->commit();
+                $success = 'Order placed! ' . (int) $quantity . ' × ' . htmlspecialchars($_POST['category_name'] ?? 'ticket')
+                    . ' for ' . date('M j, Y', strtotime($visitDate)) . '. Total: $' . number_format($total, 2);
+
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                $error = 'Order failed: ' . $e->getMessage();
+            }
         }
     }
 }
@@ -69,123 +80,170 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Buy Tickets — Greenwood Zoo</title>
-    <link rel="stylesheet" href="index.css">
+    <link rel="stylesheet" href="customer-reports.css">
     <style>
-        .tickets-wrapper { max-width: 700px; margin: 2rem auto; padding: 0 1rem; }
-        .ticket-card { background: white; border-radius: 20px; padding: 2rem; box-shadow: var(--shadow); }
-        .ticket-card h2 { font-size: 1.4rem; font-weight: 800; margin-bottom: 0.5rem; }
-        .ticket-card p { margin-bottom: 1.5rem; color: #555; }
-        .form-group { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 1rem; }
-        .form-group label { font-weight: 600; font-size: 0.9rem; }
-        .form-group input, .form-group select { padding: 0.65rem 1rem; border: 2px solid #ddd; border-radius: 10px; font: inherit; }
-        .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--accent-color); }
-        .price-display { background: var(--base-color); border-radius: 10px; padding: 1rem; margin-bottom: 1rem; font-weight: 600; }
-        .buy-btn { width: 100%; padding: 0.85rem; background: var(--accent-color); border: none; border-radius: 1000px; font: inherit; font-weight: 700; font-size: 1rem; cursor: pointer; color: white; text-transform: uppercase; }
-        .buy-btn:hover { background: var(--text-color); }
-        .msg-error { color: #e74c3c; font-weight: 600; margin-bottom: 1rem; }
+        .form-card {
+            background: var(--cr-surface);
+            border-radius: var(--cr-radius);
+            box-shadow: var(--cr-shadow);
+            border: 1px solid var(--cr-border);
+            padding: 2rem;
+            max-width: 560px;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 1.1rem;
+        }
+        .form-group label {
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 0.4rem;
+            color: var(--cr-accent);
+        }
+        .form-group select,
+        .form-group input {
+            padding: 0.6rem 0.85rem;
+            border: 1px solid var(--cr-border);
+            border-radius: 8px;
+            font: inherit;
+            font-size: 0.95rem;
+            background: white;
+            color: var(--cr-text);
+        }
+        .form-group select:focus,
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--cr-accent-soft);
+        }
+        .ticket-price {
+            margin-top: 0.4rem;
+            font-size: 0.85rem;
+            color: var(--cr-muted);
+        }
+        .total-row {
+            margin: 1.25rem 0;
+            padding: 0.85rem 1rem;
+            background: #eef6ea;
+            border-radius: 8px;
+            font-weight: 700;
+            color: var(--cr-accent);
+            font-size: 1.05rem;
+        }
+        .submit-btn {
+            padding: 0.75rem 2.5rem;
+            background: var(--cr-accent);
+            color: white;
+            border: none;
+            border-radius: 999px;
+            font: inherit;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .submit-btn:hover { background: #1a5c2b; }
+        .msg-error   { color: #c0392b; font-weight: 600; margin-bottom: 1rem; }
         .msg-success { color: #27ae60; font-weight: 600; margin-bottom: 1rem; }
-        .price-table { width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; font-size: 0.9rem; }
-        .price-table th { background: var(--accent-color); color: white; padding: 8px 12px; text-align: left; }
-        .price-table td { padding: 8px 12px; border-bottom: 1px solid #eee; }
-        .back-link { display: inline-block; margin-bottom: 1rem; color: var(--text-color); font-weight: 600; }
     </style>
 </head>
-<body>
-    <header class="site-header">
-        <a class="logo" href="index.php">Greenwood Zoo</a>
-        <nav aria-label="Main">
-            <ul class="nav-links">
-                <li><a href="index.php">Home</a></li>
-                <li><a href="customer_profile.php">My Profile</a></li>
-                <li><a href="customer_animals_report.php">Animals</a></li>
+<body class="cr-body">
+    <div class="cr-shell">
+        <header class="cr-topbar">
+            <span class="cr-brand">Greenwood Zoo</span>
+            <nav class="cr-nav">
                 <li><span>Welcome, <?= htmlspecialchars($_SESSION['firstname']) ?></span></li>
-                <li><a href="logout.php">Logout</a></li>
-            </ul>
-        </nav>
-    </header>
+                <li><a href="index.php">Home</a></li>
+                <a href="customer-dashboard.php">Dashboard</a>
+                <a href="customer_animals_report.php">Animals</a>
+                <a href="customer_tickets_report.php">My tickets</a>
+                <a class="cr-btn-outline" href="logout.php">Sign out</a>
+            </nav>
+        </header>
 
-    <div class="tickets-wrapper">
-        <a class="back-link" href="index.php">← Back to Home</a>
-        <div class="ticket-card">
-            <h2>Buy Tickets</h2>
-            <p>Purchase tickets for your upcoming visit to Greenwood Zoo!</p>
+        <main>
+            <div class="cr-hero">
+                 <a class="back-link" href="index.php">← Back to Home</a>
+                <h1>Buy tickets</h1>
+                <p>Select your ticket type, visit date, and quantity to complete your purchase.</p>
+            </div>
 
-            <!-- Price table pulled from database -->
-            <table class="price-table">
-                <tr>
-                    <th>Ticket Type</th>
-                    <th>Price</th>
-                </tr>
-                <?php foreach ($categories as $cat): ?>
-                <tr>
-                    <td><?= htmlspecialchars($cat['CategoryName']) ?></td>
-                    <td><?= $cat['Price'] == 0 ? 'Free' : '$' . number_format($cat['Price'], 2) ?></td>
-                </tr>
-                <?php endforeach; ?>
-            </table>
+            <div class="form-card">
+                <?php if ($error):   ?><p class="msg-error"><?= htmlspecialchars($error) ?></p><?php endif; ?>
+                <?php if ($success): ?><p class="msg-success"><?= $success ?></p><?php endif; ?>
 
-            <?php if ($error): ?>
-                <p class="msg-error"><?= htmlspecialchars($error) ?></p>
-            <?php endif; ?>
-            <?php if ($success): ?>
-                <p class="msg-success"><?= htmlspecialchars($success) ?></p>
-            <?php endif; ?>
+                <form method="POST" id="ticketForm">
+                    <div class="form-group">
+                        <label for="category_id">Ticket type *</label>
+                        <select name="category_id" id="category_id" required onchange="updatePrice()">
+                            <option value="">-- Select a ticket type --</option>
+                            <?php foreach ($categories as $cat): ?>
+                                <option value="<?= $cat['OrderCategoryID'] ?>"
+                                        data-price="<?= htmlspecialchars((string) $cat['Price']) ?>"
+                                        data-name="<?= htmlspecialchars($cat['CategoryName']) ?>">
+                                    <?= htmlspecialchars($cat['CategoryName']) ?> — $<?= number_format((float) $cat['Price'], 2) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <span class="ticket-price" id="priceHint"></span>
+                    </div>
 
-            <form method="POST">
-                <div class="form-group">
-                    <label>Ticket Type</label>
-                    <select name="category_id" required onchange="updatePrice()">
-                        <option value="">-- Select --</option>
-                        <?php foreach ($categories as $cat): ?>
-                        <option value="<?= $cat['OrderCategoryID'] ?>" 
-                                data-price="<?= $cat['Price'] ?>">
-                            <?= htmlspecialchars($cat['CategoryName']) ?> 
-                            — <?= $cat['Price'] == 0 ? 'Free' : '$' . number_format($cat['Price'], 2) ?>
-                        </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Quantity</label>
-                    <input type="number" name="quantity" min="1" max="20" value="1" required onchange="updatePrice()">
-                </div>
-                <div class="form-group">
-                    <label>Visit Date</label>
-                    <input type="date" name="visit_date" min="<?= date('Y-m-d') ?>" required>
-                </div>
-                <div class="form-group">
-                    <label>Payment Type</label>
-                    <select name="payment_type" required>
-                        <option value="">-- Select --</option>
-                        <option value="Credit Card">Credit Card</option>
-                        <option value="Debit Card">Debit Card</option>
-                        <option value="Cash">Cash</option>
-                        <option value="PayPal">PayPal</option>
-                    </select>
-                </div>
+                    <!-- Hidden field to pass category name for success message -->
+                    <input type="hidden" name="category_name" id="category_name">
 
-                <div class="price-display" id="price-display">
-                    Total: Select a ticket type
-                </div>
+                    <div class="form-group">
+                        <label for="quantity">Quantity *</label>
+                        <input type="number" name="quantity" id="quantity" min="1" max="20" value="1" required onchange="updatePrice()">
+                    </div>
 
-                <button type="submit" class="buy-btn">Purchase Tickets</button>
-            </form>
-        </div>
+                    <div class="form-group">
+                        <label for="visit_date">Visit date *</label>
+                        <input type="date" name="visit_date" id="visit_date" required
+                               min="<?= date('Y-m-d') ?>">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="payment_mode">Payment method *</label>
+                        <select name="payment_mode" id="payment_mode" required>
+                            <option value="">-- Select --</option>
+                            <option value="Credit Card">Credit Card</option>
+                            <option value="Debit Card">Debit Card</option>
+                            <option value="Cash">Cash</option>
+                            <option value="PayPal">PayPal</option>
+                        </select>
+                    </div>
+
+                    <div class="total-row" id="totalRow" style="display:none">
+                        Total: <span id="totalAmount">$0.00</span>
+                    </div>
+
+                    <button type="submit" class="submit-btn">Purchase tickets</button>
+                </form>
+            </div>
+        </main>
     </div>
 
     <script>
         function updatePrice() {
-            const select = document.querySelector('[name="category_id"]');
-            const qty = parseInt(document.querySelector('[name="quantity"]').value) || 1;
-            const selected = select.options[select.selectedIndex];
-            const price = parseFloat(selected.dataset.price) || 0;
-            const total = (price * qty).toFixed(2);
-            const display = document.getElementById('price-display');
+            const select   = document.getElementById('category_id');
+            const qty      = parseInt(document.getElementById('quantity').value) || 0;
+            const option   = select.options[select.selectedIndex];
+            const price    = parseFloat(option.dataset.price) || 0;
+            const name     = option.dataset.name || '';
+            const total    = price * qty;
+            const hint     = document.getElementById('priceHint');
+            const totalRow = document.getElementById('totalRow');
 
-            if (select.value) {
-                display.textContent = `Total: $${total} (${qty} x $${price.toFixed(2)})`;
+            document.getElementById('category_name').value = name;
+
+            if (price > 0) {
+                hint.textContent = '$' + price.toFixed(2) + ' per ticket';
+                totalRow.style.display = 'block';
+                document.getElementById('totalAmount').textContent = '$' + total.toFixed(2);
             } else {
-                display.textContent = 'Total: Select a ticket type';
+                hint.textContent = '';
+                totalRow.style.display = 'none';
             }
         }
     </script>
