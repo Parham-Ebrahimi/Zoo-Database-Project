@@ -171,7 +171,7 @@ $myTickets = $tickets->fetchAll();
     </header>
 
     <div class="profile-wrapper">
-        <a class="back-link" href="index.php">← Back to Home</a>
+        <a class="back-link" href="customer-dashboard.php">← Back to Dashboard</a>
 
         <div class="profile-card">
             <h2>My Profile</h2>

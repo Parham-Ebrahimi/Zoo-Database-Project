@@ -18,7 +18,7 @@ session_start();
 
                 <?php if (isset($_SESSION['customer_id'])): ?>
                     <li><span>Welcome, <?= $_SESSION['firstname'] ?></span></li>
-                    <li><a href="customer_profile.php">Profile</a></li>
+                    <li><a href="customer-dashboard.php">Dashboard</a></li>
                     <li><a href="logout.php">Logout</a></li>
                 <?php else: ?>
                     <li><a href="login.html">Login</a></li>
