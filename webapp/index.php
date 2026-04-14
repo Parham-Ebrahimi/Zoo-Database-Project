@@ -144,12 +144,9 @@ session_start();
 
             <div style="margin-top:20px; text-align:center;">
                 <?php if (isset($_SESSION['customer_id'])): ?>
-                    <a class="btn btn-primary" href="buy_tickets.php">Buy Tickets</a>
+                    <a class="btn btn-primary" href="buy-tickets.php">Buy Tickets</a>
                 <?php else: ?>
-                    <a class="btn btn-primary" href="login.html"
-                       onclick="alert('You must login or create an account first')">
-                       Buy Tickets
-                    </a>
+                    <a class="btn btn-primary" href="login.html" title="Log in or create an account to buy tickets">Buy Tickets</a>
                 <?php endif; ?>
             </div>
         </section>
