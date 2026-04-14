@@ -2,7 +2,7 @@
 session_start();
 
 if (!isset($_SESSION['customer_id'])) {
-    header('Location: login.html');
+    header('Location: sign-in.html');
     exit;
 }
 
@@ -32,6 +32,7 @@ $animals = $result->fetchAll(PDO::FETCH_ASSOC);
             <span class="cr-brand">Greenwood Zoo</span>
             <nav class="cr-nav" aria-label="Report navigation">
                 <a href="customer-dashboard.php">Dashboard</a>
+                <a href="buy-tickets.php">Buy tickets</a>
                 <a href="customer_tickets_report.php">My tickets</a>
                 <a class="cr-btn-outline" href="logout.php">Sign out</a>
             </nav>
