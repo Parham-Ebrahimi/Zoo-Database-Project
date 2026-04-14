@@ -11,7 +11,7 @@ URL: https://team9zooproject-ctfjc8b7fzhcggeh.eastus2-01.azurewebsites.net/webap
 - **Password:** admin123
 
 ## Customer Access
-- **Customer Login Page:** /customer-login.html
+- **Login (staff username or member email):** /login.html
 - **Sign Up Page:** /signup.html
 
 ## Database MySQL

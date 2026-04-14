@@ -1,7 +1,7 @@
 <?php
 session_start();
 if (!isset($_SESSION['user_id'])) {
-    header('Location: customer-login.html');
+    header('Location: login.html');
     exit;
 }
 require 'db.php';
