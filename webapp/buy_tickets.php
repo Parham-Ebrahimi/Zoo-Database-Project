@@ -80,93 +80,122 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Buy Tickets — Greenwood Zoo</title>
-    <link rel="stylesheet" href="customer-reports.css">
+    <link rel="stylesheet" href="index.css">
     <style>
-        .form-card {
-            background: var(--cr-surface);
-            border-radius: var(--cr-radius);
-            box-shadow: var(--cr-shadow);
-            border: 1px solid var(--cr-border);
-            padding: 2rem;
-            max-width: 560px;
-        }
-        .form-group {
-            display: flex;
-            flex-direction: column;
-            margin-bottom: 1.1rem;
-        }
-        .form-group label {
-            font-weight: 600;
-            font-size: 0.9rem;
-            margin-bottom: 0.4rem;
-            color: var(--cr-accent);
-        }
-        .form-group select,
-        .form-group input {
-            padding: 0.6rem 0.85rem;
-            border: 1px solid var(--cr-border);
-            border-radius: 8px;
-            font: inherit;
-            font-size: 0.95rem;
-            background: white;
-            color: var(--cr-text);
-        }
-        .form-group select:focus,
-        .form-group input:focus {
-            outline: none;
-            border-color: var(--cr-accent-soft);
-        }
-        .ticket-price {
-            margin-top: 0.4rem;
-            font-size: 0.85rem;
-            color: var(--cr-muted);
-        }
-        .total-row {
-            margin: 1.25rem 0;
-            padding: 0.85rem 1rem;
-            background: #eef6ea;
-            border-radius: 8px;
-            font-weight: 700;
-            color: var(--cr-accent);
-            font-size: 1.05rem;
-        }
-        .submit-btn {
-            padding: 0.75rem 2.5rem;
-            background: var(--cr-accent);
-            color: white;
-            border: none;
-            border-radius: 999px;
-            font: inherit;
-            font-weight: 600;
-            font-size: 0.95rem;
-            cursor: pointer;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-        }
-        .submit-btn:hover { background: #1a5c2b; }
-        .msg-error   { color: #c0392b; font-weight: 600; margin-bottom: 1rem; }
-        .msg-success { color: #27ae60; font-weight: 600; margin-bottom: 1rem; }
-    </style>
+    .form-card {
+        background: white;
+        border-radius: 20px;
+        padding: 2rem;
+        max-width: 560px;
+        box-shadow: var(--shadow);
+        border: none;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+        margin-bottom: 1rem;
+    }
+
+    .form-group label {
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: var(--text-color);
+    }
+
+    .form-group select,
+    .form-group input {
+        padding: 0.65rem 1rem;
+        border: 2px solid #ddd;
+        border-radius: 10px;
+        font: inherit;
+        font-size: 0.95rem;
+        background: white;
+    }
+
+    .form-group select:focus,
+    .form-group input:focus {
+        outline: none;
+        border-color: var(--accent-color);
+    }
+
+    .ticket-price {
+        font-size: 0.85rem;
+        color: #777;
+    }
+
+    .total-row {
+        margin: 1.2rem 0;
+        padding: 0.85rem 1rem;
+        background: #f5f5f5;
+        border-radius: 10px;
+        font-weight: 600;
+        color: var(--text-color);
+        font-size: 1rem;
+    }
+
+    .submit-btn {
+        margin-top: 0.5rem;
+        padding: 0.75rem 2rem;
+        background: var(--accent-color);
+        border: none;
+        border-radius: 1000px;
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+        color: white;
+    }
+
+    .submit-btn:hover {
+        background: var(--text-color);
+    }
+
+    .msg-error {
+        color: #e74c3c;
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+
+    .msg-success {
+        color: #27ae60;
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+
+    .back-link {
+        display: inline-block;
+        margin-bottom: 1rem;
+        color: var(--text-color);
+        font-weight: 600;
+        text-decoration: none;
+    }
+
+    .back-link:hover {
+        text-decoration: underline;
+    }
+</style>
 </head>
-<body class="cr-body">
-    <div class="cr-shell">
-        <header class="cr-topbar">
-            <span class="cr-brand">Greenwood Zoo</span>
-            <nav class="cr-nav">
-                <li><span>Welcome, <?= htmlspecialchars($_SESSION['firstname']) ?></span></li>
-                <li><a href="index.php">Home</a></li>
-                <a href="customer-dashboard.php">Dashboard</a>
-                <a href="customer_animals_report.php">Animals</a>
-                <a href="customer_tickets_report.php">My tickets</a>
-                <a class="cr-btn-outline" href="logout.php">Sign out</a>
+<body>
+    <div class="profile-wrapper">
+        <header class="site-header">
+            <a class="logo" href="index.php">Greenwood Zoo</a>
+            <nav aria-label="Main">
+                <ul class="nav-links">
+                    <li><a href="index.php">Home</a></li>
+                    <li><a href="buy_tickets.php">Buy Tickets</a></li>
+                    <li><a href="customer_animals_report.php">Animals</a></li>
+                    <li><a href="customer_profile.php">Profile</a></li>
+                    <li><span>Welcome, <?= htmlspecialchars($_SESSION['firstname']) ?></span></li>
+                    <li><a href="logout.php">Logout</a></li>
+                </ul>
             </nav>
         </header>
 
-        <main>
-            <div class="cr-hero">
-                 <a class="back-link" href="index.php">← Back to Home</a>
-                <h1>Buy tickets</h1>
-                <p>Select your ticket type, visit date, and quantity to complete your purchase.</p>
+        <div class="profile-card">
+             <a class="back-link" href="customer-dashboard.php">← Back to Dashboard</a>
+             <h1>Buy tickets</h1>
+             <p>Select your ticket type, visit date, and quantity to complete your purchase.</p>
             </div>
 
             <div class="form-card">
@@ -221,7 +250,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <button type="submit" class="submit-btn">Purchase tickets</button>
                 </form>
             </div>
-        </main>
+        </div>
     </div>
 
     <script>

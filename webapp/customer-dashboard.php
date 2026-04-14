@@ -320,7 +320,7 @@ $animalSpotlightImages = [
             <nav aria-label="Main">
                 <ul class="nav-links">
                     <li><a href="index.php">Home</a></li>
-                    <li><a href="buy-tickets.php">Buy Tickets</a></li>
+                    <li><a href="buy_tickets.php">Buy Tickets</a></li>
                     <li><a href="customer_animals_report.php">Animals</a></li>
                     <li><a href="customer_profile.php">Profile</a></li>
                     <li><span>Welcome, <?= htmlspecialchars($_SESSION['firstname']) ?></span></li>
@@ -344,7 +344,7 @@ $animalSpotlightImages = [
                 <aside class="dash-sidebar" aria-label="Quick links">
                     <div class="dash-card">
                         <h2>Tickets</h2>
-                        <a href="buy-tickets.php" class="primary">Buy tickets</a>
+                        <a href="buy_tickets.php" class="primary">Buy tickets</a>
                         <a href="customer_tickets_report.php">My ticket history</a>
                     </div>
                     <div class="dash-card">
