@@ -21,7 +21,7 @@ $result = $pdo->query("
     JOIN ordercategories oc ON o.OrderCategoryID = oc.OrderCategoryID
     JOIN order_tickets ot   ON o.OrderID = ot.OrderID
     JOIN customers c        ON o.CustomerID = c.CustomerID
-    WHERE o.OrderCategoryID BETWEEN 1 AND 5
+    WHERE o.OrderCategoryID BETWEEN 1 AND 4
     ORDER BY o.OrderDate DESC
 ");
 $tickets = $result->fetchAll();

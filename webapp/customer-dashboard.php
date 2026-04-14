@@ -12,7 +12,7 @@ $customerID = (int) $_SESSION['customer_id'];
 $stmt = $pdo->prepare("
     SELECT COUNT(*) FROM orders
     WHERE CustomerID = ? AND ScheduledDate >= CURDATE()
-    AND OrderCategoryID BETWEEN 1 AND 5
+    AND OrderCategoryID BETWEEN 1 AND 4
 ");
 $stmt->execute([$customerID]);
 $upcomingVisits = $stmt->fetchColumn();

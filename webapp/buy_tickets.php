@@ -9,8 +9,12 @@ require 'db.php';
 $error = '';
 $success = '';
 
-// Fetch ticket categories from database
-$categories = $pdo->query("SELECT * FROM ordercategories ORDER BY Price")->fetchAll();
+// Zoo tickets only (order_tickets allows categories 1–4; not Food/Shop)
+$categories = $pdo->query("
+    SELECT * FROM ordercategories
+    WHERE OrderCategoryID BETWEEN 1 AND 4
+    ORDER BY Price
+")->fetchAll();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $categoryID    = (int)$_POST['category_id'];
@@ -21,6 +25,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (!$categoryID || !$quantity || !$payment || !$visit_date) {
         $error = 'Please fill in all fields.';
+    } elseif ($categoryID < 1 || $categoryID > 4) {
+        $error = 'Please select a valid zoo ticket type (Adult, Child, Senior, or Student).';
     } else {
         try {
             // Get price from ordercategories

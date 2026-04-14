@@ -9,11 +9,11 @@ require_once 'db.php';
 $error   = '';
 $success = '';
 
-// Load ticket categories (IDs 1-5)
+// Zoo visit ticket types only (must match order_tickets CHECK: categories 1–4; not Food/Shop)
 $categories = $pdo->query("
     SELECT OrderCategoryID, CategoryName, Price
     FROM ordercategories
-    WHERE OrderCategoryID BETWEEN 1 AND 5
+    WHERE OrderCategoryID BETWEEN 1 AND 4
     ORDER BY OrderCategoryID
 ")->fetchAll();
 
@@ -27,6 +27,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Validate
     if (!$categoryID || !$quantity || !$paymentMode || !$visitDate) {
         $error = 'Please fill in all fields.';
+    } elseif ($categoryID < 1 || $categoryID > 4) {
+        $error = 'Please select a valid zoo ticket type (Adult, Child, Senior, or Student).';
     } elseif ($quantity < 1 || $quantity > 20) {
         $error = 'Quantity must be between 1 and 20.';
     } elseif (strtotime($visitDate) < strtotime('today')) {
