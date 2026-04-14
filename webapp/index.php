@@ -132,7 +132,7 @@ session_start();
             <!-- Buy Tickets button with login check -->
             <div style="margin-top:20px;">
                 <?php if (isset($_SESSION['customer_id'])): ?>
-                    <a class="btn btn-primary" href="buy-tickets.php">Buy Tickets</a>
+                    <a class="btn btn-primary" href="buy_tickets.php">Buy Tickets</a>
                 <?php else: ?>
                     <a class="btn btn-primary" href="login.html"
                        onclick="alert('You must login or create an account first')">

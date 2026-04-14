@@ -109,7 +109,7 @@ $role = $_SESSION['role'];
         <div class="card">
             <h2>Data Entry</h2>
 
-            <?php if ($role === 'admin' || $role === 'caretaker'): ?>
+            <?php if ($role === 'admin' || $role === 'caretaker' || $role === 'vet'): ?>
                 <a href="add-animal.php">Add Animal</a>
             <?php endif; ?>
 
@@ -137,7 +137,7 @@ $role = $_SESSION['role'];
 
             <?php if ($role === 'admin'): ?>
                 <a href="employees_report.php">View Employees</a>
-                <a href="tickets_report.php">View Tickets</a>
+                <a href="revenue_report.php">View Revenue Reports</a>
             <?php endif; ?>
 
             <?php if ($role === 'vet'): ?>
