@@ -27,7 +27,7 @@ session_start();
 
                 <li><a href="#about">About</a></li>
                 <li><a href="#hours">Hours</a></li>
-                <li><a href="#gallery">Animals</a></li>
+                <li><a href="animals.php">Animals</a></li>
                 <li><a href="#visit">Visit</a></li>
             </ul>
         </nav>
@@ -79,7 +79,7 @@ session_start();
                             <td>5:00 p.m.</td>
                         </tr>
                         <tr>
-                            <td>Holidays </td>
+                            <td>Holidays</td>
                             <td>8:00 a.m.</td>
                             <td>4:00 p.m.</td>
                         </tr>
@@ -92,22 +92,35 @@ session_start();
             <h2 id="gallery-heading">Meet some of our residents</h2>
             <p class="lead">A few highlights from our habitats, see them in person on your next visit!</p>
             <div class="gallery">
-                <figure>
-                    <img src="https://images.unsplash.com/photo-1771341398737-b2467b6776a7?auto=format&fit=crop&w=800&q=80" alt="Baby elephant in a grassy field" width="800" height="600" loading="lazy">
-                    <figcaption>Elephants</figcaption>
-                </figure>
-                <figure>
-                    <img src="https://images.unsplash.com/photo-1737738736083-838af5116f95?auto=format&fit=crop&w=800&q=80" alt="Giraffe standing in a field" width="800" height="600" loading="lazy">
-                    <figcaption>Giraffes</figcaption>
-                </figure>
-                <figure>
-                    <img src="https://images.unsplash.com/photo-1737498352674-aadc9f986eea?auto=format&fit=crop&w=800&q=80" alt="Penguin on a rocky beach" width="800" height="600" loading="lazy">
-                    <figcaption>Penguins</figcaption>
-                </figure>
-                <figure>
-                    <img src="https://images.unsplash.com/photo-1656899367542-3fc106faa104?auto=format&fit=crop&w=800&q=80" alt="Red panda in a tree" width="800" height="600" loading="lazy">
-                    <figcaption>Red pandas</figcaption>
-                </figure>
+
+                <a href="animals/elephants.php" style="text-decoration:none;">
+                    <figure class="animal-card">
+                        <img src="https://images.unsplash.com/photo-1771341398737-b2467b6776a7?auto=format&fit=crop&w=800&q=80" alt="Baby elephant in a grassy field" width="800" height="600" loading="lazy">
+                        <figcaption>Elephants</figcaption>
+                    </figure>
+                </a>
+
+                <a href="animals/giraffes.php" style="text-decoration:none;">
+                    <figure class="animal-card">
+                        <img src="https://images.unsplash.com/photo-1737738736083-838af5116f95?auto=format&fit=crop&w=800&q=80" alt="Giraffe standing in a field" width="800" height="600" loading="lazy">
+                        <figcaption>Giraffes</figcaption>
+                    </figure>
+                </a>
+
+                <a href="animals/penguins.php" style="text-decoration:none;">
+                    <figure class="animal-card">
+                        <img src="https://images.unsplash.com/photo-1737498352674-aadc9f986eea?auto=format&fit=crop&w=800&q=80" alt="Penguin on a rocky beach" width="800" height="600" loading="lazy">
+                        <figcaption>Penguins</figcaption>
+                    </figure>
+                </a>
+
+                <a href="animals/red-pandas.php" style="text-decoration:none;">
+                    <figure class="animal-card">
+                        <img src="https://images.unsplash.com/photo-1656899367542-3fc106faa104?auto=format&fit=crop&w=800&q=80" alt="Red panda in a tree" width="800" height="600" loading="lazy">
+                        <figcaption>Red pandas</figcaption>
+                    </figure>
+                </a>
+
             </div>
         </section>
 
@@ -117,11 +130,11 @@ session_start();
             <div class="visit-info">
                 <div class="card">
                     <strong>Address</strong>
-                    <span>1234 Greenwood Street,00000</span>
+                    <span>1234 Greenwood Street, 00000</span>
                 </div>
                 <div class="card">
                     <strong>Phone</strong>
-                    <span>(123) 456 -ZOOO</span>
+                    <span>(123) 456-ZOOO</span>
                 </div>
                 <div class="card">
                     <strong>Parking</strong>
@@ -129,8 +142,7 @@ session_start();
                 </div>
             </div>
 
-            <!-- Buy Tickets button with login check -->
-            <div style="margin-top:20px;">
+            <div style="margin-top:20px; text-align:center;">
                 <?php if (isset($_SESSION['customer_id'])): ?>
                     <a class="btn btn-primary" href="buy_tickets.php">Buy Tickets</a>
                 <?php else: ?>
