@@ -92,34 +92,35 @@ session_start();
             <h2 id="gallery-heading">Meet some of our residents</h2>
             <p class="lead">A few highlights from our habitats, see them in person on your next visit!</p>
             <div class="gallery">
-                <figure class="animal-card">
-                    <img src="https://images.unsplash.com/photo-1771341398737-b2467b6776a7?auto=format&fit=crop&w=800&q=80" alt="Baby elephant in a grassy field" width="800" height="600" loading="lazy">
-                    <figcaption>
-                        Elephants
-                        <a class="animal-link" href="animals/elephants.php">Learn More →</a>
-                    </figcaption>
-                </figure>
-                <figure class="animal-card">
-                    <img src="https://images.unsplash.com/photo-1737738736083-838af5116f95?auto=format&fit=crop&w=800&q=80" alt="Giraffe standing in a field" width="800" height="600" loading="lazy">
-                    <figcaption>
-                        Giraffes
-                        <a class="animal-link" href="animals/giraffes.php">Learn More →</a>
-                    </figcaption>
-                </figure>
-                <figure class="animal-card">
-                    <img src="https://images.unsplash.com/photo-1737498352674-aadc9f986eea?auto=format&fit=crop&w=800&q=80" alt="Penguin on a rocky beach" width="800" height="600" loading="lazy">
-                    <figcaption>
-                        Penguins
-                        <a class="animal-link" href="animals/penguins.php">Learn More →</a>
-                    </figcaption>
-                </figure>
-                <figure class="animal-card">
-                    <img src="https://images.unsplash.com/photo-1656899367542-3fc106faa104?auto=format&fit=crop&w=800&q=80" alt="Red panda in a tree" width="800" height="600" loading="lazy">
-                    <figcaption>
-                        Red pandas
-                        <a class="animal-link" href="animals/red-pandas.php">Learn More →</a>
-                    </figcaption>
-                </figure>
+
+                <a href="animals/elephants.php" style="text-decoration:none;">
+                    <figure class="animal-card">
+                        <img src="https://images.unsplash.com/photo-1771341398737-b2467b6776a7?auto=format&fit=crop&w=800&q=80" alt="Baby elephant in a grassy field" width="800" height="600" loading="lazy">
+                        <figcaption>Elephants</figcaption>
+                    </figure>
+                </a>
+
+                <a href="animals/giraffes.php" style="text-decoration:none;">
+                    <figure class="animal-card">
+                        <img src="https://images.unsplash.com/photo-1737738736083-838af5116f95?auto=format&fit=crop&w=800&q=80" alt="Giraffe standing in a field" width="800" height="600" loading="lazy">
+                        <figcaption>Giraffes</figcaption>
+                    </figure>
+                </a>
+
+                <a href="animals/penguins.php" style="text-decoration:none;">
+                    <figure class="animal-card">
+                        <img src="https://images.unsplash.com/photo-1737498352674-aadc9f986eea?auto=format&fit=crop&w=800&q=80" alt="Penguin on a rocky beach" width="800" height="600" loading="lazy">
+                        <figcaption>Penguins</figcaption>
+                    </figure>
+                </a>
+
+                <a href="animals/red-pandas.php" style="text-decoration:none;">
+                    <figure class="animal-card">
+                        <img src="https://images.unsplash.com/photo-1656899367542-3fc106faa104?auto=format&fit=crop&w=800&q=80" alt="Red panda in a tree" width="800" height="600" loading="lazy">
+                        <figcaption>Red pandas</figcaption>
+                    </figure>
+                </a>
+
             </div>
         </section>
 
