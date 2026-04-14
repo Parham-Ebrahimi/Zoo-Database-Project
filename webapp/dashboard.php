@@ -126,6 +126,9 @@ $role = $_SESSION['role'];
                 <a href="add-order.php">Record Sale</a>
             <?php endif; ?>
 
+            <?php if ($role === 'admin' ): ?>
+                <a href="caretaker.php">Update Animal Status</a>
+            <?php endif; ?>
         </div>
 
         <div class="card">
