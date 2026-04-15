@@ -20,13 +20,15 @@ $items = $pdo->query("
     ORDER BY s.ShopID, si.ItemName
 ")->fetchAll(PDO::FETCH_ASSOC);
 
-// Shop item images by keyword
+// Images keyed by substrings matched against shop_items.ItemName (first match wins).
 $shopImages = [
     'map'       => 'https://images.unsplash.com/photo-1524661135-423995f22d0b?w=600&q=80',
     'hat'       => 'https://images.unsplash.com/photo-1521369909029-2afed882baee?w=600&q=80',
-    'plush'     => 'https://images.unsplash.com/photo-1594736797933-d0501ba2fe65?w=600&q=80',
+    'stuffed'   => 'https://images.unsplash.com/photo-1566576912321-d58ddd7a6088?w=600&q=80',
+    'plush'     => 'https://images.unsplash.com/photo-1566576912321-d58ddd7a6088?w=600&q=80',
     'mug'       => 'https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?w=600&q=80',
-    'postcard'  => 'https://images.unsplash.com/photo-1586769852836-bc069f19e1be?w=600&q=80',
+    'post card' => 'https://images.unsplash.com/photo-1586281380349-616513e97ed9?w=600&q=80',
+    'postcard'  => 'https://images.unsplash.com/photo-1586281380349-616513e97ed9?w=600&q=80',
     'bracelet'  => 'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=600&q=80',
     'keychain'  => 'https://images.unsplash.com/photo-1601924994987-69e26d50dc26?w=600&q=80',
     't-shirt'   => 'https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=600&q=80',
