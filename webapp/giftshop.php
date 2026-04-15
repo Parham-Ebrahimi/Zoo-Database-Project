@@ -21,14 +21,17 @@ $items = $pdo->query("
 ")->fetchAll(PDO::FETCH_ASSOC);
 
 // Images keyed by substrings matched against shop_items.ItemName (first match wins).
+// Local files live in /images (repo root); path is relative to webapp/ pages.
 $shopImages = [
     'map'       => 'https://images.unsplash.com/photo-1524661135-423995f22d0b?w=600&q=80',
     'hat'       => 'https://images.unsplash.com/photo-1521369909029-2afed882baee?w=600&q=80',
-    'stuffed'   => 'https://images.unsplash.com/photo-1566576912321-d58ddd7a6088?w=600&q=80',
-    'plush'     => 'https://images.unsplash.com/photo-1566576912321-d58ddd7a6088?w=600&q=80',
+    'elephant'  => '../images/elephant plush.jpg',
+    'lion'      => '../images/lion plush.jpg',
+    'stuffed'   => '../images/lion plush.jpg',
+    'plush'     => '../images/lion plush.jpg',
     'mug'       => 'https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?w=600&q=80',
-    'post card' => 'https://images.unsplash.com/photo-1586281380349-616513e97ed9?w=600&q=80',
-    'postcard'  => 'https://images.unsplash.com/photo-1586281380349-616513e97ed9?w=600&q=80',
+    'post card' => '../images/post card.webp',
+    'postcard'  => '../images/post card.webp',
     'bracelet'  => 'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=600&q=80',
     'keychain'  => 'https://images.unsplash.com/photo-1601924994987-69e26d50dc26?w=600&q=80',
     't-shirt'   => 'https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=600&q=80',
@@ -44,6 +47,18 @@ function getShopImage(string $name, array $images): string {
         if ($keyword !== 'default' && str_contains($lower, $keyword)) return $url;
     }
     return $images['default'];
+}
+
+/** Safe src for local paths with spaces; passes through http(s) URLs. */
+function giftImageSrc(string $src): string {
+    if (preg_match('#^https?://#i', $src)) {
+        return $src;
+    }
+    $src = str_replace('\\', '/', $src);
+    $segments = array_values(array_filter(explode('/', $src), function ($s) {
+        return $s !== '';
+    }));
+    return implode('/', array_map('rawurlencode', $segments));
 }
 
 $cartCount = array_sum($_SESSION['cart']['food'])
@@ -162,7 +177,7 @@ foreach ($items as $item) {
             ?>
             <div class="shop-card">
                 <img class="shop-card-img"
-                     src="<?= $img ?>"
+                     src="<?= htmlspecialchars(giftImageSrc($img), ENT_QUOTES) ?>"
                      alt="<?= htmlspecialchars($item['ItemName']) ?>"
                      loading="lazy">
                 <div class="shop-card-body">
