@@ -7,8 +7,9 @@ if (!isset($_SESSION['customer_id'])) {
 require_once 'db.php';
 
 if (!isset($_SESSION['cart'])) {
-    $_SESSION['cart'] = ['food' => [], 'shop' => [], 'ticket' => []];
+    $_SESSION['cart'] = ['food' => [], 'ticket' => []];
 }
+$_SESSION['cart']['shop'] = [];
 
 // Load all food items with stall info
 $items = $pdo->query("
@@ -42,7 +43,6 @@ function getFoodImage(string $name, array $images): string {
 
 // Cart count for badge
 $cartCount = array_sum($_SESSION['cart']['food'])
-           + array_sum($_SESSION['cart']['shop'])
            + array_sum(array_column($_SESSION['cart']['ticket'], 'qty'));
 
 $added = $_GET['added'] ?? '';
@@ -142,7 +142,6 @@ $added = $_GET['added'] ?? '';
         <span class="cr-brand">Greenwood Zoo</span>
         <nav class="zoo-nav">
             <a href="customer-dashboard.php">Dashboard</a>
-            <a href="giftshop.php">Gift Shop</a>
             <a href="buy_tickets.php">Tickets</a>
             <a href="cart.php" class="cr-btn-outline cart-badge">
                 🛒 Cart

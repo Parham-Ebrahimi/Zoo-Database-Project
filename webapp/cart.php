@@ -7,8 +7,9 @@ if (!isset($_SESSION['customer_id'])) {
 require_once 'db.php';
 
 if (!isset($_SESSION['cart'])) {
-    $_SESSION['cart'] = ['food' => [], 'shop' => [], 'ticket' => []];
+    $_SESSION['cart'] = ['food' => [], 'ticket' => []];
 }
+$_SESSION['cart']['shop'] = [];
 
 // ── Load food items in cart ──────────────────────────────────────
 $foodItems = [];
@@ -22,21 +23,6 @@ if (!empty($_SESSION['cart']['food'])) {
         $r['subtotal'] = $r['Price'] * $qty;
         $foodTotal    += $r['subtotal'];
         $foodItems[]   = $r;
-    }
-}
-
-// ── Load shop items in cart ──────────────────────────────────────
-$shopItems = [];
-$shopTotal = 0;
-if (!empty($_SESSION['cart']['shop'])) {
-    $ids  = implode(',', array_map('intval', array_keys($_SESSION['cart']['shop'])));
-    $rows = $pdo->query("SELECT ShopItemID, ItemName, Price FROM shop_items WHERE ShopItemID IN ($ids)")->fetchAll();
-    foreach ($rows as $r) {
-        $qty = $_SESSION['cart']['shop'][$r['ShopItemID']] ?? 0;
-        $r['qty']      = $qty;
-        $r['subtotal'] = $r['Price'] * $qty;
-        $shopTotal    += $r['subtotal'];
-        $shopItems[]   = $r;
     }
 }
 
@@ -64,9 +50,8 @@ if (!empty($_SESSION['cart']['ticket'])) {
     }
 }
 
-$grandTotal = $foodTotal + $shopTotal + $ticketTotal;
+$grandTotal = $foodTotal + $ticketTotal;
 $cartCount  = array_sum($_SESSION['cart']['food'])
-            + array_sum($_SESSION['cart']['shop'])
             + array_sum(array_column($_SESSION['cart']['ticket'], 'qty'));
 $isEmpty    = $cartCount === 0;
 ?>
@@ -145,7 +130,6 @@ $isEmpty    = $cartCount === 0;
         <nav class="zoo-nav">
             <a href="customer-dashboard.php">Dashboard</a>
             <a href="restaurant.php">Restaurant</a>
-            <a href="giftshop.php">Gift Shop</a>
             <a href="buy_tickets.php">Tickets</a>
             <a href="logout.php" class="cr-btn-outline">Sign out</a>
         </nav>
@@ -158,10 +142,9 @@ $isEmpty    = $cartCount === 0;
         <div class="empty-state">
             <span class="emoji">🛒</span>
             <h2>Your cart is empty</h2>
-            <p>Browse our restaurant, gift shop, or buy tickets to get started.</p>
+            <p>Browse our restaurant or buy tickets to get started.</p>
             <div class="shop-links">
                 <a href="restaurant.php"  class="shop-link">🍽️ Restaurant</a>
-                <a href="giftshop.php"    class="shop-link outline">🛍️ Gift Shop</a>
                 <a href="buy_tickets.php" class="shop-link outline">🎟️ Tickets</a>
             </div>
         </div>
@@ -244,43 +227,6 @@ $isEmpty    = $cartCount === 0;
                 </div>
                 <?php endif; ?>
 
-                <?php if (!empty($shopItems)): ?>
-                <div class="cart-section">
-                    <div class="cart-section-header"><span class="icon">🛍️</span> Gift Shop</div>
-                    <table class="cart-table">
-                        <thead><tr><th>Item</th><th>Price</th><th>Qty</th><th>Subtotal</th><th></th></tr></thead>
-                        <tbody>
-                        <?php foreach ($shopItems as $s): ?>
-                        <tr>
-                            <td><?= htmlspecialchars($s['ItemName']) ?></td>
-                            <td>$<?= number_format($s['Price'], 2) ?></td>
-                            <td>
-                                <form class="qty-form" method="POST" action="cart_action.php">
-                                    <input type="hidden" name="action"   value="update">
-                                    <input type="hidden" name="type"     value="shop">
-                                    <input type="hidden" name="id"       value="<?= $s['ShopItemID'] ?>">
-                                    <input type="hidden" name="redirect" value="cart.php">
-                                    <input class="qty-input" type="number" name="qty" value="<?= $s['qty'] ?>" min="1" max="20">
-                                    <button class="update-btn" type="submit">↻</button>
-                                </form>
-                            </td>
-                            <td class="subtotal">$<?= number_format($s['subtotal'], 2) ?></td>
-                            <td>
-                                <form method="POST" action="cart_action.php">
-                                    <input type="hidden" name="action"   value="remove">
-                                    <input type="hidden" name="type"     value="shop">
-                                    <input type="hidden" name="id"       value="<?= $s['ShopItemID'] ?>">
-                                    <input type="hidden" name="redirect" value="cart.php">
-                                    <button class="remove-btn" type="submit">Remove</button>
-                                </form>
-                            </td>
-                        </tr>
-                        <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-                <?php endif; ?>
-
                 <form method="POST" action="cart_action.php" style="margin-top:.5rem">
                     <input type="hidden" name="action"   value="clear">
                     <input type="hidden" name="redirect" value="cart.php">
@@ -299,14 +245,10 @@ $isEmpty    = $cartCount === 0;
                     <?php if ($foodTotal > 0): ?>
                     <div class="summary-row"><span>Restaurant</span><span>$<?= number_format($foodTotal, 2) ?></span></div>
                     <?php endif; ?>
-                    <?php if ($shopTotal > 0): ?>
-                    <div class="summary-row"><span>Gift Shop</span><span>$<?= number_format($shopTotal, 2) ?></span></div>
-                    <?php endif; ?>
                     <div class="summary-row total"><span>Total</span><span>$<?= number_format($grandTotal, 2) ?></span></div>
                     <a href="checkout.php" class="checkout-btn">Proceed to checkout →</a>
                     <div class="continue-links">
                         <a href="restaurant.php">+ Add food items</a>
-                        <a href="giftshop.php">+ Add shop items</a>
                         <a href="buy_tickets.php">+ Add tickets</a>
                     </div>
                 </div>

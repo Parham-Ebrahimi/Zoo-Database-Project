@@ -7,14 +7,14 @@ if (!isset($_SESSION['customer_id'])) {
 require_once 'db.php';
 
 if (!isset($_SESSION['cart'])) {
-    $_SESSION['cart'] = ['food' => [], 'shop' => [], 'ticket' => []];
+    $_SESSION['cart'] = ['food' => [], 'ticket' => []];
 }
+$_SESSION['cart']['shop'] = [];
 
 // ── Rebuild cart totals ──────────────────────────────────────────
 $foodItems   = [];
-$shopItems   = [];
 $ticketItems = [];
-$foodTotal   = $shopTotal = $ticketTotal = 0;
+$foodTotal   = $ticketTotal = 0;
 
 if (!empty($_SESSION['cart']['food'])) {
     $ids  = implode(',', array_map('intval', array_keys($_SESSION['cart']['food'])));
@@ -25,18 +25,6 @@ if (!empty($_SESSION['cart']['food'])) {
         $r['subtotal'] = $r['Price'] * $qty;
         $foodTotal    += $r['subtotal'];
         $foodItems[]   = $r;
-    }
-}
-
-if (!empty($_SESSION['cart']['shop'])) {
-    $ids  = implode(',', array_map('intval', array_keys($_SESSION['cart']['shop'])));
-    $rows = $pdo->query("SELECT ShopItemID, ItemName, Price FROM shop_items WHERE ShopItemID IN ($ids)")->fetchAll();
-    foreach ($rows as $r) {
-        $qty           = $_SESSION['cart']['shop'][$r['ShopItemID']];
-        $r['qty']      = $qty;
-        $r['subtotal'] = $r['Price'] * $qty;
-        $shopTotal    += $r['subtotal'];
-        $shopItems[]   = $r;
     }
 }
 
@@ -53,7 +41,7 @@ if (!empty($_SESSION['cart']['ticket'])) {
     }
 }
 
-$grandTotal = $foodTotal + $shopTotal + $ticketTotal;
+$grandTotal = $foodTotal + $ticketTotal;
 $isEmpty    = ($grandTotal == 0);
 $error      = '';
 $success    = false;
@@ -83,18 +71,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$isEmpty) {
                 }
             }
 
-            // Insert shop order
-            if (!empty($shopItems)) {
-                $stmt = $pdo->prepare("INSERT INTO orders (OrderDate, CustomerID, OrderCategoryID, PaymentMode, TransactionAmount, ScheduledDate) VALUES (?, ?, 6, ?, ?, NULL)");
-                $stmt->execute([$today, $customerID, $paymentMode, $shopTotal]);
-                $shopOrderID = $pdo->lastInsertId();
-
-                $stmt2 = $pdo->prepare("INSERT INTO order_shop_items (OrderID, ShopItemID, Quantity) VALUES (?, ?, ?)");
-                foreach ($shopItems as $s) {
-                    $stmt2->execute([$shopOrderID, $s['ShopItemID'], $s['qty']]);
-                }
-            }
-
             // Insert ticket orders (one per ticket type/date combo)
             if (!empty($ticketItems)) {
                 foreach ($ticketItems as $t) {
@@ -110,7 +86,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$isEmpty) {
             $pdo->commit();
 
             // Clear the cart
-            $_SESSION['cart'] = ['food' => [], 'shop' => [], 'ticket' => []];
+            $_SESSION['cart'] = ['food' => [], 'ticket' => []];
+            $_SESSION['cart']['shop'] = [];
             $success = true;
 
         } catch (Exception $e) {
@@ -256,15 +233,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$isEmpty) {
                     <?php endforeach; ?>
                     <?php endif; ?>
 
-                    <?php if (!empty($shopItems)): ?>
-                    <p class="section-sub">🛍️ Gift Shop</p>
-                    <?php foreach ($shopItems as $s): ?>
-                    <div class="review-row">
-                        <div class="label"><?= htmlspecialchars($s['ItemName']) ?> × <?= $s['qty'] ?></div>
-                        <div class="price">$<?= number_format($s['subtotal'], 2) ?></div>
-                    </div>
-                    <?php endforeach; ?>
-                    <?php endif; ?>
                 </div>
 
                 <!-- Payment Method -->
@@ -305,9 +273,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$isEmpty) {
                         <?php endif; ?>
                         <?php if ($foodTotal > 0): ?>
                         <div class="total-row"><span>Restaurant</span><span>$<?= number_format($foodTotal, 2) ?></span></div>
-                        <?php endif; ?>
-                        <?php if ($shopTotal > 0): ?>
-                        <div class="total-row"><span>Gift Shop</span><span>$<?= number_format($shopTotal, 2) ?></span></div>
                         <?php endif; ?>
                         <div class="total-row grand">
                             <span>Total</span>
