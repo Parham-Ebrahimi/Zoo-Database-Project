@@ -116,18 +116,50 @@ if ($role === 'vet') {
     <div class="card-grid">
         <div class="card">
             <h2>Data Entry</h2>
+            <?php if ($role === 'admin' || $role === 'caretaker' || $role === 'vet'): ?>
+                <a href="add-animal.php">Add Animal</a>
+            <?php endif; ?>
 
-            <a href="add-animal.php">Add Animal</a>
-            <a href="add-employee.php">Add Employee</a>
-            <a href="add-ticket.php">Add Ticket</a>
+            <?php if ($role === 'admin'): ?>
+                <a href="add-employee.php">Add Employee</a>
+                <a href="add-ticket.php">Add Ticket</a>
+            <?php endif; ?>
+
+            <?php if ($role === 'vet'): ?>
+                <a href="add-health-record.php">Add Health Record</a>
+            <?php endif; ?>
+
+            <?php if ($role === 'Gift Shop Employee'): ?>
+                <a href="add-order.php">Record Sale</a>
+            <?php endif; ?>
+
+            <?php if ($role === 'admin' ): ?>
+                <a href="caretaker.php">Update Animal Status</a>
+            <?php endif; ?>
         </div>
 
         <div class="card">
             <h2>Reports</h2>
-            <a href="animals_report.php">View Animals</a>
-            <a href="tickets_report.php">View Tickets</a>
-            <a href="employees_report.php">View Employees</a>
-            <a href="revenue_report.php">View Revenue Reports</a>
+            <?php if ($role === 'admin' || $role === 'caretaker' || $role === 'vet'): ?>
+                <a href="animals_report.php">View Animals</a>
+            <?php endif; ?>
+
+            <?php if ($role === 'admin'): ?>
+                <a href="tickets_report.php"> View Tickets</a>
+                <a href="employees_report.php">View Employees</a>
+                <a href="revenue_report.php">View Revenue Reports</a>
+            <?php endif; ?>
+
+            <?php if ($role === 'vet'): ?>
+                <a href="health-reports.php">Health Records</a>
+            <?php endif; ?>
+
+            <?php if ($role === 'Gift Shop Employee'): ?>
+                <a href="sales_report.php">Sales Report</a>
+            <?php endif; ?>
+            <?php if ($role === 'admin' || $role === 'Gift Shop Employee'): ?>
+                <a href="shop_alerts.php">Gift Shop Restock Alerts</a>
+            <?php endif; ?>
 
         </div>
 
