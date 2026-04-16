@@ -6,10 +6,12 @@ if (!isset($_SESSION['customer_id'])) {
 }
 require_once 'db.php';
 
-$error   = '';
-$success = '';
+if (!isset($_SESSION['cart'])) {
+    $_SESSION['cart'] = ['food' => [], 'ticket' => []];
+}
+$_SESSION['cart']['shop'] = [];
 
-// Zoo visit ticket types only (must match order_tickets CHECK: categories 1–4; not Food/Shop)
+// Zoo visit ticket types only (categories 1–4; matches order_tickets / checkout)
 $categories = $pdo->query("
     SELECT OrderCategoryID, CategoryName, Price
     FROM ordercategories
@@ -17,60 +19,47 @@ $categories = $pdo->query("
     ORDER BY OrderCategoryID
 ")->fetchAll();
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $customerID  = (int) $_SESSION['customer_id'];
-    $categoryID  = (int) $_POST['category_id'];
-    $quantity    = (int) $_POST['quantity'];
-    $paymentMode = trim($_POST['payment_mode']);
-    $visitDate   = $_POST['visit_date'];
+// Cart count for badge
+$cartCount = array_sum($_SESSION['cart']['food'])
+           + array_sum($_SESSION['cart']['shop'])
+           + array_sum(array_column($_SESSION['cart']['ticket'], 'qty'));
 
-    // Validate
-    if (!$categoryID || !$quantity || !$paymentMode || !$visitDate) {
-        $error = 'Please fill in all fields.';
+$added   = '';
+$error   = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $categoryID  = (int)$_POST['category_id'];
+    $quantity    = max(1, (int)$_POST['quantity']);
+    $visitDate   = $_POST['visit_date'] ?? '';
+    $categoryName = trim($_POST['category_name'] ?? '');
+
+    if (!$categoryID || !$visitDate) {
+        $error = 'Please select a ticket type and visit date.';
     } elseif ($categoryID < 1 || $categoryID > 4) {
-        $error = 'Please select a valid zoo ticket type (Adult, Child, Senior, or Student).';
+        $error = 'Invalid ticket type.';
     } elseif ($quantity < 1 || $quantity > 20) {
         $error = 'Quantity must be between 1 and 20.';
     } elseif (strtotime($visitDate) < strtotime('today')) {
         $error = 'Visit date cannot be in the past.';
     } else {
-        // Get price for selected category
-        $stmt = $pdo->prepare("SELECT Price FROM ordercategories WHERE OrderCategoryID = ?");
-        $stmt->execute([$categoryID]);
-        $price = $stmt->fetchColumn();
-
-        if (!$price) {
-            $error = 'Invalid ticket type selected.';
+        // Add to cart
+        $key = $categoryID . '_' . $visitDate;
+        if (isset($_SESSION['cart']['ticket'][$key])) {
+            $_SESSION['cart']['ticket'][$key]['qty'] += $quantity;
         } else {
-            $total = $price * $quantity;
-
-            try {
-                $pdo->beginTransaction();
-
-                // Insert into orders
-                $stmt = $pdo->prepare("
-                    INSERT INTO orders (OrderDate, CustomerID, OrderCategoryID, PaymentMode, TransactionAmount, ScheduledDate)
-                    VALUES (CURDATE(), ?, ?, ?, ?, ?)
-                ");
-                $stmt->execute([$customerID, $categoryID, $paymentMode, $total, $visitDate]);
-                $orderID = $pdo->lastInsertId();
-
-                // Insert into order_tickets
-                $stmt = $pdo->prepare("
-                    INSERT INTO order_tickets (OrderID, OrderCategoryID, Quantity)
-                    VALUES (?, ?, ?)
-                ");
-                $stmt->execute([$orderID, $categoryID, $quantity]);
-
-                $pdo->commit();
-                $success = 'Order placed! ' . (int) $quantity . ' × ' . htmlspecialchars($_POST['category_name'] ?? 'ticket')
-                    . ' for ' . date('M j, Y', strtotime($visitDate)) . '. Total: $' . number_format($total, 2);
-
-            } catch (Exception $e) {
-                $pdo->rollBack();
-                $error = 'Order failed: ' . $e->getMessage();
-            }
+            $_SESSION['cart']['ticket'][$key] = [
+                'category_id' => $categoryID,
+                'visit_date'  => $visitDate,
+                'qty'         => $quantity,
+            ];
         }
+
+        // Recalculate badge count
+        $cartCount = array_sum($_SESSION['cart']['food'])
+                   + array_sum($_SESSION['cart']['shop'])
+                   + array_sum(array_column($_SESSION['cart']['ticket'], 'qty'));
+
+        $added = $quantity . 'x ' . $categoryName . ' ticket(s) for ' . date('M j, Y', strtotime($visitDate)) . ' added to cart!';
     }
 }
 ?>
@@ -80,201 +69,218 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Buy Tickets — Greenwood Zoo</title>
-    <link rel="stylesheet" href="index.css">
+    <link rel="stylesheet" href="customer-reports.css">
     <style>
-    .form-card {
-        background: white;
-        border-radius: 20px;
-        padding: 2rem;
-        max-width: 560px;
-        box-shadow: var(--shadow);
-        border: none;
-    }
+        .zoo-nav { display:flex; flex-wrap:wrap; align-items:center; gap:.75rem 1.25rem; }
+        .zoo-nav a { color:var(--cr-muted); text-decoration:none; font-weight:600; font-size:.9rem; }
+        .zoo-nav a:hover { color:var(--cr-accent); }
+        .zoo-nav .cr-btn-outline { padding:.45rem 1rem; border:1px solid var(--cr-border); border-radius:999px; background:var(--cr-surface); }
+        .cart-badge { position:relative; display:inline-flex; align-items:center; gap:.4rem; }
+        .cart-badge .badge { position:absolute; top:-8px; right:-10px; background:var(--cr-accent); color:white; font-size:.65rem; font-weight:700; padding:1px 6px; border-radius:999px; min-width:18px; text-align:center; }
 
-    .form-group {
-        display: flex;
-        flex-direction: column;
-        gap: 0.4rem;
-        margin-bottom: 1rem;
-    }
+        .form-card {
+            background: var(--cr-surface);
+            border-radius: var(--cr-radius);
+            box-shadow: var(--cr-shadow);
+            border: 1px solid var(--cr-border);
+            padding: 2rem;
+            max-width: 560px;
+        }
+        .form-group { display:flex; flex-direction:column; margin-bottom:1.1rem; }
+        .form-group label { font-weight:600; font-size:.9rem; margin-bottom:.4rem; color:var(--cr-accent); }
+        .form-group select, .form-group input {
+            padding:.6rem .85rem; border:1px solid var(--cr-border); border-radius:8px;
+            font:inherit; font-size:.95rem; background:white; color:var(--cr-text);
+        }
+        .form-group select:focus, .form-group input:focus { outline:none; border-color:var(--cr-accent-soft); }
 
-    .form-group label {
-        font-weight: 600;
-        font-size: 0.9rem;
-        color: var(--text-color);
-    }
+        .ticket-price { margin-top:.4rem; font-size:.85rem; color:var(--cr-muted); }
+        .total-row {
+            margin:1.25rem 0; padding:.85rem 1rem; background:#eef6ea;
+            border-radius:8px; font-weight:700; color:var(--cr-accent); font-size:1.05rem;
+        }
 
-    .form-group select,
-    .form-group input {
-        padding: 0.65rem 1rem;
-        border: 2px solid #ddd;
-        border-radius: 10px;
-        font: inherit;
-        font-size: 0.95rem;
-        background: white;
-    }
+        .add-btn {
+            padding:.75rem 2.5rem; background:var(--cr-accent); color:white; border:none;
+            border-radius:999px; font:inherit; font-weight:600; font-size:.95rem;
+            cursor:pointer; text-transform:uppercase; letter-spacing:.04em; transition:background .15s;
+        }
+        .add-btn:hover { background:#1a5c2b; }
 
-    .form-group select:focus,
-    .form-group input:focus {
-        outline: none;
-        border-color: var(--accent-color);
-    }
+        .view-cart-btn {
+            display:inline-block; padding:.65rem 1.5rem; background:white;
+            border:2px solid var(--cr-accent); color:var(--cr-accent); border-radius:999px;
+            font-weight:600; font-size:.9rem; text-decoration:none; margin-left:.75rem;
+            transition:background .15s;
+        }
+        .view-cart-btn:hover { background:#eef6ea; text-decoration:none; }
 
-    .ticket-price {
-        font-size: 0.85rem;
-        color: #777;
-    }
+        .msg-error   { color:#c0392b; font-weight:600; margin-bottom:1rem; padding:.75rem 1rem; background:#fee2e2; border-radius:8px; }
+        .msg-success { color:#155724; font-weight:600; margin-bottom:1rem; padding:.75rem 1rem; background:#d4edda; border-radius:8px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:.5rem; }
 
-    .total-row {
-        margin: 1.2rem 0;
-        padding: 0.85rem 1rem;
-        background: #f5f5f5;
-        border-radius: 10px;
-        font-weight: 600;
-        color: var(--text-color);
-        font-size: 1rem;
-    }
-
-    .submit-btn {
-        margin-top: 0.5rem;
-        padding: 0.75rem 2rem;
-        background: var(--accent-color);
-        border: none;
-        border-radius: 1000px;
-        font: inherit;
-        font-weight: 600;
-        cursor: pointer;
-        color: white;
-    }
-
-    .submit-btn:hover {
-        background: var(--text-color);
-    }
-
-    .msg-error {
-        color: #e74c3c;
-        font-weight: 600;
-        margin-bottom: 1rem;
-    }
-
-    .msg-success {
-        color: #27ae60;
-        font-weight: 600;
-        margin-bottom: 1rem;
-    }
-
-    .back-link {
-        display: inline-block;
-        margin-bottom: 1rem;
-        color: var(--text-color);
-        font-weight: 600;
-        text-decoration: none;
-    }
-
-    .back-link:hover {
-        text-decoration: underline;
-    }
-</style>
+        .ticket-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .ticket-type-card {
+            border: 2px solid var(--cr-border);
+            border-radius: 12px;
+            padding: 1.1rem 1.25rem;
+            cursor: pointer;
+            transition: border-color .15s, background .15s;
+            background: var(--cr-surface);
+        }
+        .ticket-type-card:hover { border-color: var(--cr-accent-soft); background: #f8fbf6; }
+        .ticket-type-card.selected { border-color: var(--cr-accent); background: #eef6ea; }
+        .ticket-type-card h3 { margin:0 0 .25rem; font-size:.95rem; font-weight:700; color:var(--cr-text); }
+        .ticket-type-card .price { font-size:1.2rem; font-weight:900; color:var(--cr-accent); }
+    </style>
 </head>
-<body>
-    <div class="profile-wrapper">
-        <header class="site-header">
-            <a class="logo" href="index.php">Greenwood Zoo</a>
-            <nav aria-label="Main">
-                <ul class="nav-links">
-                    <li><a href="index.php">Home</a></li>
-                    <li><a href="buy_tickets.php">Buy Tickets</a></li>
-                    <li><a href="customer_animals_report.php">Animals</a></li>
-                    <li><a href="customer_profile.php">Profile</a></li>
-                    <li><span>Welcome, <?= htmlspecialchars($_SESSION['firstname']) ?></span></li>
-                    <li><a href="logout.php">Logout</a></li>
-                </ul>
-            </nav>
-        </header>
+<body class="cr-body">
+<div class="cr-shell">
+    <header class="cr-topbar">
+        <span class="cr-brand">Greenwood Zoo</span>
+        <nav class="zoo-nav">
+            <a href="customer-dashboard.php">Dashboard</a>
+            <a href="restaurant.php">Restaurant</a>
+            <a href="buy_tickets.php">Tickets</a>
+            <a href="cart.php" class="cr-btn-outline cart-badge">
+                🛒 Cart
+                <?php if ($cartCount > 0): ?>
+                    <span class="badge" id="cart-count"><?= $cartCount ?></span>
+                <?php endif; ?>
+            </a>
+            <a href="logout.php" class="cr-btn-outline">Sign out</a>
+        </nav>
+    </header>
 
-        <div class="profile-card">
-             <a class="back-link" href="customer-dashboard.php">← Back to Dashboard</a>
-             <h1>Buy tickets</h1>
-             <p>Select your ticket type, visit date, and quantity to complete your purchase.</p>
+    <main>
+        <div class="cr-hero">
+            <h1>🎟️ Buy Tickets</h1>
+            <p>Select your ticket type, quantity and visit date — tickets are added to your cart so you can checkout everything together.</p>
+        </div>
+
+        <?php if ($error): ?>
+            <div class="msg-error"><?= htmlspecialchars($error) ?></div>
+        <?php endif; ?>
+
+        <?php if ($added): ?>
+            <div class="msg-success">
+                <span>✓ <?= htmlspecialchars($added) ?></span>
+                <div>
+                    <a href="buy_tickets.php" style="color:var(--cr-accent);font-weight:600;text-decoration:none;margin-right:1rem">+ Add more</a>
+                    <a href="cart.php" class="view-cart-btn">View cart (<?= $cartCount ?>)</a>
+                </div>
             </div>
+        <?php endif; ?>
 
-            <div class="form-card">
-                <?php if ($error):   ?><p class="msg-error"><?= htmlspecialchars($error) ?></p><?php endif; ?>
-                <?php if ($success): ?><p class="msg-success"><?= $success ?></p><?php endif; ?>
+        <div class="form-card">
+            <form method="POST" id="ticketForm">
+                <input type="hidden" name="category_name" id="category_name_hidden">
 
-                <form method="POST" id="ticketForm">
-                    <div class="form-group">
-                        <label for="category_id">Ticket type *</label>
-                        <select name="category_id" id="category_id" required onchange="updatePrice()">
-                            <option value="">-- Select a ticket type --</option>
-                            <?php foreach ($categories as $cat): ?>
-                                <option value="<?= $cat['OrderCategoryID'] ?>"
-                                        data-price="<?= htmlspecialchars((string) $cat['Price']) ?>"
-                                        data-name="<?= htmlspecialchars($cat['CategoryName']) ?>">
-                                    <?= htmlspecialchars($cat['CategoryName']) ?> — $<?= number_format((float) $cat['Price'], 2) ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                        <span class="ticket-price" id="priceHint"></span>
-                    </div>
+                <div class="form-group">
+                    <label for="category_id">Ticket type *</label>
+                    <select name="category_id" id="category_id" required onchange="updatePrice()">
+                        <option value="">— Select a ticket type —</option>
+                        <?php foreach ($categories as $cat): ?>
+                            <option value="<?= $cat['OrderCategoryID'] ?>"
+                                    data-price="<?= $cat['Price'] ?>"
+                                    data-name="<?= htmlspecialchars($cat['CategoryName'], ENT_QUOTES) ?>">
+                                <?= htmlspecialchars($cat['CategoryName']) ?> — $<?= number_format($cat['Price'], 2) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <span class="ticket-price" id="priceHint"></span>
+                </div>
 
-                    <!-- Hidden field to pass category name for success message -->
-                    <input type="hidden" name="category_name" id="category_name">
+                <div class="form-group">
+                    <label for="quantity">Quantity *</label>
+                    <input type="number" name="quantity" id="quantity"
+                           min="1" max="20" value="1" required oninput="updatePrice()">
+                </div>
 
-                    <div class="form-group">
-                        <label for="quantity">Quantity *</label>
-                        <input type="number" name="quantity" id="quantity" min="1" max="20" value="1" required onchange="updatePrice()">
-                    </div>
+                <div class="form-group">
+                    <label for="visit_date">Visit date *</label>
+                    <input type="date" name="visit_date" id="visit_date"
+                           required min="<?= date('Y-m-d') ?>">
+                </div>
 
-                    <div class="form-group">
-                        <label for="visit_date">Visit date *</label>
-                        <input type="date" name="visit_date" id="visit_date" required
-                               min="<?= date('Y-m-d') ?>">
-                    </div>
+                <div class="total-row" id="totalRow" style="display:none">
+                    Subtotal: <span id="totalAmount">$0.00</span>
+                </div>
 
-                    <div class="form-group">
-                        <label for="payment_mode">Payment method *</label>
-                        <select name="payment_mode" id="payment_mode" required>
-                            <option value="">-- Select --</option>
-                            <option value="Credit Card">Credit Card</option>
-                            <option value="Debit Card">Debit Card</option>
-                            <option value="Cash">Cash</option>
-                            <option value="PayPal">PayPal</option>
-                        </select>
-                    </div>
+                <div style="display:flex;align-items:center;flex-wrap:wrap;gap:.75rem">
+                    <button type="submit" class="add-btn">🛒 Add to cart</button>
+                    <?php if ($cartCount > 0): ?>
+                    <a href="cart.php" class="view-cart-btn">View cart (<?= $cartCount ?>)</a>
+                    <?php endif; ?>
+                </div>
+            </form>
+        </div>
 
-                    <div class="total-row" id="totalRow" style="display:none">
-                        Total: <span id="totalAmount">$0.00</span>
-                    </div>
-
-                    <button type="submit" class="submit-btn">Purchase tickets</button>
-                </form>
+        <?php if (!empty($_SESSION['cart']['ticket'])): ?>
+        <div style="margin-top:2rem;max-width:560px">
+            <h2 style="font-size:1rem;font-weight:700;margin-bottom:.75rem;color:var(--cr-accent)">🎟️ Tickets in your cart</h2>
+            <div style="background:var(--cr-surface);border:1px solid var(--cr-border);border-radius:12px;overflow:hidden">
+            <?php
+            foreach ($_SESSION['cart']['ticket'] as $key => $t):
+                $stmt = $pdo->prepare("SELECT CategoryName, Price FROM ordercategories WHERE OrderCategoryID = ?");
+                $stmt->execute([$t['category_id']]);
+                $cat = $stmt->fetch();
+                if (!$cat) continue;
+                $subtotal = $cat['Price'] * $t['qty'];
+            ?>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:.75rem 1.1rem;border-bottom:1px solid var(--cr-border)">
+                <div>
+                    <strong style="font-size:.9rem"><?= htmlspecialchars($cat['CategoryName']) ?></strong>
+                    <span style="color:var(--cr-muted);font-size:.82rem;margin-left:.5rem">× <?= $t['qty'] ?></span>
+                    <div style="font-size:.78rem;color:var(--cr-muted)">Visit: <?= date('M j, Y', strtotime($t['visit_date'])) ?></div>
+                </div>
+                <div style="display:flex;align-items:center;gap:.75rem">
+                    <strong style="color:var(--cr-accent)">$<?= number_format($subtotal, 2) ?></strong>
+                    <form method="POST" action="cart_action.php" style="display:inline">
+                        <input type="hidden" name="action"   value="remove">
+                        <input type="hidden" name="type"     value="ticket">
+                        <input type="hidden" name="key"      value="<?= htmlspecialchars($key) ?>">
+                        <input type="hidden" name="redirect" value="buy_tickets.php">
+                        <button type="submit" style="background:#fee2e2;border:none;color:#991b1b;border-radius:6px;padding:3px 10px;font:inherit;font-size:.78rem;font-weight:600;cursor:pointer">Remove</button>
+                    </form>
+                </div>
+            </div>
+            <?php endforeach; ?>
+            <div style="padding:.75rem 1.1rem;text-align:right">
+                <a href="cart.php" style="color:var(--cr-accent);font-weight:700;text-decoration:none;font-size:.9rem">Proceed to cart & checkout →</a>
+            </div>
             </div>
         </div>
-    </div>
+        <?php endif; ?>
+    </main>
+</div>
 
-    <script>
-        function updatePrice() {
-            const select   = document.getElementById('category_id');
-            const qty      = parseInt(document.getElementById('quantity').value) || 0;
-            const option   = select.options[select.selectedIndex];
-            const price    = parseFloat(option.dataset.price) || 0;
-            const name     = option.dataset.name || '';
-            const total    = price * qty;
-            const hint     = document.getElementById('priceHint');
-            const totalRow = document.getElementById('totalRow');
+<script>
+function updatePrice() {
+    const sel    = document.getElementById('category_id');
+    const qty    = parseInt(document.getElementById('quantity').value) || 0;
+    const opt    = sel.options[sel.selectedIndex];
+    const price  = parseFloat(opt.dataset.price) || 0;
+    const name   = opt.dataset.name || '';
+    const total  = price * qty;
+    const hint   = document.getElementById('priceHint');
+    const row    = document.getElementById('totalRow');
 
-            document.getElementById('category_name').value = name;
+    document.getElementById('category_name_hidden').value = name;
 
-            if (price > 0) {
-                hint.textContent = '$' + price.toFixed(2) + ' per ticket';
-                totalRow.style.display = 'block';
-                document.getElementById('totalAmount').textContent = '$' + total.toFixed(2);
-            } else {
-                hint.textContent = '';
-                totalRow.style.display = 'none';
-            }
-        }
-    </script>
+    if (price > 0) {
+        hint.textContent = '$' + price.toFixed(2) + ' per ticket';
+        row.style.display = 'block';
+        document.getElementById('totalAmount').textContent = '$' + total.toFixed(2);
+    } else {
+        hint.textContent = '';
+        row.style.display = 'none';
+    }
+}
+</script>
 </body>
 </html>
