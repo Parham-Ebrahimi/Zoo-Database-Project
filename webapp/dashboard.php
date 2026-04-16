@@ -7,6 +7,14 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 $role = $_SESSION['role'];
+if ($role === 'caretaker') {
+    header('Location: caretaker_dashboard.php');
+    exit;
+}
+if ($role === 'vet') {
+    header('Location: vet_dashboard.php');
+    exit;
+}
 ?>
 
 <!DOCTYPE html>
@@ -96,7 +104,7 @@ $role = $_SESSION['role'];
 <div class="dashboard-wrapper">
     <div class="dashboard-header">
         <div>
-            <h1>Dashboard</h1>
+            <h1>Admin Dashboard</h1>
             <p>
                 Welcome, <?php echo $_SESSION['firstname']; ?> |
                 Role: <?php echo $role; ?>
@@ -109,40 +117,17 @@ $role = $_SESSION['role'];
         <div class="card">
             <h2>Data Entry</h2>
 
-            <?php if ($role === 'admin' || $role === 'caretaker' || $role === 'vet'): ?>
-                <a href="add-animal.php">Add Animal</a>
-            <?php endif; ?>
-
-            <?php if ($role === 'admin'): ?>
-                <a href="add-employee.php">Add Employee</a>
-                <a href="add-ticket.php">Add Ticket</a>
-            <?php endif; ?>
-
-            <?php if ($role === 'vet'): ?>
-                <a href="add-health-record.php">Add Health Record</a>
-            <?php endif; ?>
-
-            <?php if ($role === 'admin' ): ?>
-                <a href="caretaker.php">Update Animal Status</a>
-            <?php endif; ?>
+            <a href="add-animal.php">Add Animal</a>
+            <a href="add-employee.php">Add Employee</a>
+            <a href="add-ticket.php">Add Ticket</a>
         </div>
 
         <div class="card">
             <h2>Reports</h2>
-
-            <?php if ($role === 'admin' || $role === 'caretaker' || $role === 'vet'): ?>
-                <a href="animals_report.php">View Animals</a>
-            <?php endif; ?>
-
-            <?php if ($role === 'admin'): ?>
-                <a href="tickets_report.php"> View Tickets</a>
-                <a href="employees_report.php">View Employees</a>
-                <a href="revenue_report.php">View Revenue Reports</a>
-            <?php endif; ?>
-
-            <?php if ($role === 'vet'): ?>
-                <a href="health-reports.php">Health Records</a>
-            <?php endif; ?>
+            <a href="animals_report.php">View Animals</a>
+            <a href="tickets_report.php">View Tickets</a>
+            <a href="employees_report.php">View Employees</a>
+            <a href="revenue_report.php">View Revenue Reports</a>
 
         </div>
 
