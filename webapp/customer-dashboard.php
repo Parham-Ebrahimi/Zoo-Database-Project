@@ -36,8 +36,6 @@ $animalSpotlightImages = [
     'https://images.unsplash.com/photo-1564349683136-77e08dba1ef7?w=800&q=80',
     'https://images.unsplash.com/photo-1549366021-9f761d450615?w=800&q=80',
     'https://images.unsplash.com/photo-1456926631375-92c8ce872def?w=800&q=80',
-    'https://images.unsplash.com/photo-1552410260-0ea9cb0a9d1f?w=800&q=80',
-    'https://images.unsplash.com/photo-1504006833117-8886a355efca?w=800&q=80',
     'https://images.unsplash.com/photo-1474511320723-9a56873867b5?w=800&q=80',
 ];
 ?>
@@ -323,7 +321,6 @@ $animalSpotlightImages = [
                     <li><a href="buy_tickets.php">Buy Tickets</a></li>
                     <li><a href="customer_animals_report.php">Animals</a></li>
                     <li><a href="customer_profile.php">Profile</a></li>
-                    <li><span>Welcome, <?= htmlspecialchars($_SESSION['firstname']) ?></span></li>
                     <li><a href="logout.php">Logout</a></li>
                 </ul>
             </nav>
@@ -344,7 +341,7 @@ $animalSpotlightImages = [
                 <aside class="dash-sidebar" aria-label="Quick links">
                     <div class="dash-card">
                         <h2>Tickets</h2>
-                        <a href="buy_tickets.php" class="primary">Buy tickets</a>
+                        <a href="buy_tickets.php">Buy tickets</a>
                         <a href="customer_tickets_report.php">My ticket history</a>
                     </div>
                     <div class="dash-card">
@@ -408,15 +405,7 @@ $animalSpotlightImages = [
                                     <p class="show-where"><strong>Location:</strong> Amphitheater (north meadow)</p>
                                 </div>
                             </article>
-                            <article class="show-card">
-                                <img src="https://images.unsplash.com/photo-1444464666168-e49f9773ccaa?w=600&q=80" alt="Bird in flight" loading="lazy" decoding="async">
-                                <div>
-                                    <h4>Birds of prey flight demo</h4>
-                                    <div class="show-when">Daily · 1:00 p.m.</div>
-                                    <p>Hawks, owls, and falcons soar overhead as keepers explain migration, vision, and how we rehabilitate injured raptors from the region.</p>
-                                    <p class="show-where"><strong>Location:</strong> Raptor ridge</p>
-                                </div>
-                            </article>
+                           
                             <article class="show-card">
                                 <img src="https://images.unsplash.com/photo-1561731216-c3a4d99437d5?w=600&q=80" alt="Big cat resting" loading="lazy" decoding="async">
                                 <div>
@@ -433,15 +422,6 @@ $animalSpotlightImages = [
                                     <div class="show-when">Daily · 10:00 a.m. &amp; 4:00 p.m.</div>
                                     <p>Short storytime followed by a calm meet-and-greet with a rabbit, reptile, or small mammal—perfect for younger guests and first-time zoo visitors.</p>
                                     <p class="show-where"><strong>Location:</strong> Discovery barn</p>
-                                </div>
-                            </article>
-                            <article class="show-card">
-                                <img src="https://images.unsplash.com/photo-1531386158867-349a7a2b2210?w=600&q=80" alt="Reptile habitat" loading="lazy" decoding="async">
-                                <div>
-                                    <h4>Reptile encounter</h4>
-                                    <div class="show-when">Tue, Thu, Sat · 12:30 p.m.</div>
-                                    <p>Learn how temperature, light, and diet mimic wild habitats. Touch opportunities when animals are comfortable—handlers set the pace for welfare first.</p>
-                                    <p class="show-where"><strong>Location:</strong> Herpetarium lobby</p>
                                 </div>
                             </article>
                         </div>
@@ -466,10 +446,6 @@ $animalSpotlightImages = [
                         </div>
                     </div>
                 </section>
-            </div>
-
-            <div class="logout-area">
-                <a href="logout.php">Sign out of your account</a>
             </div>
        </div>
     </div>

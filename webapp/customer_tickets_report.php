@@ -117,7 +117,6 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
 </head>
 
 <body class="cr-body">
-    <a class="cr-skip" href="#main">Skip to content</a>
     <div class="page-wrapper">
         <header class="site-header">
             <a class="logo" href="index.php">Greenwood Zoo</a>
@@ -131,7 +130,7 @@ $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         <main id="main">
             <div class="page-header">
-                <a class="back-link" href="index.php">← Back to Home</a>
+                <a class="back-link" href="customer-dashboard.php">← Back to Home</a>
                 <h1>My tickets</h1>
                 <p>Your ticket purchase history and upcoming visit dates.</p>
             </div>
