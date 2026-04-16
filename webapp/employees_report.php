@@ -46,6 +46,10 @@ $query .= " ORDER BY HireDate DESC";
 $stmt = $pdo->prepare($query);
 $stmt->execute($params);
 $employees = $stmt->fetchAll();
+$totalEmployees = count($employees);
+$avgSalary = $pdo->query(
+    "SELECT AVG(Salary)
+     FROM employees")->fetchColumn();
 ?>
 
 <!DOCTYPE html>
@@ -259,8 +263,6 @@ $employees = $stmt->fetchAll();
             </form>
         </div>
 
-        $totalEmployees = count($employees);
-        $avgSalary = $pdo->query("SELECT AVG(Salary) FROM employees")->fetchColumn();
 
         <p><strong>Total Employees:</strong> <?= $totalEmployees ?></p>
         <p><strong>Average Salary:</strong> $<?= number_format($avgSalary, 2) ?></p>
