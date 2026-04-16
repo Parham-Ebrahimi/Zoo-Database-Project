@@ -228,7 +228,7 @@ $avgSalary = $pdo->query(
                         <label>Role</label>
                         <select name="role">
                                 <option value="">All</option>
-                                <option value="Manager">Manager</option>
+                                <option value="Admin">Admin</option>
                                 <option value="Keeper">Keeper</option>
                                 <option value="Cashier">Cashier</option>
                                 <option value="Vet">Vet</option>
