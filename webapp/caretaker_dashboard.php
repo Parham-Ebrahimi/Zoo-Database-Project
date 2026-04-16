@@ -373,7 +373,6 @@ $lowFoodAnimals = count(array_filter($animals, static fn($a) => (int)$a['food_st
             <?php if ($_SESSION['role'] === 'admin'): ?>
                 <a href="dashboard.php" class="btn-nav">← Admin Dashboard</a>
             <?php endif; ?>
-            <a href="animals_report.php" class="btn-nav">Full Animal Report</a>
             <a href="logout.php" class="btn-logout">Logout</a>
         </div>
     </div>
@@ -399,7 +398,6 @@ $lowFoodAnimals = count(array_filter($animals, static fn($a) => (int)$a['food_st
             <h2>Reports</h2>
             <a href="animals_report.php">Animals Report</a>
             <a href="health-reports.php">Health Status Reports</a>
-            <a href="revenue_report.php">Revenue Report</a>
         </div>
     </div>
 

@@ -11,60 +11,17 @@ if (!in_array($_SESSION['role'], ['vet', 'admin'], true)) {
 
 require_once 'db.php';
 
-$healthFilter = $_GET['health'] ?? 'all';
-$search = trim($_GET['search'] ?? '');
-$allowedHealth = ['all', 'Sick', 'Pending', 'Healthy'];
-if (!in_array($healthFilter, $allowedHealth, true)) {
-    $healthFilter = 'all';
-}
-
-$sql = "
+$summary = $pdo->query("
     SELECT
-        a.Animal_ID,
-        a.Name,
-        a.Species,
-        a.Category,
-        COALESCE(a.Health_Status, 'Pending') AS Health_Status,
-        COALESCE(a.food_stock, 50) AS food_stock,
-        e.Enclosure_Name,
-        hr.Diagnosis,
-        hr.Treatment,
-        hr.Record_Date AS LastCheckup
-    FROM animal a
-    LEFT JOIN enclosure e ON a.Enclosure_ID = e.Enclosure_ID
-    LEFT JOIN (
-        SELECT hr1.*
-        FROM health_record hr1
-        INNER JOIN (
-            SELECT Animal_ID, MAX(Record_Date) AS MaxDate
-            FROM health_record
-            GROUP BY Animal_ID
-        ) latest
-        ON hr1.Animal_ID = latest.Animal_ID AND hr1.Record_Date = latest.MaxDate
-    ) hr ON hr.Animal_ID = a.Animal_ID
-    WHERE 1=1
-";
-$params = [];
+        COUNT(*) AS TotalAnimals,
+        SUM(CASE WHEN COALESCE(Health_Status, 'Pending') = 'Sick' THEN 1 ELSE 0 END) AS SickAnimals,
+        SUM(CASE WHEN COALESCE(Health_Status, 'Pending') = 'Pending' THEN 1 ELSE 0 END) AS PendingAnimals
+    FROM animal
+")->fetch(PDO::FETCH_ASSOC);
 
-if ($healthFilter !== 'all') {
-    $sql .= " AND COALESCE(a.Health_Status, 'Pending') = ?";
-    $params[] = $healthFilter;
-}
-if ($search !== '') {
-    $sql .= " AND (a.Name LIKE ? OR a.Species LIKE ?)";
-    $params[] = "%$search%";
-    $params[] = "%$search%";
-}
-
-$sql .= " ORDER BY FIELD(COALESCE(a.Health_Status, 'Pending'), 'Sick', 'Pending', 'Healthy'), a.Name";
-
-$stmt = $pdo->prepare($sql);
-$stmt->execute($params);
-$animals = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-$totalAnimals = count($animals);
-$sickAnimals = count(array_filter($animals, static fn($a) => $a['Health_Status'] === 'Sick'));
-$pendingAnimals = count(array_filter($animals, static fn($a) => $a['Health_Status'] === 'Pending'));
+$totalAnimals = (int)($summary['TotalAnimals'] ?? 0);
+$sickAnimals = (int)($summary['SickAnimals'] ?? 0);
+$pendingAnimals = (int)($summary['PendingAnimals'] ?? 0);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -94,28 +51,11 @@ $pendingAnimals = count(array_filter($animals, static fn($a) => $a['Health_Statu
         .nav-card h2 { font-size: 1.05rem; margin: 0 0 12px; color: var(--text-color); border-bottom: 2px solid var(--accent-color); padding-bottom: 8px; }
         .nav-card a { display: block; padding: 9px 12px; margin-bottom: 8px; background: var(--base-color); border-radius: 8px; color: var(--text-color); font-weight: 600; text-decoration: none; }
         .nav-card a:hover { background: var(--accent-color); text-decoration: none; }
-        .filter-card { background: white; border-radius: 12px; padding: 14px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
-        .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; align-items: end; }
-        .filter-group { display: flex; flex-direction: column; gap: 5px; }
-        .filter-group label { font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
-        .filter-group input, .filter-group select { padding: 8px 10px; border: 2px solid #ddd; border-radius: 8px; font: inherit; background: white; }
-        .filter-group input:focus, .filter-group select:focus { outline: none; border-color: var(--accent-color); }
-        .filter-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-        .btn-apply { padding: 8px 18px; border: none; border-radius: 8px; background: var(--accent-color); color: white; font: inherit; font-weight: 600; cursor: pointer; }
-        .btn-apply:hover { background: var(--text-color); }
-        .btn-reset { padding: 8px 18px; border-radius: 8px; background: #eee; color: #555; text-decoration: none; font-weight: 600; }
-        .btn-reset:hover { background: #ddd; text-decoration: none; }
-        .table-wrap { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; min-width: 860px; }
-        th { background-color: var(--accent-color); color: white; text-align: left; padding: 10px 12px; }
-        td { padding: 10px 12px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
-        tr:last-child td { border-bottom: none; }
-        tr:hover td { background: rgba(187, 223, 158, 0.2); }
-        .badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; }
-        .badge-healthy { background: #d4edda; color: #155724; }
-        .badge-sick { background: #f8d7da; color: #721c24; }
-        .badge-pending { background: #fff3cd; color: #856505; }
-        .muted { color: #888; }
+        .report-callout { background: white; border-radius: 14px; padding: 18px 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 16px; }
+        .report-callout h3 { margin: 0 0 8px; color: var(--text-color); }
+        .report-callout p { margin: 0 0 14px; color: #555; }
+        .report-callout a { display: inline-block; padding: 10px 16px; background: var(--accent-color); color: white; font-weight: 600; border-radius: 8px; text-decoration: none; }
+        .report-callout a:hover { background: var(--text-color); text-decoration: none; }
     </style>
 </head>
 <body>
@@ -129,7 +69,6 @@ $pendingAnimals = count(array_filter($animals, static fn($a) => $a['Health_Statu
             <?php if ($_SESSION['role'] === 'admin'): ?>
                 <a href="dashboard.php" class="btn-nav">← Admin Dashboard</a>
             <?php endif; ?>
-            <a href="animals_report.php" class="btn-nav">Full Animal Report</a>
             <a href="logout.php" class="btn-logout">Logout</a>
         </div>
     </div>
@@ -159,70 +98,11 @@ $pendingAnimals = count(array_filter($animals, static fn($a) => $a['Health_Statu
             <h2>Reports</h2>
             <a href="animals_report.php">Animals Report</a>
             <a href="health-reports.php">Health Status Reports</a>
-            <a href="revenue_report.php">Revenue Report</a>
         </div>
     </div>
 
-    <div class="filter-card">
-        <form method="GET">
-            <div class="filter-grid">
-                <div class="filter-group">
-                    <label>Health Status</label>
-                    <select name="health">
-                        <option value="all" <?= $healthFilter === 'all' ? 'selected' : '' ?>>All</option>
-                        <option value="Sick" <?= $healthFilter === 'Sick' ? 'selected' : '' ?>>Sick</option>
-                        <option value="Pending" <?= $healthFilter === 'Pending' ? 'selected' : '' ?>>Pending</option>
-                        <option value="Healthy" <?= $healthFilter === 'Healthy' ? 'selected' : '' ?>>Healthy</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label>Search Name / Species</label>
-                    <input type="text" name="search" value="<?= htmlspecialchars($search) ?>" placeholder="e.g. Lion, Zara">
-                </div>
-                <div class="filter-actions">
-                    <button type="submit" class="btn-apply">Apply</button>
-                    <a href="vet_dashboard.php" class="btn-reset">Reset</a>
-                </div>
-            </div>
-        </form>
-    </div>
-
-    <div class="table-wrap">
-        <table>
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Name</th>
-                    <th>Species</th>
-                    <th>Category</th>
-                    <th>Health</th>
-                    <th>Enclosure</th>
-                    <th>Last Checkup</th>
-                    <th>Diagnosis</th>
-                    <th>Treatment</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php if (count($animals) === 0): ?>
-                    <tr><td colspan="9" class="muted">No animals match the selected filters.</td></tr>
-                <?php else: ?>
-                    <?php foreach ($animals as $a): ?>
-                        <?php $badgeClass = strtolower($a['Health_Status']); ?>
-                        <tr>
-                            <td><?= (int)$a['Animal_ID'] ?></td>
-                            <td><strong><?= htmlspecialchars($a['Name'] ?? '') ?></strong></td>
-                            <td><?= htmlspecialchars($a['Species'] ?? '') ?></td>
-                            <td><?= htmlspecialchars($a['Category'] ?? '') ?></td>
-                            <td><span class="badge badge-<?= htmlspecialchars($badgeClass) ?>"><?= htmlspecialchars($a['Health_Status']) ?></span></td>
-                            <td><?= htmlspecialchars($a['Enclosure_Name'] ?? 'N/A') ?></td>
-                            <td><?= $a['LastCheckup'] ? htmlspecialchars((string)$a['LastCheckup']) : '<span class="muted">No record</span>' ?></td>
-                            <td><?= $a['Diagnosis'] ? htmlspecialchars((string)$a['Diagnosis']) : '<span class="muted">None</span>' ?></td>
-                            <td><?= $a['Treatment'] ? htmlspecialchars((string)$a['Treatment']) : '<span class="muted">None</span>' ?></td>
-                        </tr>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </tbody>
-        </table>
+    <div class="report-callout">
+        <a href="health-reports.php">Open Health Status Reports</a>
     </div>
 </div>
 </body>
