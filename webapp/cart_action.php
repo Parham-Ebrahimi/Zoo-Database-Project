@@ -3,8 +3,9 @@ session_start();
 require_once 'db.php';
 
 if (!isset($_SESSION['cart'])) {
-    $_SESSION['cart'] = ['food' => [], 'shop' => [], 'ticket' => []];
+    $_SESSION['cart'] = ['food' => [], 'ticket' => []];
 }
+$_SESSION['cart']['shop'] = [];
 
 $action   = $_POST['action']   ?? $_GET['action']   ?? '';
 $type     = $_POST['type']     ?? $_GET['type']     ?? '';
@@ -19,12 +20,6 @@ switch ($action) {
             $stmt->execute([$id]);
             if ($stmt->fetch()) {
                 $_SESSION['cart']['food'][$id] = ($_SESSION['cart']['food'][$id] ?? 0) + $qty;
-            }
-        } elseif ($type === 'shop') {
-            $stmt = $pdo->prepare("SELECT ShopItemID FROM shop_items WHERE ShopItemID = ?");
-            $stmt->execute([$id]);
-            if ($stmt->fetch()) {
-                $_SESSION['cart']['shop'][$id] = ($_SESSION['cart']['shop'][$id] ?? 0) + $qty;
             }
         } elseif ($type === 'ticket') {
             $visit_date  = $_POST['visit_date'] ?? '';
@@ -48,9 +43,6 @@ switch ($action) {
         if ($type === 'food') {
             if ($qty <= 0) unset($_SESSION['cart']['food'][$id]);
             else $_SESSION['cart']['food'][$id] = $qty;
-        } elseif ($type === 'shop') {
-            if ($qty <= 0) unset($_SESSION['cart']['shop'][$id]);
-            else $_SESSION['cart']['shop'][$id] = $qty;
         } elseif ($type === 'ticket') {
             $key = $_POST['key'] ?? '';
             if ($key && isset($_SESSION['cart']['ticket'][$key])) {
@@ -62,7 +54,6 @@ switch ($action) {
 
     case 'remove':
         if ($type === 'food')  unset($_SESSION['cart']['food'][$id]);
-        if ($type === 'shop')  unset($_SESSION['cart']['shop'][$id]);
         if ($type === 'ticket') {
             $key = $_POST['key'] ?? $_GET['key'] ?? '';
             if ($key) unset($_SESSION['cart']['ticket'][$key]);
@@ -70,14 +61,14 @@ switch ($action) {
         break;
 
     case 'clear':
-        $_SESSION['cart'] = ['food' => [], 'shop' => [], 'ticket' => []];
+        $_SESSION['cart'] = ['food' => [], 'ticket' => []];
+        $_SESSION['cart']['shop'] = [];
         break;
 }
 
 // AJAX response
 if (!empty($_SERVER['HTTP_X_REQUESTED_WITH'])) {
     $count = array_sum($_SESSION['cart']['food'])
-           + array_sum($_SESSION['cart']['shop'])
            + array_sum(array_column($_SESSION['cart']['ticket'], 'qty'));
     header('Content-Type: application/json');
     echo json_encode(['count' => $count, 'status' => 'ok']);

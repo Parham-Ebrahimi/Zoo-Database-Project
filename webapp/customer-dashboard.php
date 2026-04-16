@@ -350,9 +350,8 @@ $animalSpotlightImages = [
                     </div>
 
                     <div class="dash-card">
-                        <h2>Food & Shopping</h2>
+                        <h2>Dining</h2>
                         <a href="restaurant.php" class="primary">🍽️ Restaurant</a>
-                        <a href="giftshop.php">🛍️ Gift Shop</a>
                         <a href="cart.php">🛒 View cart</a>
                     </div>
 
