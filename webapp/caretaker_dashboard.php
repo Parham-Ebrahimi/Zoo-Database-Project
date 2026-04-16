@@ -157,6 +157,36 @@ $lowFoodAnimals = count(array_filter($animals, static fn($a) => (int)$a['food_st
             color: #856404; 
             border: 1px solid #ffeeba; 
         }
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        .nav-card {
+            background: white;
+            border-radius: 14px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .nav-card h2 {
+            font-size: 1.05rem;
+            margin: 0 0 12px;
+            color: var(--text-color);
+            border-bottom: 2px solid var(--accent-color);
+            padding-bottom: 8px;
+        }
+        .nav-card a {
+            display: block;
+            padding: 9px 12px;
+            margin-bottom: 8px;
+            background: var(--base-color);
+            border-radius: 8px;
+            color: var(--text-color);
+            font-weight: 600;
+            text-decoration: none;
+        }
+        .nav-card a:hover { background: var(--accent-color); text-decoration: none; }
         .stats-grid { 
             display: grid; 
             grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); 
@@ -358,6 +388,20 @@ $lowFoodAnimals = count(array_filter($animals, static fn($a) => (int)$a['food_st
             <?= $lowFoodAnimals > 1 ? 'have' : 'has' ?> critically low food stock (≤10%). Restock needed.
         </div>
     <?php endif; ?>
+
+    <div class="card-grid">
+        <div class="nav-card">
+            <h2>Data Entry</h2>
+            <a href="add-animal.php">Add Animal</a>
+            <a href="caretaker_dashboard.php">Update Animal Status</a>
+        </div>
+        <div class="nav-card">
+            <h2>Reports</h2>
+            <a href="animals_report.php">Animals Report</a>
+            <a href="health-reports.php">Health Status Reports</a>
+            <a href="revenue_report.php">Revenue Report</a>
+        </div>
+    </div>
 
     <div class="stats-grid">
         <div class="stat-card">
