@@ -122,10 +122,6 @@ $role = $_SESSION['role'];
                 <a href="add-health-record.php">Add Health Record</a>
             <?php endif; ?>
 
-            <?php if ($role === 'giftshop'): ?>
-                <a href="add-order.php">Record Sale</a>
-            <?php endif; ?>
-
             <?php if ($role === 'admin' ): ?>
                 <a href="caretaker.php">Update Animal Status</a>
             <?php endif; ?>
@@ -146,10 +142,6 @@ $role = $_SESSION['role'];
 
             <?php if ($role === 'vet'): ?>
                 <a href="health-reports.php">Health Records</a>
-            <?php endif; ?>
-
-            <?php if ($role === 'giftshop'): ?>
-                <a href="sales_report.php">Sales Report</a>
             <?php endif; ?>
 
         </div>
