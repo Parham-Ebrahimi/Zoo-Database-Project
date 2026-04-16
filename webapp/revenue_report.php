@@ -10,38 +10,118 @@ if (!in_array($_SESSION['role'], ['admin'])) {
 }
 require 'db.php';
 
-// Default date range — last 30 days
+// Filters
 $date_from = $_GET['date_from'] ?? date('Y-m-d', strtotime('-30 days'));
 $date_to   = $_GET['date_to']   ?? date('Y-m-d');
+$type      = $_GET['type'] ?? 'all';
+$group     = $_GET['group'] ?? 'day';
+$sort      = $_GET['sort'] ?? 'period';
 
-// Build query with filters
+$allowedTypes = ['all', 'ticket', 'food', 'shop'];
+$allowedGroups = ['day', 'month', 'quarter', 'year'];
+$allowedSorts = ['period', 'selected', 'total'];
+
+if (!in_array($type, $allowedTypes, true)) {
+    $type = 'all';
+}
+if (!in_array($group, $allowedGroups, true)) {
+    $group = 'day';
+}
+if (!in_array($sort, $allowedSorts, true)) {
+    $sort = 'period';
+}
+
+// Determine selected revenue column
+$column = "TotalRevenue";
+$selectedLabel = "Total Revenue";
+if ($type === 'ticket') {
+    $column = "TicketRevenue";
+    $selectedLabel = "Ticket Revenue";
+} elseif ($type === 'food') {
+    $column = "FoodRevenue";
+    $selectedLabel = "Food Revenue";
+} elseif ($type === 'shop') {
+    $column = "ShopRevenue";
+    $selectedLabel = "Shop Revenue";
+}
+
+// Grouping expression
+$periodLabelSql = "DATE_FORMAT(RevenueDate, '%Y-%m-%d')";
+$periodStartSql = "RevenueDate";
+if ($group === 'month') {
+    $periodLabelSql = "DATE_FORMAT(RevenueDate, '%Y-%m')";
+    $periodStartSql = "DATE_FORMAT(RevenueDate, '%Y-%m-01')";
+} elseif ($group === 'quarter') {
+    $periodLabelSql = "CONCAT(YEAR(RevenueDate), '-Q', QUARTER(RevenueDate))";
+    $periodStartSql = "STR_TO_DATE(CONCAT(YEAR(RevenueDate), '-', LPAD((QUARTER(RevenueDate)-1)*3+1, 2, '0'), '-01'), '%Y-%m-%d')";
+} elseif ($group === 'year') {
+    $periodLabelSql = "CAST(YEAR(RevenueDate) AS CHAR)";
+    $periodStartSql = "DATE_FORMAT(RevenueDate, '%Y-01-01')";
+}
+
+// Sorting
+$orderBy = "PeriodStart DESC";
+if ($sort === 'selected') {
+    $orderBy = "SelectedRevenue DESC";
+} elseif ($sort === 'total') {
+    $orderBy = "TotalRevenue DESC";
+}
+
+// Main query (grouped report)
 $stmt = $pdo->prepare("
-    SELECT 
-        RevenueDate,
-        TicketRevenue,
-        FoodRevenue,
-        ShopRevenue,
-        TotalRevenue
+    SELECT
+        $periodLabelSql AS PeriodLabel,
+        $periodStartSql AS PeriodStart,
+        SUM(TicketRevenue) AS TicketRevenue,
+        SUM(FoodRevenue) AS FoodRevenue,
+        SUM(ShopRevenue) AS ShopRevenue,
+        SUM(TotalRevenue) AS TotalRevenue,
+        SUM($column) AS SelectedRevenue
     FROM daily_revenue
     WHERE RevenueDate BETWEEN ? AND ?
-    ORDER BY RevenueDate DESC
+    GROUP BY PeriodLabel, PeriodStart
+    ORDER BY $orderBy
 ");
 $stmt->execute([$date_from, $date_to]);
-$rows = $stmt->fetchAll();
+$rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Summary totals
+// Totals
 $totals = $pdo->prepare("
     SELECT 
         SUM(TicketRevenue) as TotalTicket,
         SUM(FoodRevenue)   as TotalFood,
         SUM(ShopRevenue)   as TotalShop,
-        SUM(TotalRevenue)  as GrandTotal
+        SUM(TotalRevenue)  as GrandTotal,
+        SUM($column)       as SelectedTotal
     FROM daily_revenue
     WHERE RevenueDate BETWEEN ? AND ?
 ");
 $totals->execute([$date_from, $date_to]);
 $summary = $totals->fetch();
+
+// Average revenue
+$avg = $pdo->prepare("
+    SELECT AVG(TotalRevenue) as AvgRevenue
+    FROM daily_revenue
+    WHERE RevenueDate BETWEEN ? AND ?
+");
+$avg->execute([$date_from, $date_to]);
+$avgRow = $avg->fetch();
+
+$groupLabelMap = [
+    'day' => 'Daily',
+    'month' => 'Monthly',
+    'quarter' => 'Quarterly',
+    'year' => 'Yearly',
+];
+$groupLabel = $groupLabelMap[$group];
+
+$topPeriod = null;
+if (count($rows) > 0) {
+    $topPeriod = $rows[0];
+}
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -50,7 +130,9 @@ $summary = $totals->fetch();
     <title>Revenue Report — Greenwood Zoo</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        body { overflow: auto; }
+        body { 
+            overflow: auto; 
+        }
         .dashboard-wrapper { 
             box-sizing: border-box; 
             min-height: 100vh; 
@@ -78,34 +160,45 @@ $summary = $totals->fetch();
             margin-bottom: 15px; 
             color: var(--text-color); 
         }
-        .filter-grid { 
-            display: flex; 
-            flex-wrap: wrap; 
-            gap: 15px; 
-            align-items: flex-end; 
+        .filter-card form {
+            width: 100%;
+            margin: 0;
+            display: block;
         }
+        .filter-card form > div {
+            width: auto;
+            display: block;
+        }
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            align-items: end;
+        }
+
         .filter-group { 
             display: flex; 
             flex-direction: column; 
-            gap: 4px; 
+            gap: 8px; 
         }
         .filter-group label { 
             font-size: 0.85rem; 
             font-weight: 600; 
             color: var(--text-color); 
         }
-        .filter-group input { 
+        .filter-group input, .filter-group select { 
             padding: 8px 12px; 
             border: 2px solid #ddd; 
             border-radius: 8px; 
-            font: inherit; 
+            font: inherit;
+            background: white;
         }
-        .filter-group input:focus { 
+        .filter-group input:focus, .filter-group select:focus { 
             outline: none; 
             border-color: var(--accent-color); 
         }
         .search-btn { 
-            padding: 9px 24px; 
+            padding: 10px 24px; 
             background: var(--accent-color); 
             border: none; 
             border-radius: 8px; 
@@ -114,9 +207,8 @@ $summary = $totals->fetch();
             cursor: pointer; 
             color: white; 
         }
-        .search-btn:hover { background: var(--text-color); }
         .reset-btn { 
-            padding: 9px 24px; 
+            padding: 10px 24px; 
             background: #eee; 
             border: none; 
             border-radius: 8px; 
@@ -125,49 +217,22 @@ $summary = $totals->fetch();
             cursor: pointer; 
             color: #555; 
             text-decoration: none; 
-            display: inline-block; 
         }
         .reset-btn:hover { background: #ddd; }
-        .summary-grid { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); 
-            gap: 15px; 
-            margin-bottom: 25px; 
+        .filter-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: end;
         }
-        .summary-card { 
+        table {
+            width: 100%; 
+            border-collapse: collapse; 
             background: white; 
             border-radius: 15px; 
-            padding: 20px; 
+            overflow: hidden; 
             box-shadow: 0 4px 10px rgba(0,0,0,0.05); 
-            text-align: center; 
         }
-        .summary-card .label { 
-            font-size: 0.85rem; 
-            font-weight: 600; 
-            color: #777; 
-            text-transform: uppercase; 
-            letter-spacing: 0.05em; 
-            margin-bottom: 8px; 
-        }
-        .summary-card .amount { 
-            font-size: 1.6rem; 
-            font-weight: 900; 
-            color: var(--text-color); 
-        }
-        .summary-card.total { 
-            background: var(--text-color); 
-            color: white;
-        }
-        .summary-card.total .label { color: rgba(255,255,255,0.7); }
-        .summary-card.total .amount { color: white; }
-        table {
-             width: 100%; 
-             border-collapse: collapse; 
-             background: white; 
-             border-radius: 15px; 
-             overflow: hidden; 
-             box-shadow: 0 4px 10px rgba(0,0,0,0.05); 
-            }
         th { 
             background-color: var(--accent-color); 
             color: white; 
@@ -199,11 +264,6 @@ $summary = $totals->fetch();
             font-weight: 600; 
             text-decoration: none; 
             border: 2px solid var(--accent-color); 
-            font-size: 0.9rem; 
-        }
-        .back-btn:hover { 
-            background: var(--accent-color); 
-            color: white; 
         }
         .logout-btn { 
             padding: 10px 25px; 
@@ -214,17 +274,6 @@ $summary = $totals->fetch();
             font-weight: 600; 
             cursor: pointer; 
             color: var(--text-color); 
-            text-decoration: none; 
-        }
-        .logout-btn:hover { 
-            background-color: var(--text-color); 
-            color: white; 
-        }
-        .no-results { 
-            text-align: center; 
-            padding: 2rem; 
-            color: #999; 
-            font-style: italic; 
         }
     </style>
 </head>
@@ -253,39 +302,102 @@ $summary = $totals->fetch();
                     <label>Date To</label>
                     <input type="date" name="date_to" value="<?= $date_to ?>">
                 </div>
-                <button type="submit" class="search-btn">Search</button>
-                <a href="revenue_report.php" class="reset-btn">Reset</a>
+                <div class="filter-group">
+                    <label>Revenue Type</label>
+                    <select name="type">
+                        <option value="all" <?= $type=='all'?'selected':'' ?>>All</option>
+                        <option value="ticket" <?= $type=='ticket'?'selected':'' ?>>Tickets</option>
+                        <option value="food" <?= $type=='food'?'selected':'' ?>>Food</option>
+                        <option value="shop" <?= $type=='shop'?'selected':'' ?>>Shop</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Group By</label>
+                    <select name="group">
+                        <option value="day" <?= $group==='day'?'selected':'' ?>>Daily</option>
+                        <option value="month" <?= $group==='month'?'selected':'' ?>>Monthly</option>
+                        <option value="quarter" <?= $group==='quarter'?'selected':'' ?>>Quarterly</option>
+                        <option value="year" <?= $group==='year'?'selected':'' ?>>Yearly</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label>Sort By</label>
+                    <select name="sort">
+                        <option value="period" <?= $sort==='period'?'selected':'' ?>>Latest Period</option>
+                        <option value="selected" <?= $sort==='selected'?'selected':'' ?>>Highest <?= htmlspecialchars($selectedLabel) ?></option>
+                        <option value="total" <?= $sort==='total'?'selected':'' ?>>Highest Total Revenue</option>
+                    </select>
+                </div>
+
+                <div class="filter-actions">
+                    <button type="submit" class="search-btn">Search</button>
+                    <a href="revenue_report.php" class="reset-btn">Reset</a>
+                </div>
             </div>
         </form>
     </div>
 
     <!-- Results Table -->
+    <p>
+        Showing <strong><?= htmlspecialchars($groupLabel) ?></strong> results from
+        <strong><?= htmlspecialchars($date_from) ?></strong> to <strong><?= htmlspecialchars($date_to) ?></strong>.
+        Type: <strong><?= htmlspecialchars(ucfirst($type)) ?></strong>.
+    </p>
+
+    <?php if ($topPeriod): ?>
+    <p>
+        Top period by current sort:
+        <strong><?= htmlspecialchars((string)$topPeriod['PeriodLabel']) ?></strong>
+        with <strong>$<?= number_format((float)$topPeriod['SelectedRevenue'], 2) ?></strong> (<?= htmlspecialchars($selectedLabel) ?>).
+    </p>
+    <?php endif; ?>
+
     <?php if (count($rows) === 0): ?>
         <p class="no-results">No revenue data found for the selected date range.</p>
     <?php else: ?>
     <table>
         <thead>
             <tr>
-                <th>Date</th>
+                <th>Period</th>
+                <?php if ($type === 'all'): ?>
                 <th>Ticket Revenue</th>
                 <th>Food Revenue</th>
                 <th>Shop Revenue</th>
+                <?php else: ?>
+                <th><?= htmlspecialchars($selectedLabel) ?></th>
+                <th>Share of Total</th>
+                <?php endif; ?>
                 <th>Total Revenue</th>
             </tr>
         </thead>
         <tbody>
             <?php foreach ($rows as $row): ?>
             <tr>
-                <td><?= $row['RevenueDate'] ?></td>
-                <td class="<?= $row['TicketRevenue'] > 0 ? 'positive' : 'zero' ?>">
+                <td><?= htmlspecialchars((string)$row['PeriodLabel']) ?></td>
+                <?php if ($type === 'all'): ?>
+                <td class="<?= (float)$row['TicketRevenue'] > 0 ? 'positive' : 'zero' ?>">
                     $<?= number_format($row['TicketRevenue'], 2) ?>
                 </td>
-                <td class="<?= $row['FoodRevenue'] > 0 ? 'positive' : 'zero' ?>">
+                <td class="<?= (float)$row['FoodRevenue'] > 0 ? 'positive' : 'zero' ?>">
                     $<?= number_format($row['FoodRevenue'], 2) ?>
                 </td>
-                <td class="<?= $row['ShopRevenue'] > 0 ? 'positive' : 'zero' ?>">
+                <td class="<?= (float)$row['ShopRevenue'] > 0 ? 'positive' : 'zero' ?>">
                     $<?= number_format($row['ShopRevenue'], 2) ?>
                 </td>
+                <?php else: ?>
+                <td class="<?= (float)$row['SelectedRevenue'] > 0 ? 'positive' : 'zero' ?>">
+                    $<?= number_format((float)$row['SelectedRevenue'], 2) ?>
+                </td>
+                <td>
+                    <?php
+                        $share = ((float)$row['TotalRevenue'] > 0)
+                            ? ((float)$row['SelectedRevenue'] / (float)$row['TotalRevenue']) * 100
+                            : 0;
+                    ?>
+                    <?= number_format($share, 1) ?>%
+                </td>
+                <?php endif; ?>
                 <td class="positive">
                     $<?= number_format($row['TotalRevenue'], 2) ?>
                 </td>
@@ -295,9 +407,23 @@ $summary = $totals->fetch();
         <tfoot>
             <tr class="tfoot-row">
                 <td>TOTALS</td>
+                <?php if ($type === 'all'): ?>
                 <td>$<?= number_format($summary['TotalTicket'] ?? 0, 2) ?></td>
                 <td>$<?= number_format($summary['TotalFood'] ?? 0, 2) ?></td>
                 <td>$<?= number_format($summary['TotalShop'] ?? 0, 2) ?></td>
+                <?php else: ?>
+                <td>$<?= number_format($summary['SelectedTotal'] ?? 0, 2) ?></td>
+                <td>
+                    <?=
+                        number_format(
+                            (($summary['GrandTotal'] ?? 0) > 0)
+                                ? (($summary['SelectedTotal'] ?? 0) / $summary['GrandTotal']) * 100
+                                : 0,
+                            1
+                        )
+                    ?>%
+                </td>
+                <?php endif; ?>
                 <td>$<?= number_format($summary['GrandTotal'] ?? 0, 2) ?></td>
             </tr>
         </tfoot>
