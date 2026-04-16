@@ -92,7 +92,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                     <div class="form-group">
                         <label>Role *</label>
-                        <input type="text" name="role" placeholder="e.g. Zookeeper, Vet" required>
+                        <select name="role" required>
+                            <option value =""> -- Select --</option>
+                            <option value ="Manager">Manager</option>
+                            <option value = "Keeper">Keeper</option>
+                            <option value = "Cashier">Cashier</option>
+                            <option value= "Vet">Vet</option>
+                        </select>
                     </div>
                     <div class="form-group">
                         <label>Salary</label>
