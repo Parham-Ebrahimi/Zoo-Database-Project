@@ -354,7 +354,7 @@ $animalSpotlightImages = [
 
                     <div class="dash-card">
                         <h2>Explore</h2>
-                        <a href="customer_animals_report.php">View animals</a>
+                        <a href="customer_animals_report.php">View animals report</a>
                     </div>
                 </aside>
 
