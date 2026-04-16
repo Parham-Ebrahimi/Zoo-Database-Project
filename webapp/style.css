@@ -12,7 +12,7 @@
 }
 
 html{
-    font-family: montserrat, 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif ;
+    font-family: montserrat, 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
     font-size: 12pt;
     color: var(--text-color);
     text-align: center;
@@ -23,6 +23,9 @@ body{
     background-image: url(tiger.jpg);
     background-size: cover;
     background-position: right;
+}
+
+body.login-page {
     overflow: hidden;
 }
 
@@ -86,7 +89,7 @@ form input{
     border-radius: 0 10px 10px 0;
     border: none;
     background-color: var(--input-color);
-    transition: 150 ms ease;
+    transition: 150ms ease;
 }
 
 form input:hover{
@@ -103,14 +106,14 @@ div:has(input:focus) > label{
 }
 
 form button{
-    margin-top:  10px;
+    margin-top: 10px;
     border: none;
     border-radius: 1000px;
     padding: .85em 4em;
     background-color: var(--accent-color);
     font: inherit;
     font-weight: 600;
-    text-transform:  uppercase;
+    text-transform: uppercase;
     cursor: pointer;
     transition: 150ms ease;
 }
