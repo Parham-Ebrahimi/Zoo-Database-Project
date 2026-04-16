@@ -319,6 +319,7 @@ $animalSpotlightImages = [
                 <ul class="nav-links">
                     <li><a href="index.php">Home</a></li>
                     <li><a href="buy_tickets.php">Buy Tickets</a></li>
+                    <li><a href="cart.php">🛒 Cart</a></li>
                     <li><a href="customer_animals_report.php">Animals</a></li>
                     <li><a href="customer_profile.php">Profile</a></li>
                     <li><a href="logout.php">Logout</a></li>
@@ -341,9 +342,16 @@ $animalSpotlightImages = [
                 <aside class="dash-sidebar" aria-label="Quick links">
                     <div class="dash-card">
                         <h2>Tickets</h2>
-                        <a href="buy_tickets.php">Buy tickets</a>
+                        <a href="buy_tickets.php" class="primary">Buy tickets</a>
                         <a href="customer_tickets_report.php">My ticket history</a>
                     </div>
+
+                    <div class="dash-card">
+                        <h2>Dining</h2>
+                        <a href="restaurant.php" class="primary">🍽️ Restaurant</a>
+                        <a href="cart.php">🛒 View cart</a>
+                    </div>
+
                     <div class="dash-card">
                         <h2>Explore</h2>
                         <a href="customer_animals_report.php">View animals</a>
