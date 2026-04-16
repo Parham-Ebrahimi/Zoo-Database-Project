@@ -320,6 +320,7 @@ $animalSpotlightImages = [
                     <li><a href="index.php">Home</a></li>
                     <li><a href="buy_tickets.php">Buy Tickets</a></li>
                     <li><a href="cart.php">🛒 Cart</a></li>
+                    <li><a href="giftshop.php">Gift Shop</a></li>
                     <li><a href="customer_animals_report.php">Animals</a></li>
                     <li><a href="customer_profile.php">Profile</a></li>
                     <li><a href="logout.php">Logout</a></li>
@@ -354,7 +355,8 @@ $animalSpotlightImages = [
 
                     <div class="dash-card">
                         <h2>Explore</h2>
-                        <a href="customer_animals_report.php">View animals report</a>
+                        <a href="customer_animals_report.php">View animals</a>
+                        <a href="giftshop.php">Shop souvenirs</a>
                     </div>
                 </aside>
 

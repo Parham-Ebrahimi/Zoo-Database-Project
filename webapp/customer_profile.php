@@ -163,6 +163,7 @@ $myTickets = $tickets->fetchAll();
             <ul class="nav-links">
                 <li><a href="index.php">Home</a></li>
                 <li><a href="buy_tickets.php">Buy Tickets</a></li>
+                <li><a href="giftshop.php">Gift Shop</a></li>
                 <li><a href="customer_animals_report.php">Animals</a></li>
                 <li><span>Welcome, <?= htmlspecialchars($_SESSION['firstname']) ?></span></li>
                 <li><a href="logout.php">Logout</a></li>
