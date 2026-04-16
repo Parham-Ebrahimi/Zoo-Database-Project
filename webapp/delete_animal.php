@@ -9,7 +9,7 @@ if (!in_array($_SESSION['role'], ['admin', 'caretaker', 'vet'], true)) {
 }
 require_once 'db.php';
 
-$id = (int)($_GET['id'] ?? 0);
+$id = (int)($_POST['id'] ?? $_GET['id'] ?? 0);
 if ($id <= 0) {
     header('Location: animals_report.php');
     exit;
