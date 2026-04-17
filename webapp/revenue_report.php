@@ -521,7 +521,7 @@ tfoot td{background:var(--base-color);font-weight:700;padding:10px 13px;border-t
     <div class="tw"><table>
         <thead><tr><th>Ticket type</th><th>Unit price</th><th>Qty sold</th><th>Revenue</th><th>Share</th><th>Bar</th></tr></thead>
         <tbody>
-        <?php foreach ($ticketRows as $r): $pct = $ticketRev > 0 ? round($r['Revenue']/$ticketRev*100,1) : 0; ?>
+        <?php $ticketRowTotal = array_sum(array_map('floatval', array_column($ticketRows,'Revenue'))); foreach ($ticketRows as $r): $pct = $ticketRowTotal > 0 ? round((float)$r['Revenue']/$ticketRowTotal*100,1) : 0; ?>
         <tr>
             <td><span class="bdg bdg-t"><?= htmlspecialchars($r['CategoryName']) ?></span></td>
             <td>$<?= number_format($r['UnitPrice'],2) ?></td>
@@ -532,7 +532,7 @@ tfoot td{background:var(--base-color);font-weight:700;padding:10px 13px;border-t
         </tr>
         <?php endforeach; ?>
         </tbody>
-        <tfoot><tr><td colspan="2">TOTAL</td><td><?= number_format(array_sum(array_column($ticketRows,'TotalQty'))) ?></td><td class="amt">$<?= number_format($ticketRev,2) ?></td><td colspan="2"></td></tr></tfoot>
+        <tfoot><tr><td colspan="2">TOTAL</td><td><?= number_format(array_sum(array_column($ticketRows,'TotalQty'))) ?></td><td class="amt">$<?= number_format(array_sum(array_map('floatval', array_column($ticketRows,'Revenue'))),2) ?></td><td colspan="2"></td></tr></tfoot>
     </table></div>
     <div class="chart-card">
         <h3>Ticket revenue by type</h3>
@@ -607,7 +607,7 @@ tfoot td{background:var(--base-color);font-weight:700;padding:10px 13px;border-t
     <div class="tw"><table>
         <thead><tr><th>Item</th><th>Unit price</th><th>Qty sold</th><th>Revenue</th><th>Share</th><th>Bar</th></tr></thead>
         <tbody>
-        <?php foreach ($foodRows as $r): $pct = $foodRev > 0 ? round($r['Revenue']/$foodRev*100,1) : 0; ?>
+        <?php $foodRowTotal = array_sum(array_map('floatval', array_column($foodRows,'Revenue'))); foreach ($foodRows as $r): $pct = $foodRowTotal > 0 ? round((float)$r['Revenue']/$foodRowTotal*100,1) : 0; ?>
         <tr>
             <td><span class="bdg bdg-f"><?= htmlspecialchars($r['FoodName']) ?></span></td>
             <td>$<?= number_format($r['UnitPrice'],2) ?></td>
@@ -618,7 +618,7 @@ tfoot td{background:var(--base-color);font-weight:700;padding:10px 13px;border-t
         </tr>
         <?php endforeach; ?>
         </tbody>
-        <tfoot><tr><td colspan="2">TOTAL</td><td><?= number_format(array_sum(array_column($foodRows,'TotalQty'))) ?></td><td class="amt">$<?= number_format($foodRev,2) ?></td><td colspan="2"></td></tr></tfoot>
+        <tfoot><tr><td colspan="2">TOTAL</td><td><?= number_format(array_sum(array_column($foodRows,'TotalQty'))) ?></td><td class="amt">$<?= number_format(array_sum(array_map('floatval', array_column($foodRows,'Revenue'))),2) ?></td><td colspan="2"></td></tr></tfoot>
     </table></div>
     <div class="chart-card">
         <h3>Top food items by revenue</h3>
@@ -684,7 +684,7 @@ tfoot td{background:var(--base-color);font-weight:700;padding:10px 13px;border-t
     <div class="tw"><table>
         <thead><tr><th>Item</th><th>Unit price</th><th>Qty sold</th><th>Revenue</th><th>Share</th><th>Bar</th></tr></thead>
         <tbody>
-        <?php foreach ($shopRows as $r): $pct = $shopRev > 0 ? round($r['Revenue']/$shopRev*100,1) : 0; ?>
+        <?php $shopRowTotal = array_sum(array_map('floatval', array_column($shopRows,'Revenue'))); foreach ($shopRows as $r): $pct = $shopRowTotal > 0 ? round((float)$r['Revenue']/$shopRowTotal*100,1) : 0; ?>
         <tr>
             <td><span class="bdg bdg-s"><?= htmlspecialchars($r['ItemName']) ?></span></td>
             <td>$<?= number_format($r['UnitPrice'],2) ?></td>
@@ -695,7 +695,7 @@ tfoot td{background:var(--base-color);font-weight:700;padding:10px 13px;border-t
         </tr>
         <?php endforeach; ?>
         </tbody>
-        <tfoot><tr><td colspan="2">TOTAL</td><td><?= number_format(array_sum(array_column($shopRows,'TotalQty'))) ?></td><td class="amt">$<?= number_format($shopRev,2) ?></td><td colspan="2"></td></tr></tfoot>
+        <tfoot><tr><td colspan="2">TOTAL</td><td><?= number_format(array_sum(array_column($shopRows,'TotalQty'))) ?></td><td class="amt">$<?= number_format(array_sum(array_map('floatval', array_column($shopRows,'Revenue'))),2) ?></td><td colspan="2"></td></tr></tfoot>
     </table></div>
     <div class="chart-card">
         <h3>Top shop items by revenue</h3>
