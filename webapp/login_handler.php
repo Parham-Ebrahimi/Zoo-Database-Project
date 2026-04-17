@@ -56,7 +56,7 @@ if ($user && password_verify($password, $user['PasswordHash'])) {
     if ($user['Role'] === 'admin') {
         header('location: dashboard.php');
     }
-    else if ($user['Role'] === 'caretaker') {
+    else if (strtolower($user['Role']) === 'caretaker') {
         header('location: caretaker_dashboard.php');
     }
     else if ($user['Role'] === 'vet') {
