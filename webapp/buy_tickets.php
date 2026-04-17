@@ -11,7 +11,6 @@ if (!isset($_SESSION['cart'])) {
 }
 $_SESSION['cart']['shop'] = [];
 
-// Zoo visit ticket types only (categories 1–4; matches order_tickets / checkout)
 $categories = $pdo->query("
     SELECT OrderCategoryID, CategoryName, Price
     FROM ordercategories
@@ -19,7 +18,6 @@ $categories = $pdo->query("
     ORDER BY OrderCategoryID
 ")->fetchAll();
 
-// Cart count for badge
 $cartCount = array_sum($_SESSION['cart']['food'])
            + array_sum($_SESSION['cart']['shop'])
            + array_sum(array_column($_SESSION['cart']['ticket'], 'qty'));
@@ -69,15 +67,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Buy Tickets — Greenwood Zoo</title>
-    <link rel="stylesheet" href="customer-reports.css">
+    <link rel="stylesheet" href="index.css">
     <style>
-        .zoo-nav { display:flex; flex-wrap:wrap; align-items:center; gap:.75rem 1.25rem; }
-        .zoo-nav a { color:var(--cr-muted); text-decoration:none; font-weight:600; font-size:.9rem; }
-        .zoo-nav a:hover { color:var(--cr-accent); }
-        .zoo-nav .cr-btn-outline { padding:.45rem 1rem; border:1px solid var(--cr-border); border-radius:999px; background:var(--cr-surface); }
-        .cart-badge { position:relative; display:inline-flex; align-items:center; gap:.4rem; }
-        .cart-badge .badge { position:absolute; top:-8px; right:-10px; background:var(--cr-accent); color:white; font-size:.65rem; font-weight:700; padding:1px 6px; border-radius:999px; min-width:18px; text-align:center; }
-
         .form-card {
             background: var(--cr-surface);
             border-radius: var(--cr-radius);
@@ -117,49 +108,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         .msg-error   { color:#c0392b; font-weight:600; margin-bottom:1rem; padding:.75rem 1rem; background:#fee2e2; border-radius:8px; }
         .msg-success { color:#155724; font-weight:600; margin-bottom:1rem; padding:.75rem 1rem; background:#d4edda; border-radius:8px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:.5rem; }
-
-        .ticket-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-            gap: 1rem;
-            margin-bottom: 2rem;
-        }
-        .ticket-type-card {
-            border: 2px solid var(--cr-border);
-            border-radius: 12px;
-            padding: 1.1rem 1.25rem;
-            cursor: pointer;
-            transition: border-color .15s, background .15s;
-            background: var(--cr-surface);
-        }
-        .ticket-type-card:hover { border-color: var(--cr-accent-soft); background: #f8fbf6; }
-        .ticket-type-card.selected { border-color: var(--cr-accent); background: #eef6ea; }
-        .ticket-type-card h3 { margin:0 0 .25rem; font-size:.95rem; font-weight:700; color:var(--cr-text); }
-        .ticket-type-card .price { font-size:1.2rem; font-weight:900; color:var(--cr-accent); }
     </style>
 </head>
-<body class="cr-body">
-<div class="cr-shell">
-    <header class="cr-topbar">
-        <span class="cr-brand">Greenwood Zoo</span>
-        <nav class="zoo-nav">
-            <a href="customer-dashboard.php">Dashboard</a>
-            <a href="restaurant.php">Restaurant</a>
-            <a href="buy_tickets.php">Tickets</a>
-            <a href="cart.php" class="cr-btn-outline cart-badge">
-                🛒 Cart
-                <?php if ($cartCount > 0): ?>
-                    <span class="badge" id="cart-count"><?= $cartCount ?></span>
-                <?php endif; ?>
-            </a>
-            <a href="logout.php" class="cr-btn-outline">Sign out</a>
+<body>
+    <header class="site-header">
+        <a class="logo" href="index.php">Greenwood Zoo</a>
+        <nav aria-label="Main">
+            <ul class="nav-links">
+                <li><a href="index.php">Home</a></li>
+                <li><a href="customer-dashboard.php">Dashboard</a></li>
+                <li><a href="restaurant.php">Restaurant</a></li>
+                <li><a href="buy_tickets.php">Buy tickets</a></li>
+                <li><a href="giftshop.php">Gift shop</a></li>
+                <li>
+                    <a href="cart.php" class="nav-cart-link">🛒 Cart<?php if ($cartCount > 0): ?><span class="nav-cart-badge" id="cart-count"><?= (int) $cartCount ?></span><?php endif; ?></a>
+                </li>
+                <li><a href="logout.php">Logout</a></li>
+            </ul>
         </nav>
     </header>
 
     <main>
-        <div class="cr-hero">
-            <h1>🎟️ Buy Tickets</h1>
-            <p>Select your ticket type, quantity and visit date — tickets are added to your cart so you can checkout everything together.</p>
+        <div class="shop-page-header">
+            <h1>Buy tickets</h1>
+            <p>Select your ticket type, quantity and visit date. Tickets are added to your cart so you can check out together with restaurant orders.</p>
         </div>
 
         <?php if ($error): ?>
@@ -257,7 +229,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
         <?php endif; ?>
     </main>
-</div>
 
 <script>
 function updatePrice() {

@@ -7,6 +7,15 @@
     --input-color: #a6ed6d;
     --surface: rgba(255, 255, 255, 0.92);
     --shadow: 0 8px 32px rgba(23, 103, 7, 0.15);
+
+    --cr-surface: var(--surface);
+    --cr-border: rgba(23, 103, 7, 0.18);
+    --cr-accent: var(--text-color);
+    --cr-accent-soft: var(--accent-color);
+    --cr-text: var(--text-color);
+    --cr-muted: #5c6b56;
+    --cr-shadow: var(--shadow);
+    --cr-radius: 16px;
 }
 
 * {
@@ -238,10 +247,6 @@ section h2 {
     opacity: 0.9;
 }
 
-/* =============================================
-   GALLERY & ANIMAL CARDS
-   ============================================= */
-
 .gallery {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -287,10 +292,6 @@ section h2 {
     color: var(--accent-color);
 }
 
-/* =============================================
-   VISIT SECTION
-   ============================================= */
-
 .visit-info {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -311,10 +312,6 @@ section h2 {
     color: var(--text-color);
 }
 
-/* =============================================
-   FOOTER
-   ============================================= */
-
 .site-footer {
     text-align: center;
     padding: 2rem 1rem;
@@ -326,4 +323,44 @@ section h2 {
     margin-top: 0.5rem;
 }
 
-/* ===================
+
+.shop-page-header {
+    margin-bottom: 1.75rem;
+}
+
+.shop-page-header h1 {
+    font-size: clamp(1.5rem, 3vw, 2rem);
+    font-weight: 800;
+    margin: 0 0 0.35rem;
+    color: var(--text-color);
+}
+
+.shop-page-header p {
+    margin: 0;
+    color: var(--cr-muted);
+    line-height: 1.55;
+    max-width: 42rem;
+}
+
+.nav-cart-link {
+    position: relative;
+}
+
+.nav-cart-badge {
+    display: inline-block;
+    margin-left: 0.35rem;
+    min-width: 1.15rem;
+    padding: 0.12rem 0.45rem;
+    font-size: 0.68rem;
+    font-weight: 700;
+    line-height: 1.2;
+    text-align: center;
+    border-radius: 999px;
+    background: var(--accent-color);
+    color: #fff;
+    vertical-align: middle;
+}
+
+.nav-cart-badge:empty {
+    display: none;
+}

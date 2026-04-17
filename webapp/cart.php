@@ -11,7 +11,6 @@ if (!isset($_SESSION['cart'])) {
 }
 $_SESSION['cart']['shop'] = [];
 
-// ── Load food items in cart ──────────────────────────────────────
 $foodItems = [];
 $foodTotal = 0;
 if (!empty($_SESSION['cart']['food'])) {
@@ -26,7 +25,6 @@ if (!empty($_SESSION['cart']['food'])) {
     }
 }
 
-// ── Load ticket items in cart ────────────────────────────────────
 $ticketItems = [];
 $ticketTotal = 0;
 if (!empty($_SESSION['cart']['ticket'])) {
@@ -61,13 +59,8 @@ $isEmpty    = $cartCount === 0;
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Your Cart — Greenwood Zoo</title>
-    <link rel="stylesheet" href="customer-reports.css">
+    <link rel="stylesheet" href="index.css">
     <style>
-        .zoo-nav { display:flex; flex-wrap:wrap; align-items:center; gap:.75rem 1.25rem; }
-        .zoo-nav a { color:var(--cr-muted); text-decoration:none; font-weight:600; font-size:.9rem; }
-        .zoo-nav a:hover { color:var(--cr-accent); }
-        .zoo-nav .cr-btn-outline { padding:.45rem 1rem; border:1px solid var(--cr-border); border-radius:999px; background:var(--cr-surface); }
-
         .cart-layout { display:grid; grid-template-columns:1fr 320px; gap:1.5rem; align-items:start; }
         @media(max-width:860px){ .cart-layout { grid-template-columns:1fr; } }
 
@@ -123,20 +116,29 @@ $isEmpty    = $cartCount === 0;
         .shop-link.outline:hover { background:#eef6ea; }
     </style>
 </head>
-<body class="cr-body">
-<div class="cr-shell">
-    <header class="cr-topbar">
-        <span class="cr-brand">Greenwood Zoo</span>
-        <nav class="zoo-nav">
-            <a href="customer-dashboard.php">Dashboard</a>
-            <a href="restaurant.php">Restaurant</a>
-            <a href="buy_tickets.php">Tickets</a>
-            <a href="logout.php" class="cr-btn-outline">Sign out</a>
+<body>
+    <header class="site-header">
+        <a class="logo" href="index.php">Greenwood Zoo</a>
+        <nav aria-label="Main">
+            <ul class="nav-links">
+                <li><a href="index.php">Home</a></li>
+                <li><a href="customer-dashboard.php">Dashboard</a></li>
+                <li><a href="restaurant.php">Restaurant</a></li>
+                <li><a href="buy_tickets.php">Buy tickets</a></li>
+                <li><a href="giftshop.php">Gift shop</a></li>
+                <li>
+                    <a href="cart.php" class="nav-cart-link">🛒 Cart<?php if ($cartCount > 0): ?><span class="nav-cart-badge" id="cart-count"><?= (int) $cartCount ?></span><?php endif; ?></a>
+                </li>
+                <li><a href="logout.php">Logout</a></li>
+            </ul>
         </nav>
     </header>
 
     <main>
-        <h1 style="font-size:clamp(1.6rem,3vw,2rem);font-weight:700;margin:0 0 1.75rem">🛒 Your Cart</h1>
+        <div class="shop-page-header">
+            <h1>Your cart</h1>
+            <p>Review tickets and restaurant items before checkout.</p>
+        </div>
 
         <?php if ($isEmpty): ?>
         <div class="empty-state">
@@ -256,6 +258,5 @@ $isEmpty    = $cartCount === 0;
         </div>
         <?php endif; ?>
     </main>
-</div>
 </body>
 </html>
