@@ -63,23 +63,29 @@ $avgSalary = $pdo->query(
         .dashboard-wrapper { 
             box-sizing: border-box; 
             min-height: 100vh; 
-            padding: 40px; 
+            padding: 20px clamp(12px, 2.4vw, 18px); 
             background-color: rgba(187, 223, 158, 0.95); 
         }
         .dashboard-header { 
             display: flex; 
             justify-content: space-between; 
             align-items: center; 
-            margin-bottom: 30px; 
+            margin-bottom: 16px; 
             border-bottom: 3px solid var(--accent-color); 
-            padding-bottom: 20px; 
+            padding-bottom: 12px; 
         }
         .filter-card {
             background: white;
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 25px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            border-radius: 12px;
+            padding: 12px 14px;
+            margin-bottom: 14px;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.05);
+        }
+        .filter-card h2 {
+            font-size: 0.95rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: var(--text-color);
         }
         .filter-card label {
             background: none;
@@ -105,17 +111,10 @@ $avgSalary = $pdo->query(
             display: block;
         }
 
-        .filter-grid { 
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 15px; 
-            align-items: end; 
-        }
-
         .filter-group { 
             display: flex; 
             flex-direction: column; 
-            gap: 6px; 
+            gap: 4px; 
         }
         .filter-group label { 
             font-size: 0.85rem; 
@@ -123,7 +122,7 @@ $avgSalary = $pdo->query(
             color: var(--text-color); 
         }
         .filter-group input, .filter-group select { 
-            padding: 8px 12px; 
+            padding: 6px 10px; 
             border: 2px solid #ddd; 
             border-radius: 8px; 
             font: inherit;
@@ -136,28 +135,9 @@ $avgSalary = $pdo->query(
         .filter-actions {
             display: flex;
             flex-wrap: wrap;
-            gap: 12px;
+            gap: 8px;
             align-items: end;
         }
-        table { 
-            width: 100%; 
-            border-collapse: collapse; 
-            background: white; 
-            border-radius: 15px; 
-            overflow: hidden; 
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
-        }
-        th { 
-            background-color: var(--accent-color); 
-            color: white; 
-            padding: 12px 15px; 
-            text-align: left; 
-        }
-        td { 
-            padding: 10px 15px; 
-            border-bottom: 1px solid #e0e0e0; 
-        }
-        tr:hover { background-color: var(--base-color); }
         .btn { 
             padding: 6px 14px; 
             border-radius: 8px; 
@@ -196,13 +176,14 @@ $avgSalary = $pdo->query(
         }
         .back-btn { 
             display: inline-block; 
-            margin-bottom: 20px; 
-            padding: 10px 20px; 
+            margin-bottom: 14px; 
+            padding: 7px 14px; 
             background-color: var(--base-color); 
             border-radius: 8px; 
             color: var(--text-color); 
             font-weight: 600; 
             text-decoration: none; 
+            font-size: 0.88rem;
         }
         .back-btn:hover { background-color: var(--accent-color); }
     </style>
@@ -267,6 +248,7 @@ $avgSalary = $pdo->query(
         <p><strong>Total Employees:</strong> <?= $totalEmployees ?></p>
         <p><strong>Average Salary:</strong> $<?= number_format($avgSalary, 2) ?></p>
 
+        <div class="report-table-scroll">
         <table>
             <tr>
                 <th>ID</th>
@@ -296,6 +278,7 @@ $avgSalary = $pdo->query(
             </tr>
             <?php endforeach; ?>
         </table>
+        </div>
         <?php endif; ?>
     </div>
 </body>
