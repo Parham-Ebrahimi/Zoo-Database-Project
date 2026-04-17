@@ -153,3 +153,121 @@ form div.incorrect input{
 #error-message{
     color:#ff0000;
 }
+
+/* Staff / health report tables: scroll when wide, comfortable compact density */
+.report-table-scroll {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 0 0 0.85rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.07);
+    background: #fff;
+}
+.report-table-scroll::-webkit-scrollbar {
+    height: 8px;
+}
+.report-table-scroll::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.04);
+    border-radius: 6px;
+}
+.report-table-scroll::-webkit-scrollbar-thumb {
+    background: rgba(23, 103, 7, 0.28);
+    border-radius: 6px;
+}
+.report-table-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(23, 103, 7, 0.4);
+}
+.report-table-scroll table {
+    width: max-content;
+    min-width: 100%;
+    border-collapse: collapse;
+    margin: 0;
+    font-size: 0.8125rem;
+    line-height: 1.35;
+    background: #fff;
+}
+.report-table-scroll th {
+    background-color: var(--accent-color);
+    color: #fff;
+    padding: 6px 9px;
+    text-align: left;
+    font-weight: 600;
+}
+.report-table-scroll td {
+    padding: 5px 9px;
+    border-bottom: 1px solid #e0e0e0;
+    vertical-align: middle;
+}
+.report-table-scroll tbody tr:not(.detail-row):hover {
+    background-color: var(--base-color);
+}
+.report-table-scroll tfoot td {
+    background: var(--base-color);
+    font-weight: 700;
+    padding: 7px 9px;
+    border-top: 2px solid var(--accent-color);
+    border-bottom: none;
+    vertical-align: middle;
+}
+
+/* Smaller Edit / Delete (and inline forms) inside report tables only */
+.report-table-scroll td .btn,
+.report-table-scroll td .btn-edit,
+.report-table-scroll td .btn-delete,
+.report-table-scroll td button.btn {
+    padding: 2px 7px;
+    font-size: 0.7rem;
+    border-radius: 5px;
+    line-height: 1.2;
+    font-weight: 600;
+}
+.report-table-scroll td form {
+    display: inline-block;
+    margin: 0;
+    vertical-align: middle;
+}
+.report-table-scroll .actions-cell {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Report filters: sit in a tight row instead of stretching (minmax … 1fr) */
+.filter-card .filter-grid {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 8px 10px;
+}
+.filter-card .filter-grid > .filter-group {
+    flex: 0 1 150px;
+    max-width: 220px;
+    min-width: 118px;
+}
+.filter-card .filter-grid > .filter-group.filter-group--wide {
+    flex: 1 1 200px;
+    max-width: min(100%, 400px);
+    min-width: min(100%, 180px);
+}
+.filter-card .filter-grid > .filter-group input,
+.filter-card .filter-grid > .filter-group select {
+    width: 100%;
+    box-sizing: border-box;
+}
+.filter-card .filter-grid > .filter-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: flex-end;
+    flex: 1 1 auto;
+}
+@media (min-width: 920px) {
+    .filter-card .filter-grid > .filter-actions {
+        margin-left: auto;
+        flex: 0 0 auto;
+    }
+}

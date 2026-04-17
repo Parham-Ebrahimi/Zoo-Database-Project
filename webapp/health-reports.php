@@ -71,6 +71,9 @@ $animals = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $totalAnimals = count($animals);
 $sickAnimals = count(array_filter($animals, static fn($a) => $a['Health_Status'] === 'Sick'));
 $pendingAnimals = count(array_filter($animals, static fn($a) => $a['Health_Status'] === 'Pending'));
+$dashHref = $_SESSION['role'] === 'vet'
+    ? 'vet_dashboard.php'
+    : ($_SESSION['role'] === 'caretaker' ? 'caretaker_dashboard.php' : 'dashboard.php');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -81,38 +84,138 @@ $pendingAnimals = count(array_filter($animals, static fn($a) => $a['Health_Statu
     <link rel="stylesheet" href="style.css">
     <style>
         body { overflow: auto; }
-        .page-wrapper { box-sizing: border-box; min-height: 100vh; padding: 40px; background-color: rgba(187, 223, 158, 0.97); }
-        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; border-bottom: 3px solid var(--accent-color); padding-bottom: 16px; flex-wrap: wrap; gap: 10px; }
-        .page-header h1 { margin: 0; }
-        .header-actions { display: flex; gap: 10px; flex-wrap: wrap; }
-        .btn-nav { padding: 9px 20px; background-color: var(--base-color); border: 2px solid var(--accent-color); border-radius: 1000px; font: inherit; font-weight: 600; color: var(--text-color); text-decoration: none; }
-        .btn-nav:hover { background-color: var(--accent-color); text-decoration: none; }
-        .btn-logout { padding: 9px 20px; background-color: var(--accent-color); border: none; border-radius: 1000px; font: inherit; font-weight: 600; color: var(--text-color); text-decoration: none; }
-        .btn-logout:hover { background-color: var(--text-color); color: white; text-decoration: none; }
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 20px; }
-        .stat-card { background: white; border-radius: 12px; padding: 16px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
-        .stat-number { font-size: 2rem; font-weight: 900; line-height: 1; color: var(--text-color); }
-        .stat-label { margin-top: 4px; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: #777; font-weight: 600; }
-        .stat-danger .stat-number { color: #e74c3c; }
-        .stat-warning .stat-number { color: #f39c12; }
-        .filter-card { background: white; border-radius: 12px; padding: 14px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
-        .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; align-items: end; }
-        .filter-group { display: flex; flex-direction: column; gap: 5px; }
-        .filter-group label { font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
-        .filter-group input, .filter-group select { padding: 8px 10px; border: 2px solid #ddd; border-radius: 8px; font: inherit; background: white; }
-        .filter-group input:focus, .filter-group select:focus { outline: none; border-color: var(--accent-color); }
-        .filter-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-        .btn-apply { padding: 8px 18px; border: none; border-radius: 8px; background: var(--accent-color); color: white; font: inherit; font-weight: 600; cursor: pointer; }
-        .btn-apply:hover { background: var(--text-color); }
-        .btn-reset { padding: 8px 18px; border-radius: 8px; background: #eee; color: #555; text-decoration: none; font-weight: 600; }
-        .btn-reset:hover { background: #ddd; text-decoration: none; }
-        .table-wrap { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; min-width: 860px; }
-        th { background-color: var(--accent-color); color: white; text-align: left; padding: 10px 12px; }
-        td { padding: 10px 12px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
-        tr:last-child td { border-bottom: none; }
-        tr:hover td { background: rgba(187, 223, 158, 0.2); }
-        .badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; }
+        .dashboard-wrapper {
+            box-sizing: border-box;
+            min-height: 100vh;
+            padding: 20px clamp(12px, 2.4vw, 18px);
+            background-color: rgba(187, 223, 158, 0.95);
+        }
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            border-bottom: 3px solid var(--accent-color);
+            padding-bottom: 12px;
+        }
+        .filter-card {
+            background: white;
+            border-radius: 12px;
+            padding: 12px 14px;
+            margin-bottom: 14px;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.05);
+        }
+        .filter-card h2 {
+            font-size: 0.95rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: var(--text-color);
+        }
+        .filter-card label {
+            background: none;
+            color: var(--text-color);
+            font-size: 0.85rem;
+            font-weight: 600;
+            height: auto;
+            width: auto;
+            border-radius: 0;
+            display: block;
+            text-align: left;
+            padding: 0;
+            fill: none;
+            flex-shrink: unset;
+        }
+        .filter-card form {
+            width: 100%;
+            margin: 0;
+            display: block;
+        }
+        .filter-card form > div {
+            width: auto;
+            display: block;
+        }
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .filter-group label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-color);
+        }
+        .filter-group input,
+        .filter-group select {
+            padding: 6px 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font: inherit;
+            background: white;
+        }
+        .filter-group input:focus,
+        .filter-group select:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+        .filter-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: end;
+        }
+        .btn {
+            padding: 6px 14px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.85rem;
+            border: none;
+            cursor: pointer;
+            font: inherit;
+            display: inline-block;
+        }
+        .btn-edit {
+            background-color: var(--accent-color);
+            color: white;
+        }
+        .btn-edit:hover {
+            background-color: var(--text-color);
+        }
+        .logout-btn {
+            padding: 10px 25px;
+            background-color: var(--accent-color);
+            border: none;
+            border-radius: 1000px;
+            font: inherit;
+            font-weight: 600;
+            cursor: pointer;
+            color: var(--text-color);
+            text-decoration: none;
+        }
+        .logout-btn:hover {
+            background-color: var(--text-color);
+            color: white;
+        }
+        .back-btn {
+            display: inline-block;
+            margin-bottom: 14px;
+            padding: 7px 14px;
+            background-color: var(--base-color);
+            border-radius: 8px;
+            color: var(--text-color);
+            font-weight: 600;
+            text-decoration: none;
+            font-size: 0.88rem;
+        }
+        .back-btn:hover { background-color: var(--accent-color); }
+        .badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
         .badge-healthy { background: #d4edda; color: #155724; }
         .badge-sick { background: #f8d7da; color: #721c24; }
         .badge-pending { background: #fff3cd; color: #856505; }
@@ -120,34 +223,16 @@ $pendingAnimals = count(array_filter($animals, static fn($a) => $a['Health_Statu
     </style>
 </head>
 <body>
-<div class="page-wrapper">
-    <div class="page-header">
-        <div>
-            <h1>Health Status Reports</h1>
-            <p>Welcome, <strong><?= htmlspecialchars($_SESSION['firstname']) ?></strong> | Role: <?= htmlspecialchars($_SESSION['role']) ?></p>
-        </div>
-        <div class="header-actions">
-            <a href="<?= $_SESSION['role'] === 'vet' ? 'vet_dashboard.php' : ($_SESSION['role'] === 'caretaker' ? 'caretaker_dashboard.php' : 'dashboard.php') ?>" class="btn-nav">← Back to Dashboard</a>
-            <a href="logout.php" class="btn-logout">Logout</a>
-        </div>
+<div class="dashboard-wrapper">
+    <div class="dashboard-header">
+        <h1>Health Status Reports</h1>
+        <a href="logout.php" class="logout-btn">Logout</a>
     </div>
 
-    <div class="stats-grid">
-        <div class="stat-card">
-            <div class="stat-number"><?= $totalAnimals ?></div>
-            <div class="stat-label">Animals in View</div>
-        </div>
-        <div class="stat-card stat-danger">
-            <div class="stat-number"><?= $sickAnimals ?></div>
-            <div class="stat-label">Sick Animals</div>
-        </div>
-        <div class="stat-card stat-warning">
-            <div class="stat-number"><?= $pendingAnimals ?></div>
-            <div class="stat-label">Pending Review</div>
-        </div>
-    </div>
+    <a href="<?= htmlspecialchars($dashHref) ?>" class="back-btn">← Back to Dashboard</a>
 
     <div class="filter-card">
+        <h2>Filter Health Records</h2>
         <form method="GET">
             <div class="filter-grid">
                 <div class="filter-group">
@@ -159,7 +244,7 @@ $pendingAnimals = count(array_filter($animals, static fn($a) => $a['Health_Statu
                         <option value="Healthy" <?= $healthFilter === 'Healthy' ? 'selected' : '' ?>>Healthy</option>
                     </select>
                 </div>
-                <div class="filter-group">
+                <div class="filter-group filter-group--wide">
                     <label>Search Name / Species</label>
                     <input type="text" name="search" value="<?= htmlspecialchars($search) ?>" placeholder="e.g. Lion, Zara">
                 </div>
@@ -168,15 +253,18 @@ $pendingAnimals = count(array_filter($animals, static fn($a) => $a['Health_Statu
                     <input type="number" name="animal_id" value="<?= $animalId > 0 ? $animalId : '' ?>" min="1" placeholder="Optional">
                 </div>
                 <div class="filter-actions">
-                    <button type="submit" class="btn-apply">Apply</button>
-                    <a href="health-reports.php" class="btn-reset">Reset</a>
+                    <button type="submit" class="btn btn-edit">Search</button>
+                    <a href="health-reports.php" class="btn">Reset</a>
                 </div>
             </div>
         </form>
     </div>
 
-    <div class="table-wrap">
-        <table>
+    <p><strong>Animals in view:</strong> <?= $totalAnimals ?></p>
+    <p><strong>Sick:</strong> <?= $sickAnimals ?> &nbsp;|&nbsp; <strong>Pending review:</strong> <?= $pendingAnimals ?></p>
+
+    <div class="report-table-scroll">
+    <table>
             <thead>
                 <tr>
                     <th>ID</th>

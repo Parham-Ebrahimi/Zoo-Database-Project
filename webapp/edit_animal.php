@@ -9,13 +9,46 @@ if (!in_array($_SESSION['role'], ['admin', 'caretaker', 'vet'], true)) {
 }
 require_once 'db.php';
 
+/** @see animals_report.php (same logic) */
+function animal_table_has_caretaker_column(PDO $pdo): bool
+{
+    static $cache = null;
+    if ($cache !== null) {
+        return $cache;
+    }
+    try {
+        $stmt = $pdo->query("
+            SELECT 1 FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = 'animal'
+              AND COLUMN_NAME = 'Caretaker_EmployeeID'
+            LIMIT 1
+        ");
+        $cache = (bool) $stmt->fetchColumn();
+    } catch (Throwable $e) {
+        $cache = false;
+    }
+    return $cache;
+}
+
+$hasCaretakerCol = animal_table_has_caretaker_column($pdo);
+
 $id = (int)($_GET["id"] ?? 0);
 if ($id <= 0) {
     header('Location: animals_report.php');
     exit;
 }
 
-$stmt = $pdo->prepare("SELECT * FROM animal WHERE Animal_ID = ?");
+if ($hasCaretakerCol) {
+    $stmt = $pdo->prepare("
+        SELECT a.*, CONCAT(ck.FirstName, ' ', ck.LastName) AS CaretakerFullName
+        FROM animal a
+        LEFT JOIN employees ck ON a.Caretaker_EmployeeID = ck.EmployeeID
+        WHERE a.Animal_ID = ?
+    ");
+} else {
+    $stmt = $pdo->prepare("SELECT * FROM animal WHERE Animal_ID = ?");
+}
 $stmt->execute([$id]);
 $animal = $stmt->fetch(PDO::FETCH_ASSOC);
 if (!$animal) {
@@ -24,21 +57,41 @@ if (!$animal) {
 }
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
-    $name     = $_POST["name"];
-    $species  = $_POST["species"];
-    $category = $_POST["category"];
-    $age      = $_POST["age"];
-    $sex      = $_POST["sex"];
+    $name      = $_POST["name"];
+    $species   = $_POST["species"];
+    $category  = $_POST["category"];
+    $age       = $_POST["age"];
+    $sex       = $_POST["sex"];
     $enclosure = $_POST["enclosure"];
 
-    $stmt = $pdo->prepare("UPDATE animal SET Name=?, Species=?, Category=?, Age=?, Sex=?, Enclosure_ID=? WHERE Animal_ID=?");
-    $stmt->execute([$name, $species, $category, $age ?: null, $sex, $enclosure ?: null, $id]);
+    if ($hasCaretakerCol && ($_SESSION['role'] ?? '') === 'admin') {
+        $caretakerRaw = $_POST['caretaker_id'] ?? '';
+        $caretakerId  = ($caretakerRaw === '' || $caretakerRaw === '0') ? null : (int) $caretakerRaw;
+        $stmt = $pdo->prepare("
+            UPDATE animal
+            SET Name=?, Species=?, Category=?, Age=?, Sex=?, Enclosure_ID=?, Caretaker_EmployeeID=?
+            WHERE Animal_ID=?
+        ");
+        $stmt->execute([$name, $species, $category, $age ?: null, $sex, $enclosure ?: null, $caretakerId, $id]);
+    } else {
+        $stmt = $pdo->prepare("UPDATE animal SET Name=?, Species=?, Category=?, Age=?, Sex=?, Enclosure_ID=? WHERE Animal_ID=?");
+        $stmt->execute([$name, $species, $category, $age ?: null, $sex, $enclosure ?: null, $id]);
+    }
 
     header("Location: animals_report.php");
     exit();
 }
 
 $enclosures = $pdo->query("SELECT Enclosure_ID, Enclosure_Name FROM enclosure")->fetchAll();
+$assignableCaretakers = [];
+if ($hasCaretakerCol) {
+    $assignableCaretakers = $pdo->query("
+        SELECT EmployeeID, CONCAT(FirstName, ' ', LastName) AS FullName
+        FROM employees
+        WHERE LOWER(TRIM(Role)) IN ('caretaker', 'keeper')
+        ORDER BY FirstName, LastName
+    ")->fetchAll();
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -112,6 +165,30 @@ $enclosures = $pdo->query("SELECT Enclosure_ID, Enclosure_Name FROM enclosure")-
                             <?php endforeach; ?>
                         </select>
                     </div>
+                    <?php if ($hasCaretakerCol): ?>
+                    <div class="form-group" style="grid-column: 1 / -1">
+                        <label>Assigned caretaker (admin only)</label>
+                        <?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
+                            <select name="caretaker_id">
+                                <option value="">— Not assigned —</option>
+                                <?php
+                                $currentCid = isset($animal['Caretaker_EmployeeID']) ? (int) $animal['Caretaker_EmployeeID'] : 0;
+                                foreach ($assignableCaretakers as $c):
+                                ?>
+                                    <option value="<?= (int) $c['EmployeeID'] ?>" <?= $currentCid === (int) $c['EmployeeID'] ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($c['FullName']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        <?php else: ?>
+                            <p style="margin:0;padding:9px 12px;border:2px solid #eee;border-radius:8px;background:#fafafa">
+                                <?= htmlspecialchars($animal['CaretakerFullName'] ?? '') !== ''
+                                    ? htmlspecialchars((string) $animal['CaretakerFullName'])
+                                    : 'Not assigned' ?>
+                            </p>
+                        <?php endif; ?>
+                    </div>
+                    <?php endif; ?>
                 </div>
                 <button type="submit" class="submit-btn">Save Changes</button>
             </form>
