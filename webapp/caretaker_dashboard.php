@@ -5,7 +5,7 @@ if (!isset($_SESSION['user_id'])) {
     header('Location: login.html');
     exit;
 }
-if (!in_array($_SESSION['role'], ['caretaker', 'admin'], true)) {
+if (!in_array(strtolower($_SESSION['role']), ['caretaker', 'admin'], true)) {
     header('Location: dashboard.php');
     exit;
 }
