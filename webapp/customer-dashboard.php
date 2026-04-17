@@ -352,12 +352,6 @@ $animalSpotlightImages = [
                         <a href="restaurant.php" class="primary">🍽️ Restaurant</a>
                         <a href="cart.php">🛒 View cart</a>
                     </div>
-
-                    <div class="dash-card">
-                        <h2>Explore</h2>
-                        <a href="customer_animals_report.php">View animals</a>
-                        <a href="giftshop.php">Shop souvenirs</a>
-                    </div>
                 </aside>
 
                 <section class="dash-main" aria-labelledby="attractions-heading">
