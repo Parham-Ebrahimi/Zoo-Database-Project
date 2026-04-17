@@ -53,22 +53,14 @@ $added = $_GET['added'] ?? '';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Restaurant — Greenwood Zoo</title>
-    <link rel="stylesheet" href="customer-reports.css">
+    <link rel="stylesheet" href="index.css">
     <style>
-        .zoo-nav { display:flex; flex-wrap:wrap; align-items:center; gap:.75rem 1.25rem; }
-        .zoo-nav a { color:var(--cr-muted); text-decoration:none; font-weight:600; font-size:.9rem; }
-        .zoo-nav a:hover { color:var(--cr-accent); }
-        .zoo-nav .cr-btn-outline { padding:.45rem 1rem; border:1px solid var(--cr-border); border-radius:999px; background:var(--cr-surface); }
-
-        .cart-badge { position:relative; display:inline-flex; align-items:center; gap:.4rem; }
-        .cart-badge .badge { position:absolute; top:-8px; right:-10px; background:var(--cr-accent); color:white; font-size:.65rem; font-weight:700; padding:1px 6px; border-radius:999px; min-width:18px; text-align:center; }
-
         .page-hero { margin-bottom:2rem; }
-        .page-hero h1 { font-size:clamp(1.6rem,3vw,2rem); font-weight:700; margin:0 0 .35rem; }
+        .page-hero h1 { font-size:clamp(1.6rem,3vw,2rem); font-weight:800; margin:0 0 .35rem; color:var(--text-color); }
         .page-hero p  { color:var(--cr-muted); margin:0; }
 
         .stall-banner {
-            background: linear-gradient(135deg, #1a4a1a 0%, #2d6a3e 100%);
+            background: linear-gradient(135deg, var(--text-color) 0%, #2a8a3a 100%);
             border-radius: 16px;
             padding: 1.25rem 1.75rem;
             margin-bottom: 1.75rem;
@@ -136,20 +128,21 @@ $added = $_GET['added'] ?? '';
         .toast.show { opacity:1; transform:translateY(0); }
     </style>
 </head>
-<body class="cr-body">
-<div class="cr-shell">
-    <header class="cr-topbar">
-        <span class="cr-brand">Greenwood Zoo</span>
-        <nav class="zoo-nav">
-            <a href="customer-dashboard.php">Dashboard</a>
-            <a href="buy_tickets.php">Tickets</a>
-            <a href="cart.php" class="cr-btn-outline cart-badge">
-                🛒 Cart
-                <?php if ($cartCount > 0): ?>
-                    <span class="badge" id="cart-count"><?= $cartCount ?></span>
-                <?php endif; ?>
-            </a>
-            <a href="logout.php" class="cr-btn-outline">Sign out</a>
+<body>
+    <header class="site-header">
+        <a class="logo" href="index.php">Greenwood Zoo</a>
+        <nav aria-label="Main">
+            <ul class="nav-links">
+                <li><a href="index.php">Home</a></li>
+                <li><a href="customer-dashboard.php">Dashboard</a></li>
+                <li><a href="restaurant.php">Restaurant</a></li>
+                <li><a href="buy_tickets.php">Buy tickets</a></li>
+                <li><a href="giftshop.php">Gift shop</a></li>
+                <li>
+                    <a href="cart.php" class="nav-cart-link">🛒 Cart<?php if ($cartCount > 0): ?><span class="nav-cart-badge" id="cart-count"><?= (int) $cartCount ?></span><?php endif; ?></a>
+                </li>
+                <li><a href="logout.php">Logout</a></li>
+            </ul>
         </nav>
     </header>
 
@@ -203,7 +196,6 @@ $added = $_GET['added'] ?? '';
         </div>
         <?php endforeach; ?>
     </main>
-</div>
 
 <div class="toast" id="toast"></div>
 
@@ -229,10 +221,10 @@ document.querySelectorAll('.add-form').forEach(form => {
             const badge = document.getElementById('cart-count');
             if (badge) { badge.textContent = d.count; }
             else {
-                const link = document.querySelector('a[href="cart.php"]');
+                const link = document.querySelector('a.nav-cart-link');
                 if (link) {
                     const b = document.createElement('span');
-                    b.id = 'cart-count'; b.className = 'badge'; b.textContent = d.count;
+                    b.id = 'cart-count'; b.className = 'nav-cart-badge'; b.textContent = d.count;
                     link.appendChild(b);
                 }
             }
