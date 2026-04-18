@@ -462,6 +462,8 @@ $lowFoodAnimals = count(array_filter($animals, static fn($a) => (int)$a['food_st
             <?php elseif ($isVet): ?>
                 <a href="vet_dashboard.php" class="secondary-nav-btn">← Vet dashboard</a>
             <?php endif; ?>
+            <a href="change-password.php" class="secondary-nav-btn">🔒 Change Password</a>
+
             <a href="logout.php" class="logout-btn">Logout</a>
         </div>
     </div>
