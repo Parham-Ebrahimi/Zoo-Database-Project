@@ -229,11 +229,12 @@ $isEmpty    = $cartCount === 0;
                 </div>
                 <?php endif; ?>
 
-                <form method="POST" action="cart_action.php" style="margin-top:.5rem">
+                <form id="clear-cart-form" method="POST" action="cart_action.php" style="margin-top:.5rem">
                     <input type="hidden" name="action"   value="clear">
                     <input type="hidden" name="redirect" value="cart.php">
-                    <button type="submit" style="background:none;border:none;color:var(--cr-muted);font:inherit;font-size:.85rem;font-weight:600;cursor:pointer;text-decoration:underline;padding:0"
-                        onclick="return confirm('Clear your entire cart?')">Clear cart</button>
+                    <button type="button" id="open-clear-cart-modal" style="background:none;border:none;color:var(--cr-muted);font:inherit;font-size:.85rem;font-weight:600;cursor:pointer;text-decoration:underline;padding:0">
+                        Clear cart
+                    </button>
                 </form>
             </div>
 
@@ -258,5 +259,44 @@ $isEmpty    = $cartCount === 0;
         </div>
         <?php endif; ?>
     </main>
+
+    <div id="clear-cart-modal" class="site-modal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="clear-cart-modal-title">
+        <div class="site-modal__backdrop" data-close-clear-cart></div>
+        <div class="site-modal__panel">
+            <h2 id="clear-cart-modal-title" class="site-modal__title">Clear your cart?</h2>
+            <p class="site-modal__text">All tickets and restaurant items in your cart will be removed. You can add them again later.</p>
+            <div class="site-modal__actions">
+                <button type="button" class="btn btn-outline" data-close-clear-cart>Keep shopping</button>
+                <button type="button" class="btn btn-primary" id="confirm-clear-cart">Clear cart</button>
+            </div>
+        </div>
+    </div>
+    <script>
+    (function () {
+        var openBtn = document.getElementById('open-clear-cart-modal');
+        var modal = document.getElementById('clear-cart-modal');
+        var form = document.getElementById('clear-cart-form');
+        var confirmBtn = document.getElementById('confirm-clear-cart');
+        if (!openBtn || !modal || !form || !confirmBtn) return;
+        var closers = modal.querySelectorAll('[data-close-clear-cart]');
+        function openM() {
+            modal.classList.add('site-modal--open');
+            modal.setAttribute('aria-hidden', 'false');
+            document.body.style.overflow = 'hidden';
+        }
+        function closeM() {
+            modal.classList.remove('site-modal--open');
+            modal.setAttribute('aria-hidden', 'true');
+            document.body.style.overflow = '';
+        }
+        openBtn.addEventListener('click', openM);
+        closers.forEach(function (el) { el.addEventListener('click', closeM); });
+        modal.addEventListener('click', function (e) { if (e.target === modal) closeM(); });
+        confirmBtn.addEventListener('click', function () { form.submit(); });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && modal.classList.contains('site-modal--open')) closeM();
+        });
+    })();
+    </script>
 </body>
 </html>

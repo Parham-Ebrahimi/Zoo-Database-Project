@@ -364,3 +364,60 @@ section h2 {
 .nav-cart-badge:empty {
     display: none;
 }
+
+/* In-page modal (replaces browser alert for guest “Buy tickets”) */
+.site-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 1.25rem;
+}
+.site-modal.site-modal--open {
+    display: flex;
+}
+.site-modal__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(23, 103, 7, 0.5);
+    cursor: pointer;
+}
+.site-modal__panel {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 420px;
+    background: var(--surface);
+    border-radius: 20px;
+    padding: 1.75rem 1.5rem;
+    box-shadow: var(--shadow);
+    text-align: center;
+}
+.site-modal__title {
+    font-size: 1.25rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    margin: 0 0 0.75rem;
+    color: var(--text-color);
+}
+.site-modal__text {
+    margin: 0 0 1.25rem;
+    line-height: 1.55;
+    color: var(--cr-muted);
+    font-size: 0.95rem;
+}
+.site-modal__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    justify-content: center;
+}
+.site-modal__actions .btn {
+    text-decoration: none;
+}
+.site-modal__actions .btn:focus-visible {
+    outline: 2px solid var(--accent-color);
+    outline-offset: 2px;
+}

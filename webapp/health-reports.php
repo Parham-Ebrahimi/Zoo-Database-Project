@@ -4,7 +4,9 @@ if (!isset($_SESSION['user_id'])) {
     header('Location: login.html');
     exit;
 }
-if (!in_array($_SESSION['role'], ['admin', 'vet', 'caretaker'], true)) {
+require_once 'staff_home.php';
+$roleGate = strtolower(trim((string) ($_SESSION['role'] ?? '')));
+if (!in_array($roleGate, ['admin', 'vet', 'caretaker', 'keeper'], true) && !staff_is_vet_role()) {
     header('Location: dashboard.php');
     exit;
 }
@@ -71,9 +73,7 @@ $animals = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $totalAnimals = count($animals);
 $sickAnimals = count(array_filter($animals, static fn($a) => $a['Health_Status'] === 'Sick'));
 $pendingAnimals = count(array_filter($animals, static fn($a) => $a['Health_Status'] === 'Pending'));
-$dashHref = $_SESSION['role'] === 'vet'
-    ? 'vet_dashboard.php'
-    : ($_SESSION['role'] === 'caretaker' ? 'caretaker_dashboard.php' : 'dashboard.php');
+$dashHref = staff_home_href();
 ?>
 <!DOCTYPE html>
 <html lang="en">
