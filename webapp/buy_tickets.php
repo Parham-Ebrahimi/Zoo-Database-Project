@@ -1,15 +1,16 @@
 <?php
 session_start();
 if (!isset($_SESSION['customer_id'])) {
-    header('Location: sign-in.html');
+    header('Location: login.html');
     exit;
 }
 require_once 'db.php';
 
 if (!isset($_SESSION['cart'])) {
-    $_SESSION['cart'] = ['food' => [], 'ticket' => []];
+    $_SESSION['cart'] = ['food' => [], 'ticket' => [], 'shop' => []];
+} elseif (!isset($_SESSION['cart']['shop']) || !is_array($_SESSION['cart']['shop'])) {
+    $_SESSION['cart']['shop'] = [];
 }
-$_SESSION['cart']['shop'] = [];
 
 $categories = $pdo->query("
     SELECT OrderCategoryID, CategoryName, Price

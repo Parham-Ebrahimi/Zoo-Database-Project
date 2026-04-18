@@ -1,15 +1,48 @@
 <?php
 session_start();
 if (!isset($_SESSION['customer_id'])) {
-    header('Location: sign-in.html');
+    header('Location: login.html');
     exit;
 }
 require_once 'db.php';
 
 if (!isset($_SESSION['cart'])) {
-    $_SESSION['cart'] = ['food' => [], 'ticket' => []];
+    $_SESSION['cart'] = ['food' => [], 'ticket' => [], 'shop' => []];
+} elseif (!isset($_SESSION['cart']['shop']) || !is_array($_SESSION['cart']['shop'])) {
+    $_SESSION['cart']['shop'] = [];
 }
-$_SESSION['cart']['shop'] = [];
+
+// ── Load gift shop items in cart ─────────────────────────────────
+$shopItems = [];
+$shopTotal = 0;
+if (!empty($_SESSION['cart']['shop'])) {
+    $ids = implode(',', array_map('intval', array_keys($_SESSION['cart']['shop'])));
+    if ($ids !== '') {
+        $rows = $pdo->query("
+            SELECT si.ShopItemID, si.ItemName, si.Price, si.StockQty, s.ShopName
+            FROM shop_items si
+            JOIN shops s ON s.ShopID = si.ShopID
+            WHERE si.ShopItemID IN ($ids)
+        ")->fetchAll();
+        foreach ($rows as $r) {
+            $qty = (int) ($_SESSION['cart']['shop'][$r['ShopItemID']] ?? 0);
+            if ($qty < 1) {
+                continue;
+            }
+            $maxStock = (int) $r['StockQty'];
+            $qty = min($qty, max(0, $maxStock));
+            if ($qty < 1) {
+                unset($_SESSION['cart']['shop'][$r['ShopItemID']]);
+                continue;
+            }
+            $_SESSION['cart']['shop'][$r['ShopItemID']] = $qty;
+            $r['qty'] = $qty;
+            $r['subtotal'] = (float) $r['Price'] * $qty;
+            $shopTotal += $r['subtotal'];
+            $shopItems[] = $r;
+        }
+    }
+}
 
 $foodItems = [];
 $foodTotal = 0;
@@ -48,9 +81,10 @@ if (!empty($_SESSION['cart']['ticket'])) {
     }
 }
 
-$grandTotal = $foodTotal + $ticketTotal;
+$grandTotal = $foodTotal + $ticketTotal + $shopTotal;
 $cartCount  = array_sum($_SESSION['cart']['food'])
-            + array_sum(array_column($_SESSION['cart']['ticket'], 'qty'));
+            + array_sum(array_column($_SESSION['cart']['ticket'], 'qty'))
+            + array_sum($_SESSION['cart']['shop']);
 $isEmpty    = $cartCount === 0;
 ?>
 <!DOCTYPE html>
@@ -234,23 +268,64 @@ $isEmpty    = $cartCount === 0;
     <main>
         <div class="shop-page-header">
             <h1>Your cart</h1>
-            <p>Review tickets and restaurant items before checkout.</p>
+            <p>Review gift shop, ticket, and restaurant items before checkout.</p>
         </div>
 
         <?php if ($isEmpty): ?>
         <div class="empty-state">
             <span class="emoji">🛒</span>
             <h2>Your cart is empty</h2>
-            <p>Browse our restaurant or buy tickets to get started.</p>
+            <p>Browse the gift shop, restaurant, or tickets to get started.</p>
             <div class="shop-links">
-                <a href="restaurant.php"  class="shop-link"> Restaurant</a>
-                <a href="buy_tickets.php" class="shop-link outline"> Tickets</a>
+                <a href="giftshop.php" class="shop-link">Gift Shop</a>
+                <a href="restaurant.php"  class="shop-link outline">Restaurant</a>
+                <a href="buy_tickets.php" class="shop-link outline">Tickets</a>
             </div>
         </div>
         <?php else: ?>
 
         <div class="cart-layout">
             <div>
+                <?php if (!empty($shopItems)): ?>
+                <div class="cart-section">
+                    <div class="cart-section-header"><span class="icon">🎁</span> Gift Shop</div>
+                    <table class="cart-table">
+                        <thead><tr><th>Item</th><th>Price</th><th>Qty</th><th>Subtotal</th><th></th></tr></thead>
+                        <tbody>
+                        <?php foreach ($shopItems as $s): ?>
+                        <tr>
+                            <td>
+                                <div style="font-weight:600"><?= htmlspecialchars($s['ItemName']) ?></div>
+                                <div style="font-size:.8rem;color:var(--cr-muted)"><?= htmlspecialchars($s['ShopName']) ?></div>
+                            </td>
+                            <td>$<?= number_format((float) $s['Price'], 2) ?></td>
+                            <td>
+                                <form class="qty-form" method="POST" action="cart_action.php">
+                                    <input type="hidden" name="action" value="update">
+                                    <input type="hidden" name="type" value="shop">
+                                    <input type="hidden" name="id" value="<?= (int) $s['ShopItemID'] ?>">
+                                    <input type="hidden" name="redirect" value="cart.php">
+                                    <input class="qty-input" type="number" name="qty" value="<?= (int) $s['qty'] ?>" min="1" max="<?= max(1, (int) $s['StockQty']) ?>">
+                                    <button class="update-btn" type="submit" title="Update">↻</button>
+                                </form>
+                            </td>
+                            <td class="subtotal">$<?= number_format($s['subtotal'], 2) ?></td>
+                            <td>
+                                <form method="POST" action="cart_action.php">
+                                    <input type="hidden" name="action" value="remove">
+                                    <input type="hidden" name="type" value="shop">
+                                    <input type="hidden" name="id" value="<?= (int) $s['ShopItemID'] ?>">
+                                    <input type="hidden" name="redirect" value="cart.php">
+                                    <button class="remove-btn" type="submit">Remove</button>
+                                </form>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+                <?php endif; ?>
+
                 <?php if (!empty($ticketItems)): ?>
                 <div class="cart-section">
                     <div class="cart-section-header"> Zoo Tickets</div>
@@ -345,9 +420,13 @@ $isEmpty    = $cartCount === 0;
                     <?php if ($foodTotal > 0): ?>
                     <div class="summary-row"><span>Restaurant</span><span>$<?= number_format($foodTotal, 2) ?></span></div>
                     <?php endif; ?>
+                    <?php if ($shopTotal > 0): ?>
+                    <div class="summary-row"><span>Gift shop</span><span>$<?= number_format($shopTotal, 2) ?></span></div>
+                    <?php endif; ?>
                     <div class="summary-row total"><span>Total</span><span>$<?= number_format($grandTotal, 2) ?></span></div>
                     <a href="checkout.php" class="checkout-btn">Proceed to checkout →</a>
                     <div class="continue-links">
+                        <a href="giftshop.php">+ Add gift shop items</a>
                         <a href="restaurant.php">+ Add food items</a>
                         <a href="buy_tickets.php">+ Add tickets</a>
                     </div>
@@ -361,7 +440,7 @@ $isEmpty    = $cartCount === 0;
         <div class="site-modal__backdrop" data-close-clear-cart></div>
         <div class="site-modal__panel">
             <h2 id="clear-cart-modal-title" class="site-modal__title">Clear your cart?</h2>
-            <p class="site-modal__text">All tickets and restaurant items in your cart will be removed. You can add them again later.</p>
+            <p class="site-modal__text">All gift shop, ticket, and restaurant items in your cart will be removed. You can add them again later.</p>
             <div class="site-modal__actions">
                 <button type="button" class="btn btn-outline" data-close-clear-cart>Keep shopping</button>
                 <button type="button" class="btn btn-primary" id="confirm-clear-cart">Clear cart</button>

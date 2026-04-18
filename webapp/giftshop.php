@@ -1,74 +1,14 @@
 <?php
 session_start();
 if (!isset($_SESSION['customer_id'])) {
-    header('Location: sign-in.html');
+    header('Location: login.html');
     exit;
 }
 require_once 'db.php';
 
-$customerID = (int) $_SESSION['customer_id'];
-$success = '';
-$error = '';
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $itemID = (int) ($_POST['shop_item_id'] ?? 0);
-    $quantity = (int) ($_POST['quantity'] ?? 1);
-    $paymentMode = trim((string) ($_POST['payment_mode'] ?? ''));
-
-    $validPaymentModes = ['Credit Card', 'Debit Card', 'Cash', 'PayPal'];
-    if ($itemID <= 0 || $quantity <= 0 || !in_array($paymentMode, $validPaymentModes, true)) {
-        $error = 'Please choose an item, quantity, and payment method.';
-    } else {
-        try {
-            $pdo->beginTransaction();
-
-            $itemStmt = $pdo->prepare('SELECT ItemName, Price, StockQty FROM shop_items WHERE ShopItemID = ?');
-            $itemStmt->execute([$itemID]);
-            $item = $itemStmt->fetch(PDO::FETCH_ASSOC);
-
-            if (!$item) {
-                throw new RuntimeException('Selected item no longer exists.');
-            }
-
-            $total = round((float) $item['Price'] * $quantity, 2);
-
-            $orderStmt = $pdo->prepare("
-                INSERT INTO orders (OrderDate, CustomerID, OrderCategoryID, PaymentMode, TransactionAmount, ScheduledDate)
-                VALUES (CURDATE(), ?, 6, ?, ?, NULL)
-            ");
-            $orderStmt->execute([$customerID, $paymentMode, $total]);
-            $orderID = (int) $pdo->lastInsertId();
-
-            $lineStmt = $pdo->prepare('INSERT INTO order_shop_items (OrderID, ShopItemID, Quantity) VALUES (?, ?, ?)');
-            $lineStmt->execute([$orderID, $itemID, $quantity]);
-
-            $pdo->commit();
-            $success = "Purchase complete: {$quantity} x {$item['ItemName']}.";
-        } catch (Throwable $e) {
-            if ($pdo->inTransaction()) {
-                $pdo->rollBack();
-            }
-            $error = str_contains($e->getMessage(), 'out of stock')
-                ? 'Sorry, this item is out of stock or does not have enough quantity.'
-                : 'Could not complete the purchase. Please try again.';
-
-            if ($itemID > 0) {
-                try {
-                    $alertStmt = $pdo->prepare("
-                        INSERT INTO restock_alerts (ShopItemID, AlertType, Message)
-                        VALUES (?, 'OUT_OF_STOCK', 'Customer attempted to buy an out-of-stock item. Please restock.')
-                        ON DUPLICATE KEY UPDATE
-                            CreatedAt = NOW(),
-                            Message = VALUES(Message),
-                            IsResolved = 0,
-                            ResolvedAt = NULL
-                    ");
-                    $alertStmt->execute([$itemID]);
-                } catch (Throwable $ignored) {
-                }
-            }
-        }
-    }
+$flash = '';
+if (isset($_GET['added'])) {
+    $flash = 'Item added to your cart.';
 }
 
 $itemsStmt = $pdo->query("
@@ -78,6 +18,12 @@ $itemsStmt = $pdo->query("
     ORDER BY s.ShopName, si.ItemName
 ");
 $items = $itemsStmt->fetchAll(PDO::FETCH_ASSOC);
+
+$cartShop = [];
+if (isset($_SESSION['cart']['shop']) && is_array($_SESSION['cart']['shop'])) {
+    $cartShop = $_SESSION['cart']['shop'];
+}
+$cartCount = array_sum($cartShop);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -135,7 +81,6 @@ $items = $itemsStmt->fetchAll(PDO::FETCH_ASSOC);
             gap: 0.45rem;
         }
         .buy-form input,
-        .buy-form select,
         .buy-form button {
             width: 100%;
             padding: 0.5rem 0.65rem;
@@ -161,7 +106,12 @@ $items = $itemsStmt->fetchAll(PDO::FETCH_ASSOC);
             font-size: 0.92rem;
         }
         .ok { background: #ecf9e8; color: #205f18; }
-        .bad { background: #ffeaea; color: #8a1111; }
+        .cart-link {
+            font-weight: 700;
+            color: var(--accent-color);
+            text-decoration: none;
+        }
+        .cart-link:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -171,6 +121,7 @@ $items = $itemsStmt->fetchAll(PDO::FETCH_ASSOC);
             <ul class="nav-links">
                 <li><a href="customer-dashboard.php">Dashboard</a></li>
                 <li><a href="buy_tickets.php">Buy Tickets</a></li>
+                <li><a href="cart.php">Cart<?= $cartCount > 0 ? ' (' . (int) $cartCount . ')' : '' ?></a></li>
                 <li><a href="giftshop.php">Gift Shop</a></li>
                 <li><a href="customer_profile.php">Profile</a></li>
                 <li><a href="logout.php">Logout</a></li>
@@ -181,12 +132,9 @@ $items = $itemsStmt->fetchAll(PDO::FETCH_ASSOC);
     <main class="shop-wrap">
         <section class="shop-panel">
             <h1>Gift Shop</h1>
-            <p>Buy zoo merchandise online. Purchases update inventory in real time.</p>
-            <?php if ($success !== ''): ?>
-                <div class="notice ok"><?= htmlspecialchars($success) ?></div>
-            <?php endif; ?>
-            <?php if ($error !== ''): ?>
-                <div class="notice bad"><?= htmlspecialchars($error) ?></div>
+            <p>Add souvenirs to your cart, then open <a class="cart-link" href="cart.php">your cart</a> to review and pay.</p>
+            <?php if ($flash !== ''): ?>
+                <div class="notice ok"><?= htmlspecialchars($flash) ?></div>
             <?php endif; ?>
         </section>
 
@@ -194,7 +142,7 @@ $items = $itemsStmt->fetchAll(PDO::FETCH_ASSOC);
             <?php foreach ($items as $item): ?>
                 <?php
                     $stock = (int) $item['StockQty'];
-                    $stockClass = $stock <= 0 ? 'stock-out' : ($stock <= 2 ? 'stock-low' : 'stock-ok');
+                    $stockClass = $stock <= 0 ? 'stock-out' : ($stock <= 3 ? 'stock-low' : 'stock-ok');
                 ?>
                 <article class="shop-card">
                     <div class="shop-name"><?= htmlspecialchars($item['ShopName']) ?></div>
@@ -203,22 +151,16 @@ $items = $itemsStmt->fetchAll(PDO::FETCH_ASSOC);
                     <div class="meta <?= $stockClass ?>">
                         Stock: <?= $stock <= 0 ? 'Out of stock' : $stock ?>
                     </div>
-                    <form class="buy-form" method="POST">
-                        <input type="hidden" name="shop_item_id" value="<?= (int) $item['ShopItemID'] ?>">
+                    <form class="buy-form" method="POST" action="cart_action.php">
+                        <input type="hidden" name="action" value="add">
+                        <input type="hidden" name="type" value="shop">
+                        <input type="hidden" name="id" value="<?= (int) $item['ShopItemID'] ?>">
+                        <input type="hidden" name="redirect" value="giftshop.php?added=1">
                         <label>
                             Quantity
-                            <input type="number" name="quantity" min="1" max="<?= max(1, $stock) ?>" value="1" <?= $stock <= 0 ? 'disabled' : '' ?>>
+                            <input type="number" name="qty" min="1" max="<?= max(1, $stock) ?>" value="1" <?= $stock <= 0 ? 'disabled' : '' ?>>
                         </label>
-                        <label>
-                            Payment
-                            <select name="payment_mode" <?= $stock <= 0 ? 'disabled' : '' ?>>
-                                <option value="Credit Card">Credit Card</option>
-                                <option value="Debit Card">Debit Card</option>
-                                <option value="Cash">Cash</option>
-                                <option value="PayPal">PayPal</option>
-                            </select>
-                        </label>
-                        <button type="submit" <?= $stock <= 0 ? 'disabled' : '' ?>>Buy Item</button>
+                        <button type="submit" <?= $stock <= 0 ? 'disabled' : '' ?>>Add to cart</button>
                     </form>
                 </article>
             <?php endforeach; ?>
