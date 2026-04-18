@@ -162,7 +162,8 @@ $myTickets = $tickets->fetchAll();
         <nav aria-label="Main">
             <ul class="nav-links">
                 <li><a href="index.php">Home</a></li>
-                <li><a href="buy-tickets.php">Buy Tickets</a></li>
+                <li><a href="buy_tickets.php">Buy Tickets</a></li>
+                <li><a href="giftshop.php">Gift Shop</a></li>
                 <li><a href="customer_animals_report.php">Animals</a></li>
                 <li><span>Welcome, <?= htmlspecialchars($_SESSION['firstname']) ?></span></li>
                 <li><a href="logout.php">Logout</a></li>
@@ -171,7 +172,7 @@ $myTickets = $tickets->fetchAll();
     </header>
 
     <div class="profile-wrapper">
-        <a class="back-link" href="index.php">← Back to Home</a>
+        <a class="back-link" href="customer-dashboard.php">← Back to Dashboard</a>
 
         <div class="profile-card">
             <h2>My Profile</h2>

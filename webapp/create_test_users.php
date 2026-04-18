@@ -11,6 +11,14 @@ $users = [
         'password'   => 'caretaker123',
     ],
     [
+        'employeeID' => 5,
+        'firstname'  => 'Joe',
+        'lastname'   => 'Banana',
+        'role'       => 'Caretaker',
+        'username'   => 'caretaker2',
+        'password'   => 'caretaker123',
+    ],
+    [
         'employeeID' => 3,
         'firstname'  => 'Jane',
         'lastname'   => 'Vet',
