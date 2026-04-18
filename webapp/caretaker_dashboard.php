@@ -578,6 +578,7 @@ $lowFoodAnimals = count(array_filter($animals, static fn($a) => (int)$a['food_st
                                 <input type="number" name="restock_qty" class="restock-qty" value="20" min="1" max="100" title="Amount to add">
                                 <button type="submit" class="btn-sm btn-restock">Restock</button>
                             </form>
+                            <?php endif; ?>
                         </td>
                     </tr>
                 <?php endforeach; ?>
