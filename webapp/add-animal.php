@@ -15,7 +15,6 @@ require_once 'db.php';
 
 $staffHome = staff_home_href();
 
-/** @see animals_report.php (same logic) */
 function animal_table_has_caretaker_column(PDO $pdo): bool
 {
     static $cache = null;

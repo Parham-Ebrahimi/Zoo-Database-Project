@@ -345,7 +345,14 @@ function sortLink(string $col, string $label, string $current, string $dir): str
             gap: 8px;
         }
         .detail-item { font-size: .85rem; }
-        .detail-item strong { display: block; font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; color: #888; margin-bottom: 2px; }
+        .detail-item strong { 
+            display: block; 
+            font-size: .72rem; 
+            text-transform: uppercase; 
+            letter-spacing: .05em; 
+            color: #888; 
+            margin-bottom: 2px; 
+        }
 
         .no-results { padding: 28px; text-align: center; color: #888; font-style: italic; }
 

@@ -32,8 +32,6 @@ $todayRevenue   = $pdo->query("SELECT TotalRevenue FROM daily_revenue WHERE Reve
             overflow: auto;
             margin: 0;
         }
-
-        /* Full-viewport green wash (matches staff reports) */
         .dashboard-wrapper {
             box-sizing: border-box;
             width: 100%;

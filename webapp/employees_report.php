@@ -16,7 +16,11 @@ $f_sal_min   = $_GET['sal_min']   ?? '';
 $f_sal_max   = $_GET['sal_max']   ?? '';
 
 // Filter options
-$departments = $pdo->query("SELECT DISTINCT Department FROM employees WHERE Department IS NOT NULL ORDER BY Department")->fetchAll(PDO::FETCH_COLUMN);
+$departments = $pdo->query(
+    "SELECT DISTINCT Department 
+    FROM employees 
+    WHERE Department 
+    IS NOT NULL ORDER BY Department")->fetchAll(PDO::FETCH_COLUMN);
 $roles       = $pdo->query("SELECT DISTINCT Role FROM employees WHERE Role IS NOT NULL ORDER BY Role")->fetchAll(PDO::FETCH_COLUMN);
 
 // Build WHERE
@@ -278,7 +282,18 @@ body { overflow: auto; }
 .kpi .k-sub{font-size:.75rem;color:#aaa;margin-top:4px}
 
 .tab-nav{display:flex;gap:4px;margin-bottom:16px;flex-wrap:wrap}
-.tab-btn{padding:8px 18px;border:2px solid #ddd;border-radius:8px 8px 0 0;background:white;font:inherit;font-size:.85rem;font-weight:600;cursor:pointer;color:#888;border-bottom:none;transition:all .15s}
+.tab-btn{
+    padding:8px 18px;
+    border:2px solid #ddd;
+    border-radius:8px 8px 0 0;
+    background:white;
+    font:inherit;
+    font-size:.85rem;
+    font-weight:600;
+    cursor:pointer;
+    color:#888;
+    border-bottom:none;
+    transition:all .15s}
 .tab-btn.active{border-color:var(--accent-color);color:var(--text-color);border-bottom:2px solid white;margin-bottom:-2px;z-index:1}
 .tab-btn:hover:not(.active){background:#f5f5f5;color:var(--text-color)}
 .tab-content{display:none}.tab-content.active{display:block}
@@ -293,7 +308,15 @@ body { overflow: auto; }
 
 .tw{background:white;border-radius:14px;overflow:hidden;box-shadow:0 4px 14px rgba(0,0,0,.08);overflow-x:auto;margin-bottom:18px}
 table{width:100%;border-collapse:collapse;min-width:500px}
-th{background:var(--accent-color);color:white;padding:10px 13px;text-align:left;font-size:.78rem;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+th{
+    background:var(--accent-color);
+    color:white;
+    padding:10px 13px;
+    text-align:left;
+    font-size:.78rem;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+    white-space:nowrap}
 td{padding:9px 13px;border-bottom:1px solid #f0f0f0;font-size:.86rem;vertical-align:middle}
 tr:last-child td{border-bottom:none}
 tbody tr:hover td{background:rgba(187,223,158,.15)}
@@ -315,20 +338,79 @@ tfoot td{background:var(--base-color);font-weight:700;padding:10px 13px;border-t
 .bar-inner{height:100%;border-radius:3px;background:var(--accent-color)}
 .no-data{padding:30px;text-align:center;color:#aaa;font-style:italic;font-size:.88rem}
 
-.workload-card{background:white;border-radius:12px;padding:16px 18px;box-shadow:0 2px 8px rgba(0,0,0,.06);margin-bottom:12px;display:flex;align-items:center;gap:14px}
-.wl-avatar{width:44px;height:44px;border-radius:50%;background:var(--accent-color);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1rem;color:white;flex-shrink:0}
+.workload-card{
+    background:white;
+    border-radius:12px;
+    padding:16px 18px;
+    box-shadow:0 2px 8px rgba(0,0,0,.06);
+    margin-bottom:12px;
+    display:flex;
+    align-items:center;
+    gap:14px }
+.wl-avatar{
+    width:44px;
+    height:44px;
+    border-radius:50%;
+    background:var(--accent-color);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-weight:700;
+    font-size:1.1rem;
+    color:white;
+    flex-shrink:0 }
 .wl-info{flex:1}
 .wl-name{font-weight:700;font-size:.95rem;color:var(--text-color)}
 .wl-sub{font-size:.78rem;color:#888;margin-top:2px}
 .wl-stat{text-align:right;flex-shrink:0}
 .wl-stat .num{font-size:1.4rem;font-weight:900;color:var(--accent-color);line-height:1}
-.wl-stat .lbl{font-size:.7rem;color:#aaa;text-transform:uppercase;letter-spacing:.04em}
+.wl-stat .lbl{
+    font-size:.7rem;
+    color:#aaa;
+    text-transform:uppercase;
+    letter-spacing:.04em}
 
-.section-hdr{font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888;margin:0 0 10px;padding:0 0 6px;border-bottom:2px solid var(--accent-color);display:block}
-.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px}
+.section-hdr{
+    font-size:.8rem;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    color:#888;
+    margin:0 0 10px;
+    padding:0 0 6px;
+    border-bottom:2px solid var(--accent-color);
+    display:block }
+.two-col{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:16px;
+    margin-bottom:18px}
 @media(max-width:860px){.two-col{grid-template-columns:1fr}}
 
 .filter-scope-note{font-size:.82rem;color:#555;margin:0 0 12px;line-height:1.45;font-weight:600}
+
+.flash-msg{padding:10px 14px;border-radius:8px;margin-bottom:14px;font-weight:600;font-size:.9rem}
+.flash-msg.ok{background:#d4edda;color:#155724;border:1px solid #c3e6cb}
+.flash-msg.err{background:#f8d7da;color:#721c24;border:1px solid #f5c6cb}
+
+.action-btns{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.btn-delete{background-color:#e74c3c;color:#fff}
+.btn-delete:hover{background-color:#c0392b}
+
+.ui-modal{position:fixed;inset:0;z-index:4000;display:grid;place-items:center;padding:16px}
+.ui-modal[hidden]{display:none!important}
+.ui-modal__backdrop{position:absolute;inset:0;background:rgba(0,0,0,.4);cursor:pointer}
+.ui-modal__box{
+    position:relative;
+    background:#fff;
+    border-radius:12px;
+    padding:20px 22px;
+    max-width:400px;
+    width:100%;
+    box-shadow:0 8px 32px rgba(0,0,0,.18)}
+.ui-modal__box h2{margin:0 0 10px;font-size:1.05rem;color:var(--text-color)}
+.ui-modal__box p{margin:0 0 18px;font-size:.9rem;line-height:1.45;color:#444}
+.ui-modal__actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}
 </style>
 </head>
 <body>
@@ -344,7 +426,13 @@ tfoot td{background:var(--base-color);font-weight:700;padding:10px 13px;border-t
 
 <a href="dashboard.php" class="back-btn">← Back to dashboard</a>
 
-<!-- KPI Cards -->
+<?php if (!empty($_GET['deleted'])): ?>
+    <div class="flash-msg ok">Employee removed from the directory.</div>
+<?php elseif (!empty($_GET['error'])): ?>
+    <div class="flash-msg err"><?= htmlspecialchars((string) $_GET['error']) ?></div>
+<?php endif; ?>
+
+
 <div class="kpi-grid">
     <div class="kpi">
         <div class="k-label">Total employees</div>
@@ -449,15 +537,14 @@ tfoot td{background:var(--base-color);font-weight:700;padding:10px 13px;border-t
 
 <!-- Tabs -->
 <div class="tab-nav">
-    <button type="button" class="tab-btn active" onclick="showTab('overview', this)">📊 Overview</button>
-    <button type="button" class="tab-btn" onclick="showTab('departments', this)">🏢 Departments</button>
-    <button type="button" class="tab-btn" onclick="showTab('caretakers', this)">🐾 Caretakers</button>
-    <button type="button" class="tab-btn" onclick="showTab('vets', this)">🩺 Vets</button>
-    <button type="button" class="tab-btn" onclick="showTab('salary', this)">💰 Salary</button>
-    <button type="button" class="tab-btn" onclick="showTab('directory', this)">📋 Directory</button>
+    <button type="button" class="tab-btn active" onclick="showTab('overview', this)"> Overview</button>
+    <button type="button" class="tab-btn" onclick="showTab('departments', this)"> Departments</button>
+    <button type="button" class="tab-btn" onclick="showTab('caretakers', this)"> Caretakers</button>
+    <button type="button" class="tab-btn" onclick="showTab('vets', this)"> Vets</button>
+    <button type="button" class="tab-btn" onclick="showTab('salary', this)"> Salary</button>
+    <button type="button" class="tab-btn" onclick="showTab('directory', this)">Directory</button>
 </div>
 
-<!-- ═══ OVERVIEW ════════════════════════════════════════════════ -->
 <div id="tab-overview" class="tab-content active">
     <div class="chart-grid">
         <div class="cc">
@@ -481,7 +568,6 @@ tfoot td{background:var(--base-color);font-weight:700;padding:10px 13px;border-t
     </div>
 </div>
 
-<!-- ═══ DEPARTMENTS ═════════════════════════════════════════════ -->
 <div id="tab-departments" class="tab-content">
     <span class="section-hdr">Department breakdown</span>
     <?php if (empty($deptRows)): ?>
@@ -517,13 +603,23 @@ tfoot td{background:var(--base-color);font-weight:700;padding:10px 13px;border-t
         </tr></tfoot>
     </table></div>
 
-    <!-- Employees per department -->
     <?php foreach ($deptRows as $dept):
         $deptEmps = array_filter($employees, fn($e) => ($e['Department'] ?? '') === ($dept['Department'] ?? ''));
     ?>
     <span class="section-hdr" style="margin-top:18px"><?= htmlspecialchars($dept['Department'] ?? 'Unassigned') ?> (<?= count($deptEmps) ?>)</span>
     <div class="tw"><table>
-        <thead><tr><th>Name</th><th>Role</th><th>Hire date</th><th>Years</th><th>Salary</th><th>Status</th><th>Login</th></tr></thead>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Role</th>
+                <th>Hire date</th>
+                <th>Years</th>
+                <th>Salary</th>
+                <th>Status</th>
+                <th>Login</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
         <tbody>
         <?php foreach ($deptEmps as $e): ?>
         <tr>
@@ -534,6 +630,16 @@ tfoot td{background:var(--base-color);font-weight:700;padding:10px 13px;border-t
             <td class="amt">$<?= number_format($e['Salary'],0) ?></td>
             <td><span class="bdg bdg-<?= strtolower($e['Status'] ?? 'active') ?>"><?= htmlspecialchars($e['Status'] ?? 'Active') ?></span></td>
             <td><span class="bdg <?= $e['Username'] ? 'bdg-yes' : 'bdg-no' ?>"><?= $e['Username'] ? 'Yes' : 'No' ?></span></td>
+            <td>
+                <div class="action-btns">
+                    <a href="edit_employee.php?id=<?= (int) $e['EmployeeID'] ?>" class="btn btn-edit" style="padding:4px 10px;font-size:.75rem">Edit</a>
+                    <form method="post" action="delete_employee.php" class="js-delete-employee-form" style="display:inline;margin:0"
+                          data-employee-name="<?= htmlspecialchars($e['FullName'] ?? 'this employee', ENT_QUOTES, 'UTF-8') ?>">
+                        <input type="hidden" name="id" value="<?= (int) $e['EmployeeID'] ?>">
+                        <button type="submit" class="btn btn-delete" style="padding:4px 10px;font-size:.75rem">Delete</button>
+                    </form>
+                </div>
+            </td>
         </tr>
         <?php endforeach; ?>
         </tbody>
@@ -632,7 +738,17 @@ tfoot td{background:var(--base-color);font-weight:700;padding:10px 13px;border-t
 
     <span class="section-hdr" style="margin-top:18px">Health records by vet</span>
     <div class="tw"><table>
-        <thead><tr><th>Vet</th><th>Animal</th><th>Species</th><th>Diagnosis</th><th>Status</th><th>Record date</th><th>Cured date</th></tr></thead>
+        <thead>
+            <tr>
+                <th>Vet</th>
+                <th>Animal</th>
+                <th>Species</th>
+                <th>Diagnosis</th>
+                <th>Status</th>
+                <th>Record date</th>
+                <th>Cured date</th>
+            </tr>
+        </thead>
         <tbody>
         <?php
         foreach ($vetRows as $v):
@@ -678,7 +794,19 @@ tfoot td{background:var(--base-color);font-weight:700;padding:10px 13px;border-t
         </div>
     </div>
     <div class="tw"><table>
-        <thead><tr><th>Name</th><th>Department</th><th>Role</th><th>Salary</th><th>vs avg</th><th>Hire date</th><th>Years</th><th>Bar</th></tr></thead>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Department</th>
+                <th>Role</th>
+                <th>Salary</th>
+                <th>vs avg</th>
+                <th>Hire date</th>
+                <th>Years</th>
+                <th>Bar</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
         <tbody>
         <?php
         $sorted = $employees;
@@ -697,13 +825,23 @@ tfoot td{background:var(--base-color);font-weight:700;padding:10px 13px;border-t
             <td style="font-size:.78rem"><?= $e['HireDate'] ? date('M j, Y',strtotime($e['HireDate'])) : '—' ?></td>
             <td style="font-size:.78rem"><?= $e['YearsWorked'] ?? '—' ?> yr</td>
             <td><div class="bar-cell"><div class="bar-outer"><div class="bar-inner" style="width:<?= $maxSal>0?round((float)$e['Salary']/$maxSal*100):0 ?>%"></div></div></div></td>
+            <td>
+                <div class="action-btns">
+                    <a href="edit_employee.php?id=<?= (int) $e['EmployeeID'] ?>" class="btn btn-edit" style="padding:4px 10px;font-size:.75rem">Edit</a>
+                    <form method="post" action="delete_employee.php" class="js-delete-employee-form" style="display:inline;margin:0"
+                          data-employee-name="<?= htmlspecialchars($e['FullName'] ?? 'this employee', ENT_QUOTES, 'UTF-8') ?>">
+                        <input type="hidden" name="id" value="<?= (int) $e['EmployeeID'] ?>">
+                        <button type="submit" class="btn btn-delete" style="padding:4px 10px;font-size:.75rem">Delete</button>
+                    </form>
+                </div>
+            </td>
         </tr>
         <?php endforeach; ?>
         </tbody>
         <tfoot><tr>
             <td colspan="3">TOTAL / AVERAGE</td>
             <td class="amt">$<?= number_format($totalSalary,0) ?> / $<?= number_format($avgSalary,0) ?></td>
-            <td colspan="4"></td>
+            <td colspan="5"></td>
         </tr></tfoot>
     </table></div>
 </div>
@@ -716,6 +854,7 @@ tfoot td{background:var(--base-color);font-weight:700;padding:10px 13px;border-t
             <th>Sex</th><th>Age</th><th>Hire date</th><th>Years</th>
             <th>Salary</th><th>Status</th><th>Login</th>
             <th>Animals</th><th>Records</th>
+            <th>Actions</th>
         </tr></thead>
         <tbody>
         <?php foreach ($employees as $e): ?>
@@ -738,6 +877,16 @@ tfoot td{background:var(--base-color);font-weight:700;padding:10px 13px;border-t
             <td><span class="bdg <?= $e['Username'] ? 'bdg-yes' : 'bdg-no' ?>"><?= $e['Username'] ? htmlspecialchars($e['Username']) : 'No' ?></span></td>
             <td style="font-weight:<?= $e['AnimalsAssigned']>0?'700':'' ?>;color:<?= $e['AnimalsAssigned']>0?'var(--accent-color)':'' ?>"><?= $e['AnimalsAssigned'] ?: '—' ?></td>
             <td style="font-weight:<?= $e['HealthRecords']>0?'700':'' ?>;color:<?= $e['HealthRecords']>0?'#2980b9':'' ?>"><?= $e['HealthRecords'] ?: '—' ?></td>
+            <td>
+                <div class="action-btns">
+                    <a href="edit_employee.php?id=<?= (int) $e['EmployeeID'] ?>" class="btn btn-edit" style="padding:4px 10px;font-size:.75rem">Edit</a>
+                    <form method="post" action="delete_employee.php" class="js-delete-employee-form" style="display:inline;margin:0"
+                          data-employee-name="<?= htmlspecialchars($e['FullName'] ?? 'this employee', ENT_QUOTES, 'UTF-8') ?>">
+                        <input type="hidden" name="id" value="<?= (int) $e['EmployeeID'] ?>">
+                        <button type="submit" class="btn btn-delete" style="padding:4px 10px;font-size:.75rem">Delete</button>
+                    </form>
+                </div>
+            </td>
         </tr>
         <?php endforeach; ?>
         </tbody>
@@ -746,7 +895,63 @@ tfoot td{background:var(--base-color);font-weight:700;padding:10px 13px;border-t
 
 </div>
 
+<div id="delete-employee-modal" class="ui-modal" hidden role="dialog" aria-modal="true" aria-labelledby="delete-employee-modal-title">
+    <div class="ui-modal__backdrop" data-emp-del-dismiss></div>
+    <div class="ui-modal__box">
+        <h2 id="delete-employee-modal-title">Confirm delete</h2>
+        <p id="delete-employee-modal-text"></p>
+        <div class="ui-modal__actions">
+            <button type="button" class="btn btn-edit" data-emp-del-dismiss>Cancel</button>
+            <button type="button" class="btn btn-delete" id="delete-employee-modal-confirm">Delete</button>
+        </div>
+    </div>
+</div>
 <script>
+(function () {
+    var modal = document.getElementById('delete-employee-modal');
+    var textEl = document.getElementById('delete-employee-modal-text');
+    var confirmBtn = document.getElementById('delete-employee-modal-confirm');
+    if (!modal || !textEl || !confirmBtn) return;
+    var pendingForm = null;
+    var bypass = false;
+
+    function closeModal() {
+        modal.hidden = true;
+        pendingForm = null;
+    }
+
+    document.querySelectorAll('.js-delete-employee-form').forEach(function (form) {
+        form.addEventListener('submit', function (e) {
+            if (bypass) {
+                bypass = false;
+                return;
+            }
+            e.preventDefault();
+            pendingForm = form;
+            var name = form.getAttribute('data-employee-name') || 'this employee';
+            textEl.textContent = 'Remove ' + name + ' from the directory? This cannot be undone.';
+            modal.hidden = false;
+        });
+    });
+
+    confirmBtn.addEventListener('click', function () {
+        if (!pendingForm) return;
+        bypass = true;
+        if (typeof pendingForm.requestSubmit === 'function') {
+            pendingForm.requestSubmit();
+        } else {
+            pendingForm.submit();
+        }
+        closeModal();
+    });
+
+    modal.querySelectorAll('[data-emp-del-dismiss]').forEach(function (el) {
+        el.addEventListener('click', closeModal);
+    });
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && !modal.hidden) closeModal();
+    });
+})();
 function showTab(name, btn) {
     document.querySelectorAll('.tab-content').forEach(function (el) { el.classList.remove('active'); });
     document.querySelectorAll('.tab-btn').forEach(function (el) { el.classList.remove('active'); });
@@ -811,8 +1016,6 @@ new Chart(document.getElementById('hireChart'), {
     options:{ ...opts, plugins:{ ...opts.plugins, legend:{display:false} },
         scales:{ x:{ ticks:{font:{size:10}} }, y:{ ticks:{ stepSize:1, font:{size:10} } } } }
 });
-
-
 
 // Salary by role bar
 new Chart(document.getElementById('salRoleChart'), {

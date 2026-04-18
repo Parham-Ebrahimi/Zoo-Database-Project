@@ -64,7 +64,14 @@ $isEmpty    = $cartCount === 0;
         .cart-layout { display:grid; grid-template-columns:1fr 320px; gap:1.5rem; align-items:start; }
         @media(max-width:860px){ .cart-layout { grid-template-columns:1fr; } }
 
-        .section-title { font-size:.75rem; text-transform:uppercase; letter-spacing:.07em; color:var(--cr-muted); font-weight:600; margin:0 0 .75rem; }
+        .section-title { 
+            font-size:.75rem; 
+            text-transform:uppercase; 
+            letter-spacing:.07em; 
+            color:var(--cr-muted); 
+            font-weight:600; 
+            margin:0 0 .75rem; 
+        }
 
         .cart-section { margin-bottom:1.75rem; }
         .cart-section-header {
@@ -75,29 +82,111 @@ $isEmpty    = $cartCount === 0;
         }
         .cart-section-header .icon { font-size:1.1rem; }
 
-        .cart-table { width:100%; border-collapse:collapse; background:var(--cr-surface); border:1px solid var(--cr-border); border-radius:0 0 12px 12px; overflow:hidden; }
-        .cart-table th { background:linear-gradient(180deg,#eef6ea,#e4f0de); color:var(--cr-accent); font-weight:700; font-size:.82rem; text-transform:uppercase; letter-spacing:.05em; padding:.65rem 1rem; text-align:left; border-bottom:1px solid var(--cr-border); }
+        .cart-table { 
+            width:100%; 
+            border-collapse:collapse; 
+            background:var(--cr-surface); 
+            border:1px solid var(--cr-border); 
+            border-radius:0 0 12px 12px; 
+            overflow:hidden; 
+        }
+        .cart-table th { 
+            background:linear-gradient(180deg,#eef6ea,#e4f0de); 
+            color:var(--cr-accent); 
+            font-weight:700; 
+            font-size:.82rem; 
+            text-transform:uppercase; 
+            letter-spacing:.05em; 
+            padding:.65rem 1rem; 
+            text-align:left; 
+            border-bottom:1px solid var(--cr-border); 
+        }
         .cart-table td { padding:.75rem 1rem; border-bottom:1px solid #eef2eb; vertical-align:middle; font-size:.9rem; }
         .cart-table tr:last-child td { border-bottom:none; }
         .cart-table tr:hover td { background:#fafcf8; }
 
         .qty-form { display:flex; align-items:center; gap:.4rem; }
-        .qty-input { width:52px; padding:.35rem .5rem; border:1px solid var(--cr-border); border-radius:6px; font:inherit; font-size:.88rem; text-align:center; }
+        .qty-input { 
+            width:52px; 
+            padding:.35rem .5rem; 
+            border:1px solid var(--cr-border); 
+            border-radius:6px; 
+            font:inherit; 
+            font-size:.88rem; 
+            text-align:center; 
+        }
         .qty-input:focus { outline:none; border-color:var(--cr-accent-soft); }
-        .update-btn { padding:.35rem .75rem; background:var(--cr-accent); color:white; border:none; border-radius:6px; font:inherit; font-size:.8rem; font-weight:600; cursor:pointer; }
+        .update-btn { 
+            padding:.35rem .75rem; 
+            background:var(--cr-accent); 
+            color:white; 
+            border:none; 
+            border-radius:6px; 
+            font:inherit; 
+            font-size:.8rem; 
+            font-weight:600; 
+            cursor:pointer; 
+        }
         .update-btn:hover { background:#1a5c2b; }
 
-        .remove-btn { padding:.3rem .7rem; background:#fee2e2; color:#991b1b; border:none; border-radius:6px; font:inherit; font-size:.8rem; font-weight:600; cursor:pointer; transition:background .15s; }
+        .remove-btn { 
+            padding:.3rem .7rem; 
+            background:#fee2e2; 
+            color:#991b1b; 
+            border:none; 
+            border-radius:6px; 
+            font:inherit; 
+            font-size:.8rem; 
+            font-weight:600; 
+            cursor:pointer; 
+            transition:background .15s;
+        }
         .remove-btn:hover { background:#fca5a5; }
 
         .subtotal { font-weight:700; color:var(--cr-accent); }
 
-        /* Summary card */
-        .summary-card { background:var(--cr-surface); border:1px solid var(--cr-border); border-radius:16px; padding:1.5rem; box-shadow:0 4px 24px rgba(26,46,22,.08); position:sticky; top:1rem; }
-        .summary-card h2 { font-size:1rem; font-weight:700; margin:0 0 1.25rem; padding-bottom:.75rem; border-bottom:1px solid var(--cr-border); }
+        .summary-card { 
+            background:var(--cr-surface); 
+            border:1px solid var(--cr-border); 
+            border-radius:16px; 
+            padding:1.5rem; 
+            box-shadow:0 4px 24px rgba(26,46,22,.08); 
+            position:sticky; 
+            top:1rem; 
+        }
+        .summary-card h2 { 
+            font-size:1rem; 
+            font-weight:700; 
+            margin:0 0 1.25rem; 
+            padding-bottom:.75rem; 
+            border-bottom:1px solid var(--cr-border); 
+        }
         .summary-row { display:flex; justify-content:space-between; font-size:.9rem; margin-bottom:.6rem; }
-        .summary-row.total { font-weight:700; font-size:1.05rem; padding-top:.75rem; border-top:2px solid var(--cr-border); margin-top:.5rem; color:var(--cr-text); }
-        .checkout-btn { display:block; width:100%; padding:.85rem; background:var(--cr-accent); color:white; border:none; border-radius:999px; font:inherit; font-weight:700; font-size:1rem; cursor:pointer; text-align:center; text-decoration:none; margin-top:1.25rem; transition:background .15s; }
+        .summary-row.total { 
+            font-weight:700; 
+            font-size:1.05rem; 
+            padding-top:.75rem; 
+            border-top:2px solid var(--cr-border); 
+            margin-top:.5rem; 
+            color:var(--cr-text); 
+        }
+        .checkout-btn { 
+            display:block; 
+            width:100%; 
+            padding:.85rem; 
+            background:var(--cr-accent); 
+            color:white; 
+            border:none; 
+            border-radius:999px; 
+            font:inherit; 
+            font-weight:700; 
+            font-size:1rem; 
+            cursor:pointer; 
+            text-align:center; 
+            text-decoration:none; 
+            margin-top:1.25rem; 
+            transition:background .15s;
+        }
         .checkout-btn:hover { background:#1a5c2b; text-decoration:none; }
         .checkout-btn:disabled, .checkout-btn.disabled { background:#ccc; cursor:not-allowed; }
 
@@ -110,7 +199,15 @@ $isEmpty    = $cartCount === 0;
         .empty-state h2 { font-size:1.2rem; margin-bottom:.5rem; color:var(--cr-text); }
         .empty-state p { margin-bottom:1.5rem; }
         .shop-links { display:flex; flex-wrap:wrap; gap:.75rem; justify-content:center; }
-        .shop-link { padding:.65rem 1.5rem; background:var(--cr-accent); color:white; border-radius:999px; font-weight:600; font-size:.9rem; text-decoration:none; }
+        .shop-link { 
+            padding:.65rem 1.5rem; 
+            background:var(--cr-accent); 
+            color:white; 
+            border-radius:999px; 
+            font-weight:600; 
+            font-size:.9rem; 
+            text-decoration:none; 
+        }
         .shop-link:hover { background:#1a5c2b; text-decoration:none; }
         .shop-link.outline { background:transparent; border:1px solid var(--cr-accent); color:var(--cr-accent); }
         .shop-link.outline:hover { background:#eef6ea; }
@@ -146,8 +243,8 @@ $isEmpty    = $cartCount === 0;
             <h2>Your cart is empty</h2>
             <p>Browse our restaurant or buy tickets to get started.</p>
             <div class="shop-links">
-                <a href="restaurant.php"  class="shop-link">🍽️ Restaurant</a>
-                <a href="buy_tickets.php" class="shop-link outline">🎟️ Tickets</a>
+                <a href="restaurant.php"  class="shop-link"> Restaurant</a>
+                <a href="buy_tickets.php" class="shop-link outline"> Tickets</a>
             </div>
         </div>
         <?php else: ?>
@@ -156,7 +253,7 @@ $isEmpty    = $cartCount === 0;
             <div>
                 <?php if (!empty($ticketItems)): ?>
                 <div class="cart-section">
-                    <div class="cart-section-header"><span class="icon">🎟️</span> Zoo Tickets</div>
+                    <div class="cart-section-header"> Zoo Tickets</div>
                     <table class="cart-table">
                         <thead><tr><th>Type</th><th>Visit Date</th><th>Price</th><th>Qty</th><th>Subtotal</th><th></th></tr></thead>
                         <tbody>

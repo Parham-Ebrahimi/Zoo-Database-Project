@@ -65,7 +65,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ");
                     $alertStmt->execute([$itemID]);
                 } catch (Throwable $ignored) {
-                    // Do not fail user response due to secondary alert write.
                 }
             }
         }

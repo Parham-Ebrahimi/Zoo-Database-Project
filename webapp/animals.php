@@ -80,7 +80,6 @@
     </div>
 
     <?php
-    // Add as many animals as you want here!
     $animals = [
         [
             "name" => "Elephants",
@@ -110,7 +109,6 @@
             "img" => "https://images.unsplash.com/photo-1656899367542-3fc106faa104?auto=format&fit=crop&w=800&q=80",
             "alt" => "Red panda in a tree"
         ],
-        // ➕ Add more animals below by copying the block above
     ];
     ?>
 

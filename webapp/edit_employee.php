@@ -4,7 +4,7 @@ if (!isset($_SESSION['user_id'])) {
     header('Location: login.html');
     exit;
 }
-if (!in_array($_SESSION['role'], ['admin'], true)) {
+if (!in_array(strtolower(trim((string) ($_SESSION['role'] ?? ''))), ['admin'], true)) {
     die('Access denied');
 }
 require_once 'db.php';
