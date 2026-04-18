@@ -81,6 +81,21 @@ $todayRevenue   = $pdo->query("SELECT TotalRevenue FROM daily_revenue WHERE Reve
             font-weight: 600;
             color: var(--text-color);
         }
+        .secondary-nav-btn {
+            padding: 9px 18px;
+            background-color: var(--base-color);
+            border: 2px solid var(--accent-color);
+            border-radius: 1000px;
+            font: inherit;
+            font-weight: 600;
+            font-size: 0.88rem;
+            color: var(--text-color);
+            text-decoration: none;
+        }
+        .secondary-nav-btn:hover {
+            background-color: var(--accent-color);
+            text-decoration: none;
+        }
         
         .logout-btn {
             padding: 10px 22px;
