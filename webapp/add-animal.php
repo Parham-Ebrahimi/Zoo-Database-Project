@@ -5,11 +5,38 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
-if (!in_array($_SESSION['role'], ['admin', 'caretaker'])) {
-    die("Access denied");
+require_once 'staff_home.php';
+$roleGate = strtolower(trim((string) ($_SESSION['role'] ?? '')));
+if (!in_array($roleGate, ['admin', 'caretaker', 'vet', 'keeper'], true) && !staff_is_vet_role()) {
+    die('Access denied');
 }
 
 require_once 'db.php';
+
+$staffHome = staff_home_href();
+
+function animal_table_has_caretaker_column(PDO $pdo): bool
+{
+    static $cache = null;
+    if ($cache !== null) {
+        return $cache;
+    }
+    try {
+        $stmt = $pdo->query("
+            SELECT 1 FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = 'animal'
+              AND COLUMN_NAME = 'Caretaker_EmployeeID'
+            LIMIT 1
+        ");
+        $cache = (bool) $stmt->fetchColumn();
+    } catch (Throwable $e) {
+        $cache = false;
+    }
+    return $cache;
+}
+
+$hasCaretakerCol = animal_table_has_caretaker_column($pdo);
 
 $error = '';
 $success = '';
@@ -21,17 +48,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $age        = $_POST['age'];
     $sex        = $_POST['sex'];
     $enclosure  = $_POST['enclosure_id'];
+    $caretakerId = null;
+    if ($hasCaretakerCol && strtolower((string) ($_SESSION['role'] ?? '')) === 'admin') {
+        $cr = $_POST['caretaker_id'] ?? '';
+        $caretakerId = ($cr === '' || $cr === '0') ? null : (int) $cr;
+    }
 
     if (empty($name) || empty($species) || empty($category) || empty($sex)) {
         $error = 'Please fill in all required fields.';
     } else {
-        $stmt = $pdo->prepare("INSERT INTO animal (Name, Species, Category, Age, Sex, Enclosure_ID) VALUES (?, ?, ?, ?, ?, ?)");
-        $stmt->execute([$name, $species, $category, $age ?: null, $sex, $enclosure ?: null]);
+        if ($hasCaretakerCol && strtolower((string) ($_SESSION['role'] ?? '')) === 'admin') {
+            $stmt = $pdo->prepare("
+                INSERT INTO animal (Name, Species, Category, Age, Sex, Enclosure_ID, Caretaker_EmployeeID)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            ");
+            $stmt->execute([$name, $species, $category, $age ?: null, $sex, $enclosure ?: null, $caretakerId]);
+        } else {
+            $stmt = $pdo->prepare("INSERT INTO animal (Name, Species, Category, Age, Sex, Enclosure_ID) VALUES (?, ?, ?, ?, ?, ?)");
+            $stmt->execute([$name, $species, $category, $age ?: null, $sex, $enclosure ?: null]);
+        }
         $success = 'Animal added successfully!';
     }
 }
 
 $enclosures = $pdo->query("SELECT Enclosure_ID, Enclosure_Name FROM enclosure")->fetchAll();
+$assignableCaretakers = [];
+if ($hasCaretakerCol) {
+    $assignableCaretakers = $pdo->query("
+        SELECT EmployeeID, CONCAT(FirstName, ' ', LastName) AS FullName
+        FROM employees
+        WHERE LOWER(TRIM(Role)) IN ('caretaker', 'keeper')
+        ORDER BY FirstName, LastName
+    ")->fetchAll();
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -172,7 +221,10 @@ $enclosures = $pdo->query("SELECT Enclosure_ID, Enclosure_Name FROM enclosure")-
             <a href="logout.php" class="logout-btn">Logout</a>
         </div>
 
-        <a href="dashboard.php" class="back-btn">← Back to Dashboard</a>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px">
+            <a href="<?= htmlspecialchars($staffHome) ?>" class="back-btn" style="margin-bottom:0">← Back to dashboard</a>
+            <a href="animals_report.php" class="back-btn" style="margin-bottom:0">Animals report</a>
+        </div>
 
         <div class="form-card">
             <?php if ($error): ?><p class="msg-error"><?= $error ?></p><?php endif; ?>
@@ -213,6 +265,17 @@ $enclosures = $pdo->query("SELECT Enclosure_ID, Enclosure_Name FROM enclosure")-
                             <?php endforeach; ?>
                         </select>
                     </div>
+                    <?php if ($hasCaretakerCol && strtolower((string) ($_SESSION['role'] ?? '')) === 'admin'): ?>
+                    <div class="form-group full">
+                        <label>Assigned caretaker</label>
+                        <select name="caretaker_id">
+                            <option value="">— Not assigned —</option>
+                            <?php foreach ($assignableCaretakers as $c): ?>
+                                <option value="<?= (int) $c['EmployeeID'] ?>"><?= htmlspecialchars($c['FullName']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <?php endif; ?>
                 </div>
                 <button type="submit" class="submit-btn">Add Animal</button>
             </form>

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign in — Greenwood Zoo</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="wrapper">
+        <h1>Sign in</h1>
+        <p class="sign-in-hint">Use your <strong>staff username</strong> or your member <strong>email</strong> and password. We’ll send you to the right dashboard.</p>
+        <p id="error-message"></p>
+        <form id="form" action="unified_login.php" method="POST">
+            <div>
+                <label for="identifier-input">
+                    <span>@</span>
+                </label>
+                <input type="text" name="identifier" id="identifier-input" placeholder="Email or username" autocomplete="username">
+            </div>
+
+            <div>
+                <label for="password-input">
+                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#1f1f1f"><path d="M240-80q-33 0-56.5-23.5T160-160v-400q0-33 23.5-56.5T240-640h40v-80q0-83 58.5-141.5T480-920q83 0 141.5 58.5T680-720v80h40q33 0 56.5 23.5T800-560v400q0 33-23.5 56.5T720-80H240Zm296.5-223.5Q560-327 560-360t-23.5-56.5Q513-440 480-440t-56.5 23.5Q400-393 400-360t23.5 56.5Q447-280 480-280t56.5-23.5ZM360-640h240v-80q0-50-35-85t-85-35q-50 0-85 35t-35 85v80Z"/></svg>
+                </label>
+                <input type="password" name="password" id="password-input" placeholder="Password" autocomplete="current-password">
+            </div>
+
+            <button type="submit">Sign in</button>
+        </form>
+
+        <p>Don’t have a member account? <a href="signup.html">Create one</a></p>
+    </div>
+
+    <style>
+        .sign-in-hint {
+            font-size: 0.9rem;
+            color: #444;
+            line-height: 1.45;
+            margin: 0 0 1rem;
+            max-width: 320px;
+        }
+    </style>
+
+    <script>
+        const form = document.getElementById('form')
+        const identifierInput = document.getElementById('identifier-input')
+        const passwordInput = document.getElementById('password-input')
+        const errorMessage = document.getElementById('error-message')
+
+        const params = new URLSearchParams(window.location.search)
+        if (params.get('error')) {
+            errorMessage.innerText = params.get('error')
+        }
+        if (params.get('success')) {
+            errorMessage.style.color = 'green'
+            errorMessage.innerText = params.get('success')
+        }
+
+        form.addEventListener('submit', (e) => {
+            const errors = []
+            if (!identifierInput.value.trim()) {
+                errors.push('Email or username is required')
+                identifierInput.parentElement.classList.add('incorrect')
+            } else {
+                identifierInput.parentElement.classList.remove('incorrect')
+            }
+            if (!passwordInput.value) {
+                errors.push('Password is required')
+                passwordInput.parentElement.classList.add('incorrect')
+            } else {
+                passwordInput.parentElement.classList.remove('incorrect')
+            }
+            if (errors.length > 0) {
+                e.preventDefault()
+                errorMessage.innerText = errors.join('. ')
+            }
+        })
+
+        ;[identifierInput, passwordInput].forEach((input) => {
+            input.addEventListener('input', () => {
+                if (input.parentElement.classList.contains('incorrect')) {
+                    input.parentElement.classList.remove('incorrect')
+                    errorMessage.innerText = ''
+                }
+            })
+        })
+    </script>
+</body>
+</html>

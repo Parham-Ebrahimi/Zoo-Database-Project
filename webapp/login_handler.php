@@ -32,7 +32,7 @@ if ($customer && password_verify($password, $customer['Password_Hash'])) {
     $_SESSION['firstname'] = $customer['FirstName'];
     $_SESSION['role'] = 'customer';
 
-    header('Location: index.php');
+    header('Location: customer-dashboard.php');
     exit;
 }
 
@@ -53,7 +53,19 @@ if ($user && password_verify($password, $user['PasswordHash'])) {
     $_SESSION['firstname'] = $user['FirstName'];
     $_SESSION['role'] = $user['Role'];
 
-    header('Location: dashboard.php');
+    if ($user['Role'] === 'admin') {
+        header('location: dashboard.php');
+    }
+    else if (strtolower($user['Role']) === 'caretaker') {
+        header('location: caretaker_dashboard.php');
+    }
+    else if ($user['Role'] === 'vet') {
+        header('location: vet_dashboard.php');
+    }
+    else {
+        header ('Location: dashboard.php');
+    }
+
     exit;
 }
 
