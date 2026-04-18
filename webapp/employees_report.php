@@ -107,8 +107,8 @@ $sexStmt = $pdo->prepare("
 $sexStmt->execute($params);
 $sexRows = $sexStmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Caretaker workload
-$caretakerStmt = $pdo->query("
+// Caretaker workload (same filters as main employee list: search, dept, status, etc.)
+$caretakerStmt = $pdo->prepare("
     SELECT CONCAT(e.FirstName,' ',e.LastName) AS Name,
            e.EmployeeID,
            COUNT(a.Animal_ID) AS Animals,
@@ -116,14 +116,16 @@ $caretakerStmt = $pdo->query("
     FROM employees e
     LEFT JOIN animal a ON a.Caretaker_EmployeeID = e.EmployeeID
     LEFT JOIN enclosure enc ON enc.Enclosure_ID = a.Enclosure_ID
-    WHERE LOWER(e.Role) IN ('caretaker','keeper')
+    WHERE LOWER(TRIM(e.Role)) IN ('caretaker','keeper')
+      AND ($wSql)
     GROUP BY e.EmployeeID, e.FirstName, e.LastName
     ORDER BY Animals DESC
 ");
+$caretakerStmt->execute($params);
 $caretakerRows = $caretakerStmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Vet activity
-$vetStmt = $pdo->query("
+// Vet activity (same filters as main employee list)
+$vetStmt = $pdo->prepare("
     SELECT CONCAT(e.FirstName,' ',e.LastName) AS Name,
            e.EmployeeID,
            COUNT(hr.HealthRecord_ID) AS TotalRecords,
@@ -133,14 +135,14 @@ $vetStmt = $pdo->query("
            MAX(hr.Record_Date) AS LastActivity
     FROM employees e
     LEFT JOIN health_record hr ON hr.Veterinarian_ID = e.EmployeeID
-    WHERE LOWER(e.Role) IN ('vet','veterinarian')
+    WHERE LOWER(TRIM(e.Role)) IN ('vet','veterinarian')
+      AND ($wSql)
     GROUP BY e.EmployeeID, e.FirstName, e.LastName
     ORDER BY TotalRecords DESC
 ");
+$vetStmt->execute($params);
 $vetRows = $vetStmt->fetchAll(PDO::FETCH_ASSOC);
 
-$hasFilters = array_filter([$f_dept,$f_role,$f_sex,$f_search,$f_hire_from,$f_hire_to,$f_sal_min,$f_sal_max])
-           || $f_status !== 'Active';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -151,14 +153,122 @@ $hasFilters = array_filter([$f_dept,$f_role,$f_sex,$f_search,$f_hire_from,$f_hir
 <link rel="stylesheet" href="style.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
-body{overflow:auto}
-.pw{box-sizing:border-box;min-height:100vh;padding:28px 36px;background:rgba(187,223,158,.97)}
-.ph{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;border-bottom:3px solid var(--accent-color);padding-bottom:16px;flex-wrap:wrap;gap:12px}
-.ph h1{font-size:1.7rem;margin:0}
-.bn{padding:8px 20px;background:var(--base-color);border:2px solid var(--accent-color);border-radius:1000px;font:inherit;font-weight:600;font-size:.88rem;color:var(--text-color);text-decoration:none}
-.bn:hover{background:var(--accent-color);text-decoration:none}
-.bl{padding:8px 20px;background:var(--accent-color);border:none;border-radius:1000px;font:inherit;font-weight:600;cursor:pointer;color:var(--text-color);text-decoration:none}
-.bl:hover{background:var(--text-color);color:white}
+body { overflow: auto; }
+.dashboard-wrapper {
+    box-sizing: border-box;
+    min-height: 100vh;
+    padding: 20px clamp(12px, 2.4vw, 18px);
+    background-color: rgba(187, 223, 158, 0.95);
+}
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    border-bottom: 3px solid var(--accent-color);
+    padding-bottom: 12px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+.dashboard-header h1 { font-size: 1.5rem; margin: 0; font-weight: 800; color: var(--text-color); }
+.back-btn {
+    display: inline-block;
+    margin-bottom: 14px;
+    padding: 7px 14px;
+    background-color: var(--base-color);
+    border-radius: 8px;
+    color: var(--text-color);
+    font-weight: 600;
+    text-decoration: none;
+    font-size: 0.88rem;
+}
+.back-btn:hover { background-color: var(--accent-color); }
+.logout-btn {
+    padding: 10px 22px;
+    background-color: var(--accent-color);
+    border: none;
+    border-radius: 1000px;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--text-color);
+    text-decoration: none;
+}
+.logout-btn:hover { background-color: var(--text-color); color: white; }
+
+.filter-card {
+    background: white;
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.05);
+}
+.filter-card h2 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: var(--text-color);
+}
+.filter-card label {
+    background: none;
+    color: var(--text-color);
+    font-size: 0.85rem;
+    font-weight: 600;
+    height: auto;
+    width: auto;
+    border-radius: 0;
+    display: block;
+    text-align: left;
+    padding: 0;
+}
+.filter-card form { width: 100%; margin: 0; display: block; }
+.filter-card form > div { width: auto; display: block; }
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.filter-group label { font-size: 0.85rem; font-weight: 600; color: var(--text-color); }
+.filter-group input,
+.filter-group select {
+    padding: 6px 10px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font: inherit;
+    background: white;
+}
+.filter-group input:focus,
+.filter-group select:focus {
+    outline: none;
+    border-color: var(--accent-color);
+}
+.filter-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: flex-end;
+}
+.btn {
+    padding: 6px 14px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.85rem;
+    border: none;
+    cursor: pointer;
+    font: inherit;
+    display: inline-block;
+}
+.btn-edit {
+    background-color: var(--accent-color);
+    color: white;
+}
+.btn-edit:hover { background-color: var(--text-color); }
+.filter-actions .btn:not(.btn-edit) {
+    background: #eee;
+    color: #555;
+}
+.filter-actions .btn:not(.btn-edit):hover { background: #ddd; }
 
 .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px}
 .kpi{background:white;border-radius:14px;padding:16px 18px;box-shadow:0 2px 10px rgba(0,0,0,.07);border-left:4px solid var(--accent-color)}
@@ -166,20 +276,6 @@ body{overflow:auto}
 .kpi .k-label{font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#888;margin-bottom:6px}
 .kpi .k-val{font-size:1.6rem;font-weight:900;color:var(--text-color);line-height:1}
 .kpi .k-sub{font-size:.75rem;color:#aaa;margin-top:4px}
-
-.fp{background:white;border-radius:14px;padding:16px 20px;margin-bottom:18px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
-.fp summary{font-weight:700;font-size:.92rem;cursor:pointer;color:var(--text-color);list-style:none;display:flex;align-items:center;gap:.5rem}
-.fp summary::before{content:"🔍"}
-.fg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:11px;margin-top:14px}
-.fg{display:flex;flex-direction:column;gap:3px}
-.fg label{font-size:.75rem;font-weight:600;color:var(--text-color);text-transform:uppercase;letter-spacing:.04em}
-.fg input,.fg select{padding:7px 10px;border:2px solid #ddd;border-radius:8px;font:inherit;font-size:.87rem;background:white}
-.fg input:focus,.fg select:focus{outline:none;border-color:var(--accent-color)}
-.fa{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
-.bfil{padding:8px 22px;background:var(--accent-color);border:none;border-radius:8px;font:inherit;font-weight:600;cursor:pointer;color:white}
-.bfil:hover{background:var(--text-color)}
-.bres{padding:8px 22px;background:#eee;border:none;border-radius:8px;font:inherit;font-weight:600;cursor:pointer;color:#555;text-decoration:none;display:inline-block}
-.bres:hover{background:#ddd}
 
 .tab-nav{display:flex;gap:4px;margin-bottom:16px;flex-wrap:wrap}
 .tab-btn{padding:8px 18px;border:2px solid #ddd;border-radius:8px 8px 0 0;background:white;font:inherit;font-size:.85rem;font-weight:600;cursor:pointer;color:#888;border-bottom:none;transition:all .15s}
@@ -231,21 +327,22 @@ tfoot td{background:var(--base-color);font-weight:700;padding:10px 13px;border-t
 .section-hdr{font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888;margin:0 0 10px;padding:0 0 6px;border-bottom:2px solid var(--accent-color);display:block}
 .two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px}
 @media(max-width:860px){.two-col{grid-template-columns:1fr}}
+
+.filter-scope-note{font-size:.82rem;color:#555;margin:0 0 12px;line-height:1.45;font-weight:600}
 </style>
 </head>
 <body>
-<div class="pw">
+<div class="dashboard-wrapper">
 
-<div class="ph">
+<div class="dashboard-header">
     <div>
-        <h1>Employee Report</h1>
-        <p style="margin:4px 0 0;font-size:.85rem;color:#555">Welcome, <?= htmlspecialchars($_SESSION['firstname']) ?> &middot; <?= $totalEmp ?> employee<?= $totalEmp!==1?'s':'' ?> shown</p>
+        <h1>Employee report</h1>
+        <p style="margin:4px 0 0;font-size:.85rem;color:#666;font-weight:500">Welcome, <?= htmlspecialchars($_SESSION['firstname'] ?? '') ?> · <?= $totalEmp ?> employee<?= $totalEmp !== 1 ? 's' : '' ?> shown</p>
     </div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap">
-        <a href="dashboard.php" class="bn">← Dashboard</a>
-        <a href="logout.php" class="bl">Logout</a>
-    </div>
+    <a href="logout.php" class="logout-btn">Logout</a>
 </div>
+
+<a href="dashboard.php" class="back-btn">← Back to dashboard</a>
 
 <!-- KPI Cards -->
 <div class="kpi-grid">
@@ -281,70 +378,83 @@ tfoot td{background:var(--base-color);font-weight:700;padding:10px 13px;border-t
     </div>
 </div>
 
-<!-- Filters -->
-<details class="fp" <?= $hasFilters?'open':'' ?>>
-    <summary>Filters &amp; Search</summary>
+<div class="filter-card">
+    <h2>Filter employees</h2>
     <form method="GET">
-        <div class="fg-grid">
-            <div class="fg" style="grid-column:span 2">
-                <label>Search name</label>
-                <input type="text" name="search" value="<?= htmlspecialchars($f_search) ?>" placeholder="First or last name...">
+        <div class="filter-grid">
+            <div class="filter-group filter-group--wide">
+                <label for="emp_search">Search name</label>
+                <input id="emp_search" type="text" name="search" value="<?= htmlspecialchars($f_search) ?>" placeholder="First or last name">
             </div>
-            <div class="fg">
-                <label>Department</label>
-                <select name="dept">
+            <div class="filter-group">
+                <label for="emp_dept">Department</label>
+                <select id="emp_dept" name="dept">
                     <option value="">All departments</option>
                     <?php foreach ($departments as $d): ?>
-                    <option value="<?= htmlspecialchars($d) ?>" <?= $f_dept===$d?'selected':'' ?>><?= htmlspecialchars($d) ?></option>
+                    <option value="<?= htmlspecialchars($d) ?>" <?= $f_dept === $d ? 'selected' : '' ?>><?= htmlspecialchars($d) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
-            <div class="fg">
-                <label>Role</label>
-                <select name="role">
+            <div class="filter-group">
+                <label for="emp_role">Role</label>
+                <select id="emp_role" name="role">
                     <option value="">All roles</option>
                     <?php foreach ($roles as $r): ?>
-                    <option value="<?= htmlspecialchars($r) ?>" <?= $f_role===$r?'selected':'' ?>><?= htmlspecialchars($r) ?></option>
+                    <option value="<?= htmlspecialchars($r) ?>" <?= $f_role === $r ? 'selected' : '' ?>><?= htmlspecialchars($r) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
-            <div class="fg">
-                <label>Status</label>
-                <select name="status">
+            <div class="filter-group">
+                <label for="emp_status">Status</label>
+                <select id="emp_status" name="status">
                     <option value="">All</option>
-                    <option value="Active"   <?= $f_status==='Active'?'selected':'' ?>>Active</option>
-                    <option value="Inactive" <?= $f_status==='Inactive'?'selected':'' ?>>Inactive</option>
+                    <option value="Active" <?= $f_status === 'Active' ? 'selected' : '' ?>>Active</option>
+                    <option value="Inactive" <?= $f_status === 'Inactive' ? 'selected' : '' ?>>Inactive</option>
                 </select>
             </div>
-            <div class="fg">
-                <label>Sex</label>
-                <select name="sex">
+            <div class="filter-group">
+                <label for="emp_sex">Sex</label>
+                <select id="emp_sex" name="sex">
                     <option value="">Any</option>
-                    <option value="M" <?= $f_sex==='M'?'selected':'' ?>>Male</option>
-                    <option value="F" <?= $f_sex==='F'?'selected':'' ?>>Female</option>
-                    <option value="Other" <?= $f_sex==='Other'?'selected':'' ?>>Other</option>
+                    <option value="M" <?= $f_sex === 'M' ? 'selected' : '' ?>>Male</option>
+                    <option value="F" <?= $f_sex === 'F' ? 'selected' : '' ?>>Female</option>
+                    <option value="Other" <?= $f_sex === 'Other' ? 'selected' : '' ?>>Other</option>
                 </select>
             </div>
-            <div class="fg"><label>Hire date from</label><input type="date" name="hire_from" value="<?= htmlspecialchars($f_hire_from) ?>"></div>
-            <div class="fg"><label>Hire date to</label><input type="date" name="hire_to" value="<?= htmlspecialchars($f_hire_to) ?>"></div>
-            <div class="fg"><label>Min salary ($)</label><input type="number" name="sal_min" value="<?= htmlspecialchars($f_sal_min) ?>" placeholder="e.g. 30000"></div>
-            <div class="fg"><label>Max salary ($)</label><input type="number" name="sal_max" value="<?= htmlspecialchars($f_sal_max) ?>" placeholder="e.g. 60000"></div>
-        </div>
-        <div class="fa">
-            <button type="submit" class="bfil">Apply filters</button>
-            <a href="employees_report.php" class="bres">Reset all</a>
+            <div class="filter-group">
+                <label for="emp_hire_from">Hire date from</label>
+                <input id="emp_hire_from" type="date" name="hire_from" value="<?= htmlspecialchars($f_hire_from) ?>">
+            </div>
+            <div class="filter-group">
+                <label for="emp_hire_to">Hire date to</label>
+                <input id="emp_hire_to" type="date" name="hire_to" value="<?= htmlspecialchars($f_hire_to) ?>">
+            </div>
+            <div class="filter-group">
+                <label for="emp_sal_min">Min salary ($)</label>
+                <input id="emp_sal_min" type="number" name="sal_min" value="<?= htmlspecialchars($f_sal_min) ?>" placeholder="e.g. 30000" step="any">
+            </div>
+            <div class="filter-group">
+                <label for="emp_sal_max">Max salary ($)</label>
+                <input id="emp_sal_max" type="number" name="sal_max" value="<?= htmlspecialchars($f_sal_max) ?>" placeholder="e.g. 60000" step="any">
+            </div>
+            <div class="filter-actions">
+                <button type="submit" class="btn btn-edit">Search</button>
+                <a href="employees_report.php" class="btn">Reset</a>
+            </div>
         </div>
     </form>
-</details>
+</div>
+
+<p class="filter-scope-note">All tabs below use these filters. After changing them, click <strong>Search</strong> again.</p>
 
 <!-- Tabs -->
 <div class="tab-nav">
-    <button class="tab-btn active" onclick="showTab('overview')">📊 Overview</button>
-    <button class="tab-btn" onclick="showTab('departments')">🏢 Departments</button>
-    <button class="tab-btn" onclick="showTab('caretakers')">🐾 Caretakers</button>
-    <button class="tab-btn" onclick="showTab('vets')">🩺 Vets</button>
-    <button class="tab-btn" onclick="showTab('salary')">💰 Salary</button>
-    <button class="tab-btn" onclick="showTab('directory')">📋 Directory</button>
+    <button type="button" class="tab-btn active" onclick="showTab('overview', this)">📊 Overview</button>
+    <button type="button" class="tab-btn" onclick="showTab('departments', this)">🏢 Departments</button>
+    <button type="button" class="tab-btn" onclick="showTab('caretakers', this)">🐾 Caretakers</button>
+    <button type="button" class="tab-btn" onclick="showTab('vets', this)">🩺 Vets</button>
+    <button type="button" class="tab-btn" onclick="showTab('salary', this)">💰 Salary</button>
+    <button type="button" class="tab-btn" onclick="showTab('directory', this)">📋 Directory</button>
 </div>
 
 <!-- ═══ OVERVIEW ════════════════════════════════════════════════ -->
@@ -367,16 +477,6 @@ tfoot td{background:var(--base-color);font-weight:700;padding:10px 13px;border-t
         <div class="cc">
             <h3>Hiring timeline</h3>
             <div class="cw"><canvas id="hireChart"></canvas></div>
-        </div>
-    </div>
-    <div class="two-col">
-        <div class="cc">
-            <h3>Sex distribution</h3>
-            <div class="cw-sm"><canvas id="sexChart"></canvas></div>
-        </div>
-        <div class="cc">
-            <h3>System access</h3>
-            <div class="cw-sm"><canvas id="accessChart"></canvas></div>
         </div>
     </div>
 </div>
@@ -442,11 +542,11 @@ tfoot td{background:var(--base-color);font-weight:700;padding:10px 13px;border-t
     <?php endif; ?>
 </div>
 
-<!-- ═══ CARETAKERS ══════════════════════════════════════════════ -->
+
 <div id="tab-caretakers" class="tab-content">
     <span class="section-hdr">Caretaker workload</span>
     <?php if (empty($caretakerRows)): ?>
-        <p class="no-data">No caretakers found.</p>
+        <p class="no-data">No caretakers match the current filters (same as the directory). Try a different name search or choose Reset, then Search again.</p>
     <?php else: ?>
     <?php foreach ($caretakerRows as $c):
         $initials = strtoupper(substr($c['Name'],0,1));
@@ -504,11 +604,11 @@ tfoot td{background:var(--base-color);font-weight:700;padding:10px 13px;border-t
     <?php endif; ?>
 </div>
 
-<!-- ═══ VETS ════════════════════════════════════════════════════ -->
+
 <div id="tab-vets" class="tab-content">
     <span class="section-hdr">Vet activity summary</span>
     <?php if (empty($vetRows)): ?>
-        <p class="no-data">No vets found.</p>
+        <p class="no-data">No veterinarians match the current filters. Try a different name search or choose Reset, then Search again.</p>
     <?php else: ?>
     <?php foreach ($vetRows as $v):
         $initials = strtoupper(substr($v['Name'],0,1));
@@ -565,7 +665,6 @@ tfoot td{background:var(--base-color);font-weight:700;padding:10px 13px;border-t
     <?php endif; ?>
 </div>
 
-<!-- ═══ SALARY ══════════════════════════════════════════════════ -->
 <div id="tab-salary" class="tab-content">
     <span class="section-hdr">Salary analysis</span>
     <div class="chart-grid" style="margin-bottom:18px">
@@ -609,7 +708,6 @@ tfoot td{background:var(--base-color);font-weight:700;padding:10px 13px;border-t
     </table></div>
 </div>
 
-<!-- ═══ DIRECTORY ═══════════════════════════════════════════════ -->
 <div id="tab-directory" class="tab-content">
     <span class="section-hdr">Full employee directory (<?= $totalEmp ?>)</span>
     <div class="tw"><table>
@@ -646,14 +744,15 @@ tfoot td{background:var(--base-color);font-weight:700;padding:10px 13px;border-t
     </table></div>
 </div>
 
-</div><!-- end .pw -->
+</div>
 
 <script>
-function showTab(name) {
-    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-    document.getElementById('tab-' + name).classList.add('active');
-    event.currentTarget.classList.add('active');
+function showTab(name, btn) {
+    document.querySelectorAll('.tab-content').forEach(function (el) { el.classList.remove('active'); });
+    document.querySelectorAll('.tab-btn').forEach(function (el) { el.classList.remove('active'); });
+    var pane = document.getElementById('tab-' + name);
+    if (pane) pane.classList.add('active');
+    if (btn) btn.classList.add('active');
 }
 
 const green  = '#6ac473';
@@ -713,21 +812,7 @@ new Chart(document.getElementById('hireChart'), {
         scales:{ x:{ ticks:{font:{size:10}} }, y:{ ticks:{ stepSize:1, font:{size:10} } } } }
 });
 
-// Sex pie
-new Chart(document.getElementById('sexChart'), {
-    type:'pie',
-    data:{ labels:sexLabels, datasets:[{ data:sexCounts, backgroundColor:[blue,orange,purple,teal], borderWidth:2, borderColor:'#fff' }] },
-    options:{ responsive:true, maintainAspectRatio:false,
-        plugins:{ legend:{ position:'bottom', labels:{font:{size:11}} } } }
-});
 
-// System access pie
-new Chart(document.getElementById('accessChart'), {
-    type:'pie',
-    data:{ labels:['Has login','No login'], datasets:[{ data:[<?= $hasSystem ?>,<?= $totalEmp-$hasSystem ?>], backgroundColor:[green,'#ddd'], borderWidth:2, borderColor:'#fff' }] },
-    options:{ responsive:true, maintainAspectRatio:false,
-        plugins:{ legend:{ position:'bottom', labels:{font:{size:11}} } } }
-});
 
 // Salary by role bar
 new Chart(document.getElementById('salRoleChart'), {
