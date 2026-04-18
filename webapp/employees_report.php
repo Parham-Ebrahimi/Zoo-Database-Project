@@ -186,6 +186,38 @@ $avgSalary = $pdo->query(
             font-size: 0.88rem;
         }
         .back-btn:hover { background-color: var(--accent-color); }
+
+        .ui-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 3000;
+            display: grid;
+            place-items: center;
+            padding: 16px;
+        }
+        .ui-modal[hidden] { display: none !important; }
+        .ui-modal__backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.4);
+            cursor: pointer;
+        }
+        .ui-modal__box {
+            position: relative;
+            background: #fff;
+            border-radius: 12px;
+            padding: 20px 22px;
+            max-width: 400px;
+            width: 100%;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+        }
+        .ui-modal__box h2 {
+            margin: 0 0 10px;
+            font-size: 1.05rem;
+            color: var(--text-color);
+        }
+        .ui-modal__box p { margin: 0 0 18px; font-size: 0.9rem; line-height: 1.45; color: #444; }
+        .ui-modal__actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
     </style>
 </head>
 <body>
@@ -273,7 +305,9 @@ $avgSalary = $pdo->query(
                 <td><?= $row['Sex'] ?></td>
                 <td>
                     <a href="edit_employee.php?id=<?= $row['EmployeeID'] ?>" class="btn btn-edit">Edit</a>
-                    <a href="delete_employee.php?id=<?= $row['EmployeeID'] ?>" class="btn btn-delete" onclick="return confirm('Are you sure?')">Delete</a>
+                    <a href="delete_employee.php?id=<?= (int) $row['EmployeeID'] ?>"
+                       class="btn btn-delete js-delete-employee-link"
+                       data-employee-label="<?= htmlspecialchars(trim(($row['FirstName'] ?? '') . ' ' . ($row['LastName'] ?? '')), ENT_QUOTES, 'UTF-8') ?>">Delete</a>
                 </td>
             </tr>
             <?php endforeach; ?>
@@ -281,5 +315,52 @@ $avgSalary = $pdo->query(
         </div>
         <?php endif; ?>
     </div>
+
+    <div id="delete-employee-modal" class="ui-modal" hidden role="dialog" aria-modal="true" aria-labelledby="delete-employee-modal-title">
+        <div class="ui-modal__backdrop" data-emp-modal-dismiss></div>
+        <div class="ui-modal__box">
+            <h2 id="delete-employee-modal-title">Confirm delete</h2>
+            <p id="delete-employee-modal-text"></p>
+            <div class="ui-modal__actions">
+                <button type="button" class="btn btn-edit" data-emp-modal-dismiss>Cancel</button>
+                <button type="button" class="btn btn-delete" id="delete-employee-modal-confirm">Delete</button>
+            </div>
+        </div>
+    </div>
+    <script>
+    (function () {
+        var modal = document.getElementById('delete-employee-modal');
+        var textEl = document.getElementById('delete-employee-modal-text');
+        var confirmBtn = document.getElementById('delete-employee-modal-confirm');
+        if (!modal || !textEl || !confirmBtn) return;
+        var pendingUrl = null;
+
+        function closeModal() {
+            modal.hidden = true;
+            pendingUrl = null;
+        }
+
+        document.querySelectorAll('.js-delete-employee-link').forEach(function (a) {
+            a.addEventListener('click', function (e) {
+                e.preventDefault();
+                pendingUrl = a.getAttribute('href');
+                var label = a.getAttribute('data-employee-label') || 'this employee';
+                textEl.textContent = 'Remove ' + label + ' from the directory? This cannot be undone.';
+                modal.hidden = false;
+            });
+        });
+
+        confirmBtn.addEventListener('click', function () {
+            if (pendingUrl) window.location.href = pendingUrl;
+        });
+
+        modal.querySelectorAll('[data-emp-modal-dismiss]').forEach(function (el) {
+            el.addEventListener('click', closeModal);
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && !modal.hidden) closeModal();
+        });
+    })();
+    </script>
 </body>
 </html>

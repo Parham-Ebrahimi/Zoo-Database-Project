@@ -268,26 +268,125 @@ $hasFilters = array_filter([$f_payment, $f_customer, $f_amt_min, $f_amt_max])
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Revenue & Sales Report</title>
 <link rel="stylesheet" href="style.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js">
-function toggleRaw(btn, id) {
-    const body = document.getElementById(id);
-    body.classList.toggle('open');
-    btn.classList.toggle('open');
-    const arrow = btn.querySelector('.arrow');
-    arrow.textContent = body.classList.contains('open') ? '▼' : '▶';
-}
-
-</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
-body{overflow:auto}
-.pw{box-sizing:border-box;min-height:100vh;padding:28px 36px;background:rgba(187,223,158,.97)}
-.ph{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;border-bottom:3px solid var(--accent-color);padding-bottom:16px;flex-wrap:wrap;gap:12px}
-.ph h1{font-size:1.7rem;margin:0}
-.hbtns{display:flex;gap:10px;flex-wrap:wrap}
-.bn{padding:8px 20px;background:var(--base-color);border:2px solid var(--accent-color);border-radius:1000px;font:inherit;font-weight:600;font-size:.88rem;color:var(--text-color);text-decoration:none;cursor:pointer}
-.bn:hover{background:var(--accent-color);text-decoration:none}
-.bl{padding:8px 20px;background:var(--accent-color);border:none;border-radius:1000px;font:inherit;font-weight:600;cursor:pointer;color:var(--text-color);text-decoration:none}
-.bl:hover{background:var(--text-color);color:white}
+body { overflow: auto; }
+.dashboard-wrapper {
+    box-sizing: border-box;
+    min-height: 100vh;
+    padding: 20px clamp(12px, 2.4vw, 18px);
+    background-color: rgba(187, 223, 158, 0.95);
+}
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    border-bottom: 3px solid var(--accent-color);
+    padding-bottom: 12px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+.dashboard-header h1 { font-size: 1.5rem; margin: 0; font-weight: 800; color: var(--text-color); }
+.header-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.back-btn {
+    display: inline-block;
+    margin-bottom: 14px;
+    padding: 7px 14px;
+    background-color: var(--base-color);
+    border-radius: 8px;
+    color: var(--text-color);
+    font-weight: 600;
+    text-decoration: none;
+    font-size: 0.88rem;
+}
+.back-btn:hover { background-color: var(--accent-color); }
+.logout-btn {
+    padding: 10px 22px;
+    background-color: var(--accent-color);
+    border: none;
+    border-radius: 1000px;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--text-color);
+    text-decoration: none;
+}
+.logout-btn:hover { background-color: var(--text-color); color: white; }
+
+.filter-card {
+    background: white;
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.05);
+}
+.filter-card h2 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: var(--text-color);
+}
+.filter-card label {
+    background: none;
+    color: var(--text-color);
+    font-size: 0.85rem;
+    font-weight: 600;
+    height: auto;
+    width: auto;
+    border-radius: 0;
+    display: block;
+    text-align: left;
+    padding: 0;
+}
+.filter-card form { width: 100%; margin: 0; display: block; }
+.filter-card form > div { width: auto; display: block; }
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.filter-group label { font-size: 0.85rem; font-weight: 600; color: var(--text-color); }
+.filter-group input,
+.filter-group select {
+    padding: 6px 10px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font: inherit;
+    background: white;
+}
+.filter-group input:focus,
+.filter-group select:focus {
+    outline: none;
+    border-color: var(--accent-color);
+}
+.filter-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: flex-end;
+}
+.btn {
+    padding: 6px 14px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.85rem;
+    border: none;
+    cursor: pointer;
+    font: inherit;
+    display: inline-block;
+}
+.btn-edit {
+    background-color: var(--accent-color);
+    color: white;
+}
+.btn-edit:hover { background-color: var(--text-color); }
+.filter-actions .btn:not(.btn-edit) {
+    background: #eee;
+    color: #555;
+}
+.filter-actions .btn:not(.btn-edit):hover { background: #ddd; }
 
 /* KPI cards */
 .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;margin-bottom:20px}
@@ -303,21 +402,6 @@ body{overflow:auto}
 .kpi.ticket .k-fill{background:#2980b9}
 .kpi.food   .k-fill{background:#e67e22}
 .kpi.shop   .k-fill{background:#8e44ad}
-
-/* Filter panel */
-.fp{background:white;border-radius:14px;padding:16px 20px;margin-bottom:18px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
-.fp summary{font-weight:700;font-size:.92rem;cursor:pointer;color:var(--text-color);list-style:none;display:flex;align-items:center;gap:.5rem}
-.fp summary::before{content:"🔍"}
-.fg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:11px;margin-top:14px}
-.fg{display:flex;flex-direction:column;gap:3px}
-.fg label{font-size:.75rem;font-weight:600;color:var(--text-color);text-transform:uppercase;letter-spacing:.04em}
-.fg input,.fg select{padding:7px 10px;border:2px solid #ddd;border-radius:8px;font:inherit;font-size:.87rem;background:white}
-.fg input:focus,.fg select:focus{outline:none;border-color:var(--accent-color)}
-.fa{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
-.bfil{padding:8px 22px;background:var(--accent-color);border:none;border-radius:8px;font:inherit;font-weight:600;cursor:pointer;color:white}
-.bfil:hover{background:var(--text-color)}
-.bres{padding:8px 22px;background:#eee;border:none;border-radius:8px;font:inherit;font-weight:600;cursor:pointer;color:#555;text-decoration:none;display:inline-block}
-.bres:hover{background:#ddd}
 
 /* Tab nav */
 .tab-nav{display:flex;gap:4px;margin-bottom:16px;flex-wrap:wrap}
@@ -386,22 +470,22 @@ tfoot td{background:var(--base-color);font-weight:700;padding:10px 13px;border-t
 </style>
 </head>
 <body>
-<div class="pw">
+<div class="dashboard-wrapper">
 
-<!-- Header -->
-<div class="ph">
+<div class="dashboard-header">
     <div>
-        <h1>Revenue &amp; Sales Report</h1>
-        <p style="margin:4px 0 0;font-size:.85rem;color:#555">
+        <h1>Revenue &amp; sales report</h1>
+        <p style="margin:4px 0 0;font-size:.85rem;color:#666;font-weight:500">
             <?= htmlspecialchars($f_from) ?> → <?= htmlspecialchars($f_to) ?>
-            &nbsp;·&nbsp; Welcome, <?= htmlspecialchars($_SESSION['firstname']) ?>
+            · <?= htmlspecialchars($_SESSION['firstname'] ?? '') ?>
         </p>
     </div>
-    <div class="hbtns">
-        <a href="dashboard.php" class="bn">← Dashboard</a>
-        <a href="logout.php" class="bl">Logout</a>
+    <div class="header-actions">
+        <a href="logout.php" class="logout-btn">Logout</a>
     </div>
 </div>
+
+<a href="dashboard.php" class="back-btn" style="margin-bottom:12px">← Back to dashboard</a>
 
 <!-- KPI Cards -->
 <div class="kpi-grid">
@@ -437,49 +521,63 @@ tfoot td{background:var(--base-color);font-weight:700;padding:10px 13px;border-t
     </div>
 </div>
 
-<!-- Filters -->
-<details class="fp" <?= $hasFilters ? 'open' : '' ?>>
-    <summary>Filters &amp; Options</summary>
+<div class="filter-card">
+    <h2>Filter revenue</h2>
     <form method="GET">
-        <div class="fg-grid">
-            <div class="fg"><label>Date from</label><input type="date" name="date_from" value="<?= $f_from ?>"></div>
-            <div class="fg"><label>Date to</label><input type="date" name="date_to" value="<?= $f_to ?>"></div>
-            <div class="fg">
-                <label>Group by</label>
-                <select name="group">
-                    <?php foreach (['day'=>'Daily','week'=>'Weekly','month'=>'Monthly','quarter'=>'Quarterly','year'=>'Yearly'] as $v=>$l): ?>
-                    <option value="<?= $v ?>" <?= $f_group===$v?'selected':'' ?>><?= $l ?></option>
+        <div class="filter-grid">
+            <div class="filter-group">
+                <label for="rev_date_from">Date from</label>
+                <input id="rev_date_from" type="date" name="date_from" value="<?= htmlspecialchars($f_from) ?>">
+            </div>
+            <div class="filter-group">
+                <label for="rev_date_to">Date to</label>
+                <input id="rev_date_to" type="date" name="date_to" value="<?= htmlspecialchars($f_to) ?>">
+            </div>
+            <div class="filter-group">
+                <label for="rev_group">Group by</label>
+                <select id="rev_group" name="group">
+                    <?php foreach (['day' => 'Daily', 'week' => 'Weekly', 'month' => 'Monthly', 'quarter' => 'Quarterly', 'year' => 'Yearly'] as $v => $l): ?>
+                    <option value="<?= $v ?>" <?= $f_group === $v ? 'selected' : '' ?>><?= $l ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
-            <div class="fg">
-                <label>Category</label>
-                <select name="category">
-                    <option value="all"    <?= $f_category==='all'   ?'selected':'' ?>>All categories</option>
-                    <option value="ticket" <?= $f_category==='ticket'?'selected':'' ?>>Tickets only</option>
-                    <option value="food"   <?= $f_category==='food'  ?'selected':'' ?>>Food only</option>
-                    <option value="shop"   <?= $f_category==='shop'  ?'selected':'' ?>>Shop only</option>
+            <div class="filter-group">
+                <label for="rev_category">Category</label>
+                <select id="rev_category" name="category">
+                    <option value="all" <?= $f_category === 'all' ? 'selected' : '' ?>>All categories</option>
+                    <option value="ticket" <?= $f_category === 'ticket' ? 'selected' : '' ?>>Tickets only</option>
+                    <option value="food" <?= $f_category === 'food' ? 'selected' : '' ?>>Food only</option>
+                    <option value="shop" <?= $f_category === 'shop' ? 'selected' : '' ?>>Shop only</option>
                 </select>
             </div>
-            <div class="fg">
-                <label>Payment method</label>
-                <select name="payment">
+            <div class="filter-group">
+                <label for="rev_payment">Payment method</label>
+                <select id="rev_payment" name="payment">
                     <option value="">All methods</option>
-                    <?php foreach (['Credit Card','Debit Card','Cash','PayPal'] as $pm): ?>
-                    <option value="<?= $pm ?>" <?= $f_payment===$pm?'selected':'' ?>><?= $pm ?></option>
+                    <?php foreach (['Credit Card', 'Debit Card', 'Cash', 'PayPal'] as $pm): ?>
+                    <option value="<?= htmlspecialchars($pm) ?>" <?= $f_payment === $pm ? 'selected' : '' ?>><?= htmlspecialchars($pm) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
-            <div class="fg"><label>Customer name / email</label><input type="text" name="customer" value="<?= htmlspecialchars($f_customer) ?>" placeholder="Search..."></div>
-            <div class="fg"><label>Min amount ($)</label><input type="number" step="0.01" name="amt_min" value="<?= htmlspecialchars($f_amt_min) ?>" placeholder="0.00"></div>
-            <div class="fg"><label>Max amount ($)</label><input type="number" step="0.01" name="amt_max" value="<?= htmlspecialchars($f_amt_max) ?>" placeholder="999"></div>
-        </div>
-        <div class="fa">
-            <button type="submit" class="bfil">Apply filters</button>
-            <a href="revenue_report.php" class="bres">Reset all</a>
+            <div class="filter-group filter-group--wide">
+                <label for="rev_customer">Customer name or email</label>
+                <input id="rev_customer" type="text" name="customer" value="<?= htmlspecialchars($f_customer) ?>" placeholder="e.g. Jane or @email">
+            </div>
+            <div class="filter-group">
+                <label for="rev_amt_min">Min amount ($)</label>
+                <input id="rev_amt_min" type="number" step="0.01" name="amt_min" value="<?= htmlspecialchars($f_amt_min) ?>" placeholder="0.00">
+            </div>
+            <div class="filter-group">
+                <label for="rev_amt_max">Max amount ($)</label>
+                <input id="rev_amt_max" type="number" step="0.01" name="amt_max" value="<?= htmlspecialchars($f_amt_max) ?>" placeholder="999">
+            </div>
+            <div class="filter-actions">
+                <button type="submit" class="btn btn-edit">Search</button>
+                <a href="revenue_report.php" class="btn">Reset</a>
+            </div>
         </div>
     </form>
-</details>
+</div>
 
 <!-- Tab navigation -->
 <div class="tab-nav">
@@ -899,7 +997,7 @@ tfoot td{background:var(--base-color);font-weight:700;padding:10px 13px;border-t
     <?php endif; ?>
 </div>
 
-</div><!-- end .pw -->
+</div><!-- end dashboard-wrapper -->
 
 <script>
 // ── Tab switching ─────────────────────────────────────────────────

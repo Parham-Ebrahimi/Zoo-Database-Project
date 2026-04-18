@@ -4,11 +4,15 @@ if (!isset($_SESSION['user_id'])) {
     header('Location: login.html');
     exit;
 }
-if (!in_array($_SESSION['role'], ['admin', 'caretaker', 'vet'])) {
+require_once 'staff_home.php';
+$roleGate = strtolower(trim((string) ($_SESSION['role'] ?? '')));
+if (!in_array($roleGate, ['admin', 'caretaker', 'vet', 'keeper'], true) && !staff_is_vet_role()) {
     header('Location: dashboard.php');
     exit;
 }
 require 'db.php';
+
+$staffHome = staff_home_href();
 
 function animal_table_has_caretaker_column(PDO $pdo): bool
 {
@@ -346,6 +350,50 @@ function sortLink(string $col, string $label, string $current, string $dir): str
         .no-results { padding: 28px; text-align: center; color: #888; font-style: italic; }
 
         .result-count { font-size: .85rem; color: #666; margin-bottom: 12px; font-weight: 600; }
+
+        .flash-msg {
+            padding: 10px 14px;
+            border-radius: 8px;
+            margin-bottom: 14px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        .flash-msg.ok { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .flash-msg.err { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+
+        .action-btns { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+
+        .ui-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 3000;
+            display: grid;
+            place-items: center;
+            padding: 16px;
+        }
+        .ui-modal[hidden] { display: none !important; }
+        .ui-modal__backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.4);
+            cursor: pointer;
+        }
+        .ui-modal__box {
+            position: relative;
+            background: #fff;
+            border-radius: 12px;
+            padding: 20px 22px;
+            max-width: 400px;
+            width: 100%;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+        }
+        .ui-modal__box h2 {
+            margin: 0 0 10px;
+            font-size: 1.05rem;
+            color: var(--text-color);
+        }
+        .ui-modal__box p { margin: 0 0 18px; font-size: 0.9rem; line-height: 1.45; color: #444; }
+        .ui-modal__actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
     </style>
 </head>
 <body>
@@ -357,8 +405,15 @@ function sortLink(string $col, string $label, string $current, string $dir): str
     </div>
 
     <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px">
-        <a href="dashboard.php" class="back-btn" style="margin-bottom:0">← Back to Dashboard</a>
+        <a href="<?= htmlspecialchars($staffHome) ?>" class="back-btn" style="margin-bottom:0">← Back to dashboard</a>
     </div>
+
+    <?php if (!empty($_GET['deleted'])): ?>
+        <p class="flash-msg ok" role="status">Animal record was removed from the directory.</p>
+    <?php endif; ?>
+    <?php if (!empty($_GET['error'])): ?>
+        <p class="flash-msg err" role="alert"><?= htmlspecialchars((string) $_GET['error']) ?></p>
+    <?php endif; ?>
 
     <div class="filter-card">
         <h2>Filter Animals</h2>
@@ -490,6 +545,7 @@ function sortLink(string $col, string $label, string $current, string $dir): str
             <th>Assigned caretaker</th>
             <?php endif; ?>
             <th>Vet</th>
+            <th>Actions</th>
         </tr>
     </thead>
 
@@ -538,6 +594,16 @@ function sortLink(string $col, string $label, string $current, string $dir): str
                     ? htmlspecialchars($a['LastVisitVet']) 
                     : '<span style="color:#aaa">—</span>' ?>
             </td>
+            <td>
+                <div class="action-btns">
+                    <a href="edit_animal.php?id=<?= (int) $a['Animal_ID'] ?>" class="btn btn-edit" style="padding:4px 10px;font-size:0.8rem">Edit</a>
+                    <form method="post" action="delete_animal.php" class="js-delete-animal-form" style="display:inline;margin:0"
+                          data-animal-name="<?= htmlspecialchars($a['Name'] ?? 'this animal', ENT_QUOTES, 'UTF-8') ?>">
+                        <input type="hidden" name="id" value="<?= (int) $a['Animal_ID'] ?>">
+                        <button type="submit" class="btn btn-delete" style="padding:4px 10px;font-size:0.8rem">Delete</button>
+                    </form>
+                </div>
+            </td>
         </tr>
     <?php endforeach; ?>
     </tbody>
@@ -546,5 +612,65 @@ function sortLink(string $col, string $label, string $current, string $dir): str
 </div>
 
 <?php endif; ?>
+</div>
+
+<div id="delete-animal-modal" class="ui-modal" hidden role="dialog" aria-modal="true" aria-labelledby="delete-animal-modal-title">
+    <div class="ui-modal__backdrop" data-modal-dismiss></div>
+    <div class="ui-modal__box">
+        <h2 id="delete-animal-modal-title">Confirm delete</h2>
+        <p id="delete-animal-modal-text"></p>
+        <div class="ui-modal__actions">
+            <button type="button" class="btn btn-edit" data-modal-dismiss>Cancel</button>
+            <button type="button" class="btn btn-delete" id="delete-animal-modal-confirm">Delete</button>
+        </div>
+    </div>
+</div>
+<script>
+(function () {
+    var modal = document.getElementById('delete-animal-modal');
+    var textEl = document.getElementById('delete-animal-modal-text');
+    var confirmBtn = document.getElementById('delete-animal-modal-confirm');
+    if (!modal || !textEl || !confirmBtn) return;
+    var pendingForm = null;
+    var bypass = false;
+
+    function closeModal() {
+        modal.hidden = true;
+        pendingForm = null;
+    }
+
+    document.querySelectorAll('.js-delete-animal-form').forEach(function (form) {
+        form.addEventListener('submit', function (e) {
+            if (bypass) {
+                bypass = false;
+                return;
+            }
+            e.preventDefault();
+            pendingForm = form;
+            var name = form.getAttribute('data-animal-name') || 'this animal';
+            textEl.textContent = 'Delete ' + name + ' permanently? This cannot be undone.';
+            modal.hidden = false;
+        });
+    });
+
+    confirmBtn.addEventListener('click', function () {
+        if (!pendingForm) return;
+        bypass = true;
+        if (typeof pendingForm.requestSubmit === 'function') {
+            pendingForm.requestSubmit();
+        } else {
+            pendingForm.submit();
+        }
+        closeModal();
+    });
+
+    modal.querySelectorAll('[data-modal-dismiss]').forEach(function (el) {
+        el.addEventListener('click', closeModal);
+    });
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && !modal.hidden) closeModal();
+    });
+})();
+</script>
 </body>
 </html>

@@ -217,8 +217,8 @@ $todayRevenue   = $pdo->query("SELECT TotalRevenue FROM daily_revenue WHERE Reve
         </div>
     </div>
 
-        <!-- Stats Row (admin/manager only) -->
-        <?php if (in_array($role, ['admin', 'manager'])): ?>
+        <!-- Stats Row (adminonly) -->
+        <?php if (in_array($role, ['admin'])): ?>
         <div class="stats-row">
             <div class="stat-card">
                 <div class="stat-label">🐾 Total Animals</div>
@@ -251,10 +251,10 @@ $todayRevenue   = $pdo->query("SELECT TotalRevenue FROM daily_revenue WHERE Reve
         <?php endif; ?>
 
         <!-- Animals Section -->
-        <?php if (in_array($role, ['admin', 'zookeeper', 'vet', 'manager'])): ?>
+        <?php if (in_array($role, ['admin', 'caretaker', 'vet',])): ?>
         <div class="section-title">Animals & Enclosures</div>
         <div class="tiles-grid">
-            <?php if (in_array($role, ['admin', 'zookeeper'])): ?>
+            <?php if (in_array($role, ['admin', 'caretaker'])): ?>
             <a href="add-animal.php" class="tile">
                 <div class="tile-icon">➕</div>
                 <div class="tile-text"><strong>Add Animal</strong><span>Register new animal</span></div>
@@ -267,15 +267,12 @@ $todayRevenue   = $pdo->query("SELECT TotalRevenue FROM daily_revenue WHERE Reve
             <a href="health-reports.php" class="tile">
                 <div class="tile-text"><strong>Health Records</strong><span>Medical history</span></div>
             </a>
-            <a href="add-health-record.php" class="tile">
-                <div class="tile-text"><strong>Add Health Record</strong><span>Log a checkup</span></div>
-            </a>
             <?php endif; ?>
         </div>
         <?php endif; ?>
 
         <!-- Staff Section -->
-        <?php if (in_array($role, ['admin', 'manager'])): ?>
+        <?php if (in_array($role, ['admin'])): ?>
         <div class="section-title">Staff Management</div>
         <div class="tiles-grid">
             <a href="add-employee.php" class="tile">
@@ -287,8 +284,7 @@ $todayRevenue   = $pdo->query("SELECT TotalRevenue FROM daily_revenue WHERE Reve
         </div>
         <?php endif; ?>
 
-        <!-- Revenue & Tickets Section -->
-        <?php if (in_array($role, ['admin', 'manager', 'cashier'])): ?>
+        <?php if (in_array($role, ['admin', 'cashier'])): ?>
         <div class="section-title">Revenue & Tickets</div>
         <div class="tiles-grid">
             <?php if (in_array($role, ['admin', 'cashier'])): ?>
@@ -296,26 +292,20 @@ $todayRevenue   = $pdo->query("SELECT TotalRevenue FROM daily_revenue WHERE Reve
                 <div class="tile-text"><strong>Add Ticket</strong><span>Create new ticket</span></div>
             </a>
             <?php endif; ?>
-            <?php if (in_array($role, ['admin', 'manager'])): ?>
+            <?php if (in_array($role, ['admin'])): ?>
             <a href="revenue_report.php" class="tile">
                 <div class="tile-text"><strong>Revenue Report</strong><span>Daily financial summary</span></div>
-            </a>
-            <a href="tickets_report.php" class="tile">
-                <div class="tile-text"><strong>Tickets Report</strong><span>Sales by type & date</span></div>
             </a>
             <?php endif; ?>
         </div>
         <?php endif; ?>
 
         <!-- Gift Shop Section -->
-        <?php if (in_array($role, ['admin', 'cashier', 'manager'])): ?>
+        <?php if (in_array($role, ['admin', 'cashier'])): ?>
         <div class="section-title">Gift Shop & Food</div>
         <div class="tiles-grid">
             <a href="shop_alerts.php" class="tile">
                 <div class="tile-text"><strong>Shop Restock Alerts</strong><span>Low stock warnings</span></div>
-            </a>
-            <a href="sales_report.php" class="tile">
-                <div class="tile-text"><strong>Sales Report</strong><span>Shop & food sales</span></div>
             </a>
         </div>
         <?php endif; ?>

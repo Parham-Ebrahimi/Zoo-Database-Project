@@ -146,10 +146,9 @@ session_start();
                 <?php if (isset($_SESSION['customer_id'])): ?>
                     <a class="btn btn-primary" href="buy_tickets.php">Buy Tickets</a>
                 <?php else: ?>
-                    <a class="btn btn-primary" href="login.html"
-                       onclick="alert('You must login or create an account first')">
-                       Buy Tickets
-                    </a>
+                    <button type="button" class="btn btn-primary" id="open-guest-buy-modal" aria-haspopup="dialog" aria-controls="guest-buy-modal">
+                        Buy Tickets
+                    </button>
                 <?php endif; ?>
             </div>
         </section>
@@ -163,5 +162,55 @@ session_start();
             <a href="signup.html">Sign up</a>
         </p>
     </footer>
+
+    <div id="guest-buy-modal" class="site-modal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="guest-buy-modal-title">
+        <div class="site-modal__backdrop" data-close-modal></div>
+        <div class="site-modal__panel">
+            <h2 id="guest-buy-modal-title" class="site-modal__title">Log in to buy tickets</h2>
+            <p class="site-modal__text">You need an account to purchase zoo tickets. Log in if you already have one, or create a new account to get started.</p>
+            <div class="site-modal__actions">
+                <a class="btn btn-primary" href="login.html">Log in</a>
+                <a class="btn btn-outline" href="signup.html">Create account</a>
+                <button type="button" class="btn btn-outline" data-close-modal>Not now</button>
+            </div>
+        </div>
+    </div>
+    <script>
+    (function () {
+        var openBtn = document.getElementById('open-guest-buy-modal');
+        var modal = document.getElementById('guest-buy-modal');
+        if (!openBtn || !modal) return;
+        var closers = modal.querySelectorAll('[data-close-modal]');
+        function isOpen() {
+            return modal.classList.contains('site-modal--open');
+        }
+        function openModal() {
+            modal.classList.add('site-modal--open');
+            modal.setAttribute('aria-hidden', 'false');
+            document.body.style.overflow = 'hidden';
+            var first = modal.querySelector('.site-modal__panel a[href], .site-modal__panel button');
+            if (first) first.focus();
+        }
+        function closeModal() {
+            modal.classList.remove('site-modal--open');
+            modal.setAttribute('aria-hidden', 'true');
+            document.body.style.overflow = '';
+            openBtn.focus();
+        }
+        openBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            openModal();
+        });
+        closers.forEach(function (el) {
+            el.addEventListener('click', closeModal);
+        });
+        modal.addEventListener('click', function (e) {
+            if (e.target === modal) closeModal();
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && isOpen()) closeModal();
+        });
+    })();
+    </script>
 </body>
 </html>

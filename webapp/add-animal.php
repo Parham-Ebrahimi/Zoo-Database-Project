@@ -5,11 +5,15 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
-if (!in_array($_SESSION['role'], ['admin', 'caretaker', 'vet'])) {
-    die("Access denied");
+require_once 'staff_home.php';
+$roleGate = strtolower(trim((string) ($_SESSION['role'] ?? '')));
+if (!in_array($roleGate, ['admin', 'caretaker', 'vet', 'keeper'], true) && !staff_is_vet_role()) {
+    die('Access denied');
 }
 
 require_once 'db.php';
+
+$staffHome = staff_home_href();
 
 /** @see animals_report.php (same logic) */
 function animal_table_has_caretaker_column(PDO $pdo): bool
@@ -46,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $sex        = $_POST['sex'];
     $enclosure  = $_POST['enclosure_id'];
     $caretakerId = null;
-    if ($hasCaretakerCol && ($_SESSION['role'] ?? '') === 'admin') {
+    if ($hasCaretakerCol && strtolower((string) ($_SESSION['role'] ?? '')) === 'admin') {
         $cr = $_POST['caretaker_id'] ?? '';
         $caretakerId = ($cr === '' || $cr === '0') ? null : (int) $cr;
     }
@@ -54,7 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($name) || empty($species) || empty($category) || empty($sex)) {
         $error = 'Please fill in all required fields.';
     } else {
-        if ($hasCaretakerCol && ($_SESSION['role'] ?? '') === 'admin') {
+        if ($hasCaretakerCol && strtolower((string) ($_SESSION['role'] ?? '')) === 'admin') {
             $stmt = $pdo->prepare("
                 INSERT INTO animal (Name, Species, Category, Age, Sex, Enclosure_ID, Caretaker_EmployeeID)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -218,7 +222,10 @@ if ($hasCaretakerCol) {
             <a href="logout.php" class="logout-btn">Logout</a>
         </div>
 
-        <a href="dashboard.php" class="back-btn">← Back to Dashboard</a>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px">
+            <a href="<?= htmlspecialchars($staffHome) ?>" class="back-btn" style="margin-bottom:0">← Back to dashboard</a>
+            <a href="animals_report.php" class="back-btn" style="margin-bottom:0">Animals report</a>
+        </div>
 
         <div class="form-card">
             <?php if ($error): ?><p class="msg-error"><?= $error ?></p><?php endif; ?>
@@ -259,7 +266,7 @@ if ($hasCaretakerCol) {
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <?php if ($hasCaretakerCol && ($_SESSION['role'] ?? '') === 'admin'): ?>
+                    <?php if ($hasCaretakerCol && strtolower((string) ($_SESSION['role'] ?? '')) === 'admin'): ?>
                     <div class="form-group full">
                         <label>Assigned caretaker</label>
                         <select name="caretaker_id">
