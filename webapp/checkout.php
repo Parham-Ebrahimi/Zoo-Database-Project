@@ -187,7 +187,22 @@ $navCartCount = array_sum($_SESSION['cart']['food'] ?? [])
         .total-row { display:flex; justify-content:space-between; font-size:.9rem; margin-bottom:.5rem; }
         .total-row.grand { font-weight:700; font-size:1.1rem; padding-top:.75rem; border-top:2px solid var(--cr-border); margin-top:.25rem; }
 
-        .place-btn { display:block; width:100%; padding:1rem; background:var(--cr-accent); color:white; border:none; border-radius:999px; font:inherit; font-weight:700; font-size:1rem; cursor:pointer; text-align:center; margin-top:1.25rem; transition:background .15s; }
+        .place-btn { 
+            display:block; 
+            width:100%; 
+            padding:1rem; 
+            background:var(--cr-accent); 
+            color:white; 
+            border:none; 
+            border-radius:999px; 
+            font:inherit; 
+            font-weight:700; 
+            font-size:1rem; 
+            cursor:pointer; 
+            text-align:center; 
+            margin-top:1.25rem; 
+            transition:background .15s; 
+        }
         .place-btn:hover { background:#1a5c2b; }
 
         .msg-error   { background:#fee2e2; color:#991b1b; padding:.85rem 1rem; border-radius:10px; font-weight:600; margin-bottom:1rem; }

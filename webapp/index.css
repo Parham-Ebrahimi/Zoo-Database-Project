@@ -365,7 +365,6 @@ section h2 {
     display: none;
 }
 
-/* In-page modal (replaces browser alert for guest “Buy tickets”) */
 .site-modal {
     position: fixed;
     inset: 0;

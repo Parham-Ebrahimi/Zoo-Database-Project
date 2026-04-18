@@ -106,8 +106,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         .view-cart-btn:hover { background:#eef6ea; text-decoration:none; }
 
-        .msg-error   { color:#c0392b; font-weight:600; margin-bottom:1rem; padding:.75rem 1rem; background:#fee2e2; border-radius:8px; }
-        .msg-success { color:#155724; font-weight:600; margin-bottom:1rem; padding:.75rem 1rem; background:#d4edda; border-radius:8px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:.5rem; }
+        .msg-error   { 
+            color:#c0392b; 
+            font-weight:600; 
+            margin-bottom:1rem; 
+            padding:.75rem 1rem; 
+            background:#fee2e2; 
+            border-radius:8px; 
+        }
+        .msg-success { 
+            color:#155724; 
+            font-weight:600; 
+            margin-bottom:1rem; 
+            padding:.75rem 1rem; 
+            background:#d4edda; 
+            border-radius:8px; 
+            display:flex; 
+            align-items:center; 
+            justify-content:space-between; 
+            flex-wrap:wrap; 
+            gap:.5rem; 
+        }
     </style>
 </head>
 <body>

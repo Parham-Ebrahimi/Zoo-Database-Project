@@ -13,7 +13,6 @@ $error   = '';
 $success = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // ── Sanitize inputs ───────────────────────────────────────────
     $firstname   = trim($_POST['firstname']  ?? '');
     $midinit     = trim($_POST['midinit']    ?? '');
     $lastname    = trim($_POST['lastname']   ?? '');
@@ -30,7 +29,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password    = $_POST['password']        ?? '';
     $create_user = isset($_POST['create_user']);
 
-    // ── Validation ────────────────────────────────────────────────
     $errors = [];
 
     if (empty($firstname))  $errors[] = 'First name is required.';
@@ -40,14 +38,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($hiredate))   $errors[] = 'Hire date is required.';
     if (empty($dob))        $errors[] = 'Date of birth is required.';
 
-    // Salary validation
     if ($salary === '' || $salary === null) {
         $errors[] = 'Salary is required.';
     } elseif ((float)$salary <= 0) {
         $errors[] = 'Salary must be greater than 0.';
     }
 
-    // Age validation - must be 18+
     if (!empty($dob) && !empty($hiredate)) {
         $age = (new DateTime($dob))->diff(new DateTime($hiredate))->y;
         if ($age < 18) {
@@ -55,7 +51,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // Hire date cannot be in the future
     if (!empty($hiredate) && strtotime($hiredate) > time()) {
         $errors[] = 'Hire date cannot be in the future.';
     }
@@ -156,13 +151,40 @@ $enclosures = $pdo->query("SELECT Enclosure_ID, Enclosure_Name FROM enclosure OR
     <link rel="stylesheet" href="style.css">
     <style>
         body { overflow: auto; }
-        .dashboard-wrapper { box-sizing:border-box; min-height:100vh; padding:30px 40px; background-color:var(--base-color); }
-        .dashboard-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:3px solid var(--accent-color); padding-bottom:15px; }
-        .form-card { background:white; border-radius:15px; padding:25px 30px; max-width:780px; box-shadow:0 4px 10px rgba(0,0,0,0.05); }
+        .dashboard-wrapper { 
+            box-sizing:border-box; 
+            min-height:100vh; 
+            padding:30px 40px; 
+            background-color:var(--base-color); 
+        }
+        .dashboard-header { 
+            display:flex; 
+            justify-content:space-between; 
+            align-items:center; 
+            margin-bottom:20px; 
+            border-bottom:3px solid var(--accent-color); 
+            padding-bottom:15px; 
+        }
+        .form-card { 
+            background:white; 
+            border-radius:15px; 
+            padding:25px 30px; 
+            max-width:780px; 
+            box-shadow:0 4px 10px rgba(0,0,0,0.05); 
+        }
         .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
         .form-group { display:flex; flex-direction:column; gap:4px; }
         .form-group.full { grid-column:1/-1; }
-        .form-group label { font-weight:600; font-size:0.88rem; color:var(--text-color); text-align:left; width:auto; height:auto; background:none; border-radius:0; }
+        .form-group label { 
+            font-weight:600; 
+            font-size:0.88rem; 
+            color:var(--text-color); 
+            text-align:left; 
+            width:auto; 
+            height:auto; 
+            background:none; 
+            border-radius:0; 
+        }
         .form-group input, .form-group select {
             width:100%; padding:9px 12px; border:2px solid #ddd; border-radius:8px;
             font:inherit; font-size:0.92rem; box-sizing:border-box; background:white; height:auto; flex-grow:0;
@@ -173,25 +195,96 @@ $enclosures = $pdo->query("SELECT Enclosure_ID, Enclosure_Name FROM enclosure OR
 
         /* Section headers inside form */
         .form-section { grid-column:1/-1; margin:8px 0 2px; padding-bottom:6px; border-bottom:2px solid var(--base-color); }
-        .form-section h3 { font-size:0.88rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:#888; margin:0; }
+        .form-section h3 { 
+            font-size:0.88rem; 
+            font-weight:700; 
+            text-transform:uppercase; 
+            letter-spacing:0.05em; 
+            color:#888; 
+            margin:0; 
+        }
 
         /* Login account toggle */
-        .login-toggle { grid-column:1/-1; background:#f0faf0; border:2px solid var(--accent-color); border-radius:10px; padding:14px 16px; }
+        .login-toggle { 
+            grid-column:1/-1; 
+            background:#f0faf0;
+            border:2px solid var(--accent-color); 
+            border-radius:10px; 
+            padding:14px 16px; 
+        }
         .login-toggle-header { display:flex; align-items:center; gap:10px; cursor:pointer; }
         .login-toggle-header input[type="checkbox"] { width:18px; height:18px; cursor:pointer; accent-color:var(--accent-color); }
-        .login-toggle-header label { font-weight:700; font-size:0.92rem; color:var(--text-color); cursor:pointer; margin:0; background:none; height:auto; width:auto; }
+        .login-toggle-header label { 
+            font-weight:700; 
+            font-size:0.92rem; 
+            color:var(--text-color); 
+            cursor:pointer; 
+            margin:0; 
+            background:none; 
+            height:auto; 
+            width:auto; 
+        }
         .login-toggle-header .hint { font-size:0.78rem; color:#888; }
         .login-fields { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px; display:none; }
         .login-fields.visible { display:grid; }
 
-        .submit-btn { margin-top:18px; padding:11px 32px; background-color:var(--accent-color); border:none; border-radius:1000px; font:inherit; font-weight:600; cursor:pointer; color:var(--text-color); font-size:1rem; }
+        .submit-btn { 
+            margin-top:18px; 
+            padding:11px 32px; 
+            background-color:var(--accent-color); 
+            border:none; 
+            border-radius:1000px; 
+            font:inherit; 
+            font-weight:600; 
+            cursor:pointer; 
+            color:var(--text-color); 
+            font-size:1rem; 
+        }
         .submit-btn:hover { background-color:var(--text-color); color:white; }
-        .logout-btn { padding:9px 22px; background-color:var(--accent-color); border:none; border-radius:1000px; font:inherit; font-weight:600; cursor:pointer; color:var(--text-color); text-decoration:none; }
+        .logout-btn { 
+            padding:9px 22px; 
+            background-color:var(--accent-color); 
+            border:none; 
+            border-radius:1000px; 
+            font:inherit; 
+            font-weight:600; 
+            cursor:pointer; 
+            color:var(--text-color); 
+            text-decoration:none; 
+        }
         .logout-btn:hover { background-color:var(--text-color); color:white; }
-        .back-btn { display:inline-block; margin-bottom:15px; padding:8px 18px; background-color:var(--base-color); border-radius:8px; color:var(--text-color); font-weight:600; text-decoration:none; border:2px solid var(--accent-color); font-size:0.9rem; }
+        .back-btn { 
+            display:inline-block; 
+            margin-bottom:15px; 
+            padding:8px 18px; 
+            background-color:var(--base-color); 
+            border-radius:8px; 
+            color:var(--text-color); 
+            font-weight:600; 
+            text-decoration:none; 
+            border:2px solid var(--accent-color); 
+            font-size:0.9rem; 
+        }
         .back-btn:hover { background-color:var(--accent-color); }
-        .msg-error { color:#e74c3c; font-weight:600; margin-bottom:14px; padding:12px 14px; background:#fde8e8; border-radius:8px; border:1px solid #f5c6c6; line-height:1.6; }
-        .msg-success { color:#155724; font-weight:600; margin-bottom:14px; padding:12px 14px; background:#d4edda; border-radius:8px; border:1px solid #c3e6cb; }
+        .msg-error { 
+            color:#e74c3c; 
+            font-weight:600; 
+            margin-bottom:14px; 
+            padding:12px 14px; 
+            background:#fde8e8; 
+            border-radius:8px; 
+            border:1px solid #f5c6c6; 
+            line-height:1.6; 
+        }
+        .msg-success { 
+            color:#155724; 
+            font-weight:600; 
+            margin-bottom:14px; 
+            padding:12px 14px; 
+            background:#d4edda; 
+            border-radius:8px; 
+            border:1px solid #c3e6cb; 
+        }
         .required { color:#e74c3c; }
         .hint-text { font-size:0.74rem; color:#aaa; margin-top:1px; }
 
@@ -331,7 +424,7 @@ $enclosures = $pdo->query("SELECT Enclosure_ID, Enclosure_Name FROM enclosure OR
                     </div>
                 </div>
 
-            </div><!-- end form-grid -->
+            </div>
 
             <button type="submit" class="submit-btn">Add employee</button>
         </form>
