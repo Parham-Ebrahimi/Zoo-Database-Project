@@ -211,6 +211,8 @@ $todayRevenue   = $pdo->query("SELECT TotalRevenue FROM daily_revenue WHERE Reve
         </div>
         <div class="dashboard-header-actions">
             <span class="user-name"><?= htmlspecialchars($firstname) ?></span>
+            <a href="change-password.php" class="secondary-nav-btn">🔒 Change Password</a>
+
             <a href="logout.php" class="logout-btn">Logout</a>
         </div>
     </div>
