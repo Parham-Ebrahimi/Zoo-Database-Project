@@ -1,14 +1,23 @@
 <?php
 require_once __DIR__ . '/session_bootstrap.php';
+
+$role = $_SESSION['role'] ?? '';
+$isAdminStaffCart = ($role === 'admin' && !empty($_SESSION['user_id']) && !isset($_SESSION['customer_id']));
+
 if (!isset($_SESSION['customer_id'])) {
-    if (!empty($_SESSION['user_id'])) {
+    if ($isAdminStaffCart) {
+        // Admin can review session cart without a linked customer account.
+    } elseif (!empty($_SESSION['user_id'])) {
         header('Location: dashboard.php');
         exit;
+    } else {
+        header('Location: login.html');
+        exit;
     }
-    header('Location: login.html');
-    exit;
 }
 require_once 'db.php';
+
+$canCheckout = isset($_SESSION['customer_id']);
 
 if (!isset($_SESSION['cart'])) {
     $_SESSION['cart'] = ['food' => [], 'ticket' => [], 'shop' => []];
@@ -249,12 +258,27 @@ $isEmpty    = $cartCount === 0;
         .shop-link:hover { background:#1a5c2b; text-decoration:none; }
         .shop-link.outline { background:transparent; border:1px solid var(--cr-accent); color:var(--cr-accent); }
         .shop-link.outline:hover { background:#eef6ea; }
+        .admin-cart-topnav {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-left: auto;
+        }
     </style>
 </head>
 <body>
     <header class="site-header">
         <a class="logo" href="index.php">Greenwood Zoo</a>
+        <?php if ($isAdminStaffCart): ?>
+        <nav class="admin-cart-topnav" aria-label="Account">
+            <a href="dashboard.php" class="admin-nav-link">Dashboard</a>
+            <?php include __DIR__ . '/admin_header_cart_profile.inc.php'; ?>
+            <a href="logout.php" class="admin-nav-link">Logout</a>
+        </nav>
+        <?php else: ?>
         <?php require __DIR__ . '/customer_nav.php'; ?>
+        <?php endif; ?>
     </header>
 
     <main>
@@ -416,7 +440,13 @@ $isEmpty    = $cartCount === 0;
                     <div class="summary-row"><span>Gift shop</span><span>$<?= number_format($shopTotal, 2) ?></span></div>
                     <?php endif; ?>
                     <div class="summary-row total"><span>Total</span><span>$<?= number_format($grandTotal, 2) ?></span></div>
+                    <?php if ($canCheckout): ?>
                     <a href="checkout.php" class="checkout-btn">Proceed to checkout →</a>
+                    <?php else: ?>
+                    <p class="checkout-admin-note" style="margin:10px 0 0;font-size:.82rem;color:var(--cr-muted);line-height:1.45">
+                        Checkout uses a customer account. Use the public site as a customer to place orders, or manage sales from the staff dashboard.
+                    </p>
+                    <?php endif; ?>
                     <div class="continue-links">
                         <a href="giftshop.php">+ Add gift shop items</a>
                         <a href="restaurant.php">+ Add food items</a>

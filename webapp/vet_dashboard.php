@@ -240,6 +240,9 @@ $defaultUpdateAnimalHref = !empty($sickList)
                 <a href="dashboard.php" class="secondary-nav-btn">← Staff dashboard</a>
             <?php endif; ?>
             <a href="change-password.php" class="secondary-nav-btn">Change Password</a>
+            <?php if ($isAdmin): ?>
+            <?php include __DIR__ . '/admin_header_cart_profile.inc.php'; ?>
+            <?php endif; ?>
             <a href="logout.php" class="logout-btn">Logout</a>
         </div>
     </div>

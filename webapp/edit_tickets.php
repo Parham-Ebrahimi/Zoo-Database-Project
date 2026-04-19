@@ -125,7 +125,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     <div class="dashboard-wrapper">
         <div class="dashboard-header">
             <h1>Edit Ticket</h1>
-            <a href="logout.php" class="logout-btn">Logout</a>
+            <div class="admin-header-actions-inline">
+                <?php include __DIR__ . '/admin_header_cart_profile.inc.php'; ?>
+                <a href="logout.php" class="logout-btn">Logout</a>
+            </div>
         </div>
 
         <a href="tickets_report.php" class="back-btn">← Back to Tickets</a>

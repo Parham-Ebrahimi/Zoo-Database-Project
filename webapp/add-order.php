@@ -94,7 +94,7 @@ $giftTypes = $pdo->query("
     <link rel="stylesheet" href="style.css">
     <style>
         .gs-shell { box-sizing: border-box; min-height: 100vh; padding: clamp(18px, 3vw, 36px); background: linear-gradient(165deg, rgba(187, 223, 158, 0.55) 0%, rgba(187, 223, 158, 0.92) 42%, var(--base-color) 100%); }
-        .gs-inner { max-width: 860px; margin: 0 auto; }
+        .gs-inner { max-width: 880px; margin: 0 auto; width: 100%; box-sizing: border-box; }
         .gs-header { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 22px; padding-bottom: 18px; border-bottom: 3px solid var(--accent-color); }
         .gs-header h1 { margin: 0 0 6px; font-size: clamp(1.35rem, 2.5vw, 1.75rem); font-weight: 800; color: var(--text-color); letter-spacing: -0.02em; }
         .gs-meta { margin-top: 18px; font-size: 0.8rem; color: #888; }
@@ -128,7 +128,13 @@ $giftTypes = $pdo->query("
                     <h1>Record Gift Shop Sale</h1>
                     <p class="gs-meta">Signed in as <?= $firstname ?></p>
                 </div>
-                <a class="gs-back" href="<?= htmlspecialchars($dashboardBackHref) ?>">← Back to dashboard</a>
+                <div class="gs-header-actions">
+                    <?php include __DIR__ . '/admin_header_cart_profile.inc.php'; ?>
+                    <?php if ($role === 'admin'): ?>
+                    <a href="logout.php" class="gs-back">Logout</a>
+                    <?php endif; ?>
+                    <a class="gs-back" href="<?= htmlspecialchars($dashboardBackHref) ?>">← Back to dashboard</a>
+                </div>
             </header>
 
             <div class="gs-card">

@@ -461,8 +461,10 @@ if ($isRestaurantEmployee) {
         </div>
         <div class="dashboard-header-actions">
             <span class="user-name"><?= htmlspecialchars($firstname) ?></span>
-            <a href="change-password.php" class="secondary-nav-btn">🔒 Change Password</a>
-
+            <a href="change-password.php" class="secondary-nav-btn">Change Password</a>
+            <?php if ($isAdmin): ?>
+            <?php include __DIR__ . '/admin_header_cart_profile.inc.php'; ?>
+            <?php endif; ?>
             <a href="logout.php" class="logout-btn">Logout</a>
         </div>
     </div>
@@ -481,6 +483,14 @@ if ($isRestaurantEmployee) {
             <div class="stat-card <?= $pendingHealth > 0 ? 'warning' : '' ?>">
                 <div class="stat-label">Health Alerts</div>
                 <div class="stat-value <?= $pendingHealth > 0 ? 'warning' : '' ?>"><?= $pendingHealth ?></div>
+            </div>
+            <div class="stat-card <?= (int) $pendingRestock > 0 ? 'warning' : '' ?>">
+                <div class="stat-label">Gift Shop Alerts</div>
+                <div class="stat-value <?= (int) $pendingRestock > 0 ? 'warning' : '' ?>"><?= (int) $pendingRestock ?></div>
+            </div>
+            <div class="stat-card <?= (int) $pendingRestaurantRestock > 0 ? 'warning' : '' ?>">
+                <div class="stat-label">Restaurant Alerts</div>
+                <div class="stat-value <?= (int) $pendingRestaurantRestock > 0 ? 'warning' : '' ?>"><?= (int) $pendingRestaurantRestock ?></div>
             </div>
             <div class="stat-card money">
                 <div class="stat-label">Today's Revenue</div>
@@ -647,9 +657,6 @@ if ($isRestaurantEmployee) {
             <a href="add-order.php" class="tile">
                 <div class="tile-text"><strong>Record sale</strong><span>Log a customer gift shop purchase</span></div>
             </a>
-            <a href="sales_report.php" class="tile">
-                <div class="tile-text"><strong>Gift Shop Sales report</strong><span>Line items, filters &amp; chart</span></div>
-            </a>
             <a href="shop_alerts.php" class="tile">
                 <div class="tile-text"><strong>Shop restock alerts</strong><span>Low stock warnings</span></div>
             </a>
@@ -699,9 +706,6 @@ if ($isRestaurantEmployee) {
             </a>
             <a href="restaurant.php" class="tile">
                 <div class="tile-text"><strong>Restaurant menu</strong><span>Open current menu and stall view</span></div>
-            </a>
-            <a href="restaurant_sales_report.php" class="tile">
-                <div class="tile-text"><strong>Restaurant sales report</strong><span>Food sales totals and item-level breakdown</span></div>
             </a>
             <a href="restaurant_alerts.php" class="tile">
                 <div class="tile-text"><strong>Restaurant restock alerts</strong><span>Items at low stock (≤3) or out of stock</span></div>

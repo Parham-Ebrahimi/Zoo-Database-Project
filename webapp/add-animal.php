@@ -218,7 +218,10 @@ if ($hasCaretakerCol) {
     <div class="dashboard-wrapper">
         <div class="dashboard-header">
             <h1>Add Animal</h1>
-            <a href="logout.php" class="logout-btn">Logout</a>
+            <div class="admin-header-actions-inline">
+                <?php include __DIR__ . '/admin_header_cart_profile.inc.php'; ?>
+                <a href="logout.php" class="logout-btn">Logout</a>
+            </div>
         </div>
 
         <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px">

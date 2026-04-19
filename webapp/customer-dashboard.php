@@ -379,13 +379,13 @@ $animalSpotlightImages = [
 
                     <div class="dash-card">
                         <h2>Dining</h2>
-                        <a href="restaurant.php" class="primary">🍽️ Restaurant</a>
+                        <a href="restaurant.php" class="primary">Restaurant</a>
                         
                     </div>
 
                     <div class="dash-card">
                         <h2>Gift Shop</h2>
-                        <a href="giftshop.php" class="primary">🎁 Gift shop</a>
+                        <a href="giftshop.php" class="primary">Gift shop</a>
                     </div>
                 </aside>
 

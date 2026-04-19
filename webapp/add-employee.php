@@ -299,7 +299,10 @@ $enclosures = $pdo->query("SELECT Enclosure_ID, Enclosure_Name FROM enclosure OR
 <div class="dashboard-wrapper">
     <div class="dashboard-header">
         <h1>Add Employee</h1>
-        <a href="logout.php" class="logout-btn">Logout</a>
+        <div class="admin-header-actions-inline">
+            <?php include __DIR__ . '/admin_header_cart_profile.inc.php'; ?>
+            <a href="logout.php" class="logout-btn">Logout</a>
+        </div>
     </div>
 
     <a href="dashboard.php" class="back-btn">← Back to Dashboard</a>

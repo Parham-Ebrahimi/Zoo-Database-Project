@@ -298,6 +298,26 @@ function gift_shop_item_image_src(string $itemName, int $shopItemId = 0): string
             text-underline-offset: 2px;
         }
         .site-header .staff-back:hover { color: #143d12; }
+        .site-header a.admin-nav-link {
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: #1f5a1a;
+            text-decoration: underline;
+            text-underline-offset: 2px;
+        }
+        .site-header a.admin-nav-link:hover { color: #143d12; }
+        .site-header .admin-nav-badge {
+            display: inline-block;
+            min-width: 1.1em;
+            padding: 0 5px;
+            margin-left: 3px;
+            border-radius: 999px;
+            background: #1f5a1a;
+            color: #fff;
+            font-size: 0.72rem;
+            font-weight: 800;
+            text-decoration: none;
+        }
         .shop-lead-muted {
             margin: 0 0 0.75rem;
             font-size: 0.92rem;
@@ -315,7 +335,13 @@ function gift_shop_item_image_src(string $itemName, int $shopItemId = 0): string
     <header class="site-header">
         <a class="logo" href="index.php">Greenwood Zoo</a>
         <?php if (!empty($staffPreview)): ?>
-            <a class="staff-back" href="<?= htmlspecialchars($staffPreviewDashboardHref) ?>">← Back to dashboard</a>
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-left:auto">
+                <?php if ($role === 'admin'): ?>
+                    <?php include __DIR__ . '/admin_header_cart_profile.inc.php'; ?>
+                    <a class="staff-back" href="logout.php">Logout</a>
+                <?php endif; ?>
+                <a class="staff-back" href="<?= htmlspecialchars($staffPreviewDashboardHref) ?>">← Back to dashboard</a>
+            </div>
         <?php else: ?>
             <?php require __DIR__ . '/customer_nav.php'; ?>
         <?php endif; ?>

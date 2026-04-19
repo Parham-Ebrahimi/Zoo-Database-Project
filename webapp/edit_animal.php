@@ -139,7 +139,10 @@ $isAdmin = strtolower((string)($_SESSION['role'] ?? '')) === 'admin';
 <div class="dashboard-wrapper">
     <div class="dashboard-header">
         <h1>Edit Animal — <?= htmlspecialchars($animal['Name']) ?></h1>
-        <a href="logout.php" class="logout-btn">Logout</a>
+        <div class="admin-header-actions-inline">
+            <?php include __DIR__ . '/admin_header_cart_profile.inc.php'; ?>
+            <a href="logout.php" class="logout-btn">Logout</a>
+        </div>
     </div>
 
     <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:15px">

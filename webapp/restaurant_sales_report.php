@@ -6,13 +6,11 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 $role = $_SESSION['role'] ?? '';
-if (!in_array($role, ['admin', 'Restaurant Employee'], true)) {
+if (($role ?? '') !== 'admin') {
     header('Location: dashboard.php');
     exit;
 }
-$dashboardBackHref = $role === 'Restaurant Employee'
-    ? 'dashboard.php#restaurant-staff'
-    : 'dashboard.php';
+$dashboardBackHref = 'dashboard.php#restaurant-shop-admin';
 
 require_once 'db.php';
 
@@ -195,11 +193,11 @@ $stallRevenueChartJson = json_encode([
     <div class="page-wrap">
         <h1>Restaurant Sales report</h1>
         <p class="report-nav">
-            <a class="back-dash-pill" href="<?= htmlspecialchars($dashboardBackHref) ?>">Back to dashboard</a>
-            <?php if ($role === 'Restaurant Employee'): ?>
-                <span>|</span>
-                <a class="nav-link-record" href="restaurant_alerts.php">View restock alerts</a>
+            <?php include __DIR__ . '/admin_header_cart_profile.inc.php'; ?>
+            <?php if ($role === 'admin'): ?>
+            <a class="back-dash-pill" href="logout.php">Logout</a>
             <?php endif; ?>
+            <a class="back-dash-pill" href="<?= htmlspecialchars($dashboardBackHref) ?>">Back to dashboard</a>
         </p>
 
         <div class="filter-card">
