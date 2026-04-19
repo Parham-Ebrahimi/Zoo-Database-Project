@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shark – Greenwood Zoo</title>
+    <title>Camel – Greenwood Zoo</title>
     <link rel="stylesheet" href="../index.css">
     <style>
         .animal-hero { position: relative; height: 420px; overflow: hidden; }
@@ -44,59 +44,51 @@
             </ul>
         </nav>
     </header>
-
     <div class="animal-hero">
-        <img src="https://images.unsplash.com/photo-1598113972215-96c018fb1a0b?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="Shark at Greenwood Zoo">
+        <img src="https://images.unsplash.com/photo-1598113972215-96c018fb1a0b?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="Camel at Greenwood Zoo">
         <div class="animal-hero-text">
-            <h1>Shark</h1>
-            <p>Sand Tiger Shark · <em>Carcharias taurus</em></p>
+            <h1>Camel</h1>
+            <p>Dromedary Camel · <em>Camelus dromedarius</em></p>
         </div>
     </div>
-
     <main class="animal-detail">
         <a class="back-link" href="../animals.php">← Back to all animals</a>
-
-        <h2>About our Shark</h2>
+        <h2>About our Camel</h2>
         <p>
-            Sharks have prowled the world's oceans for over 450 million years, making them one of evolution's
-            great success stories. Our resident shark, Jeff, lives in the Lion Kingdom aquatic exhibit — a
-            large, purpose-built tank with viewing windows that let visitors get face-to-face with one of
-            the ocean's apex predators. Despite their fearsome reputation, most shark species pose little
-            danger to humans. Jeff is a powerful and graceful swimmer, often gliding slowly through his
-            tank in a mesmerising display of natural elegance.
+            Camels are legendary survivors — perfectly adapted to withstand the harshest desert conditions
+            on Earth. Contrary to popular belief, a camel's hump stores fat, not water, which is metabolised
+            into energy during long journeys without food. Our resident camel, Joe, lives in the Woodlands
+            Enclosure and is a favourite among younger visitors for her calm, curious demeanour. With her
+            thick double eyelashes, closeable nostrils, and broad padded feet, Joe carries all the hallmarks
+            of a true desert specialist.
         </p>
-
         <div class="fact-grid">
-            <div class="fact-card"><strong>90–160 kg</strong><span>Average weight</span></div>
-            <div class="fact-card"><strong>15–40 yrs</strong><span>Lifespan</span></div>
-            <div class="fact-card"><strong>Critically Endangered</strong><span>Conservation status</span></div>
-            <div class="fact-card"><strong>Worldwide Oceans</strong><span>Native habitat</span></div>
+            <div class="fact-card"><strong>400–600 kg</strong><span>Average weight</span></div>
+            <div class="fact-card"><strong>40–50 yrs</strong><span>Lifespan</span></div>
+            <div class="fact-card"><strong>Least Concern</strong><span>Conservation status</span></div>
+            <div class="fact-card"><strong>Middle East &amp; Africa</strong><span>Native habitat</span></div>
         </div>
-
-        <h2>Meet Our Shark</h2>
+        <h2>Meet Our Camel</h2>
         <table class="residents-table">
             <thead><tr><th>Name</th><th>Age</th><th>Sex</th><th>Diet</th><th>Enclosure</th></tr></thead>
             <tbody>
-                <tr><td>Jeff</td><td>8 yr</td><td>Male</td><td>Carnivore</td><td>Lion Kingdom</td></tr>
+                <tr><td>Joe</td><td>9 yr</td><td>Female</td><td>Herbivore</td><td>Woodlands Enclosure</td></tr>
             </tbody>
         </table>
-
         <h2>Conservation</h2>
         <p>
-            Sharks are critically important to healthy ocean ecosystems, yet over 100 million sharks are
-            killed each year through fishing and finning. Greenwood Zoo advocates for stronger international
-            shark protection laws and supports marine conservation organisations working to end the shark fin trade.
+            While domesticated dromedary camels are widespread, the wild Bactrian camel is critically endangered.
+            Greenwood Zoo supports programmes working to protect wild camel populations in Central Asia and
+            raises awareness about the importance of preserving desert ecosystems worldwide.
         </p>
-
         <h2>Feeding & Care</h2>
         <p>
-            Jeff is fed a carnivorous diet of fish and marine prey managed by our aquatics team, who monitor
-            water quality, salinity, and temperature around the clock. His tank is maintained to closely
-            replicate natural ocean conditions. Feeding times are a highlight for visitors — check our daily
-            programme for scheduled feeding demonstrations.
+            Joe enjoys a herbivorous diet of hay, grasses, grains, and occasional fresh produce.
+            Her care team monitors her hump condition as an indicator of overall health and nutrition.
+            The Woodlands Enclosure provides Joe with plenty of space to roam, sand to roll in,
+            and shade structures to rest under during the warmest parts of the day.
         </p>
     </main>
-
     <footer class="site-footer">
         <p>&copy; 2026 Team 9 COSC 3380 Zoo Database Systems Project.</p>
         <p><a href="../login.html">Login</a> · <a href="../signup.html">Sign up</a></p>
