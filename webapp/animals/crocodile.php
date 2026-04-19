@@ -76,8 +76,8 @@ require_once __DIR__ . '/../db.php'; ?>
 
         <?php
 require_once __DIR__ . '/../db.php';
-$animalSpecies = 'Nile Crocodile';
-$animalLabel   = 'Crocodile';
+$animalSpecies = "Nile Crocodile";
+$animalLabel   = "Crocodile";
 require __DIR__ . '/_animal_residents.php';
 ?>
 

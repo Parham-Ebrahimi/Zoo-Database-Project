@@ -97,8 +97,8 @@
 
         <?php
 require_once __DIR__ . '/../db.php';
-$animalSpecies = 'African Savanna Elephant';
-$animalLabel   = 'Elephants';
+$animalSpecies = "African Savanna Elephant";
+$animalLabel   = "Elephants";
 require __DIR__ . '/_animal_residents.php';
 ?>
 
