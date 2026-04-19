@@ -1,15 +1,20 @@
 <?php
-session_start();
+require_once __DIR__ . '/session_bootstrap.php';
 if (!isset($_SESSION['customer_id'])) {
-    header('Location: sign-in.html');
+    if (!empty($_SESSION['user_id'])) {
+        header('Location: dashboard.php');
+        exit;
+    }
+    header('Location: login.html');
     exit;
 }
 require_once 'db.php';
 
 if (!isset($_SESSION['cart'])) {
-    $_SESSION['cart'] = ['food' => [], 'ticket' => []];
+    $_SESSION['cart'] = ['food' => [], 'ticket' => [], 'shop' => []];
+} elseif (!isset($_SESSION['cart']['shop']) || !is_array($_SESSION['cart']['shop'])) {
+    $_SESSION['cart']['shop'] = [];
 }
-$_SESSION['cart']['shop'] = [];
 
 // Load all food items with stall info
 $items = $pdo->query("
@@ -43,6 +48,7 @@ function getFoodImage(string $name, array $images): string {
 
 // Cart count for badge
 $cartCount = array_sum($_SESSION['cart']['food'])
+           + array_sum($_SESSION['cart']['shop'] ?? [])
            + array_sum(array_column($_SESSION['cart']['ticket'], 'qty'));
 
 $added = $_GET['added'] ?? '';
@@ -131,19 +137,7 @@ $added = $_GET['added'] ?? '';
 <body>
     <header class="site-header">
         <a class="logo" href="index.php">Greenwood Zoo</a>
-        <nav aria-label="Main">
-            <ul class="nav-links">
-                <li><a href="index.php">Home</a></li>
-                <li><a href="customer-dashboard.php">Dashboard</a></li>
-                <li><a href="restaurant.php">Restaurant</a></li>
-                <li><a href="buy_tickets.php">Buy tickets</a></li>
-                <li><a href="giftshop.php">Gift shop</a></li>
-                <li>
-                    <a href="cart.php" class="nav-cart-link">🛒 Cart<?php if ($cartCount > 0): ?><span class="nav-cart-badge" id="cart-count"><?= (int) $cartCount ?></span><?php endif; ?></a>
-                </li>
-                <li><a href="logout.php">Logout</a></li>
-            </ul>
-        </nav>
+        <?php require __DIR__ . '/customer_nav.php'; ?>
     </header>
 
     <main>

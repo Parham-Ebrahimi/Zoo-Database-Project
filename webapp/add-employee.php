@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/session_bootstrap.php';
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.html');
     exit;
@@ -108,7 +108,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Create system user if requested
             if ($create_user) {
                 $hash = password_hash($password, PASSWORD_BCRYPT);
-                $sysRole = strtolower($role);
+                $sysRole = $role === 'Gift Shop Employee'
+                    ? 'Gift Shop Employee'
+                    : strtolower($role);
 
                 $stmt2 = $pdo->prepare("
                     INSERT INTO systemuser (EmployeeID, Username, PasswordHash, Role)
@@ -362,8 +364,7 @@ $enclosures = $pdo->query("SELECT Enclosure_ID, Enclosure_Name FROM enclosure OR
                         <option value="Admin"     <?= ($role??'')==='Admin'    ?'selected':'' ?>>Admin</option>
                         <option value="Caretaker" <?= ($role??'')==='Caretaker'?'selected':'' ?>>Caretaker</option>
                         <option value="Vet"       <?= ($role??'')==='Vet'      ?'selected':'' ?>>Vet</option>
-                        <option value="Cashier"   <?= ($role??'')==='Cashier'  ?'selected':'' ?>>Cashier</option>
-                        <option value="Shop"      <?= ($role??'')==='Shop'     ?'selected':'' ?>>Shop</option>
+                        <option value="Gift Shop Employee" <?= ($role??'')==='Gift Shop Employee' ?'selected':'' ?>>Gift Shop Employee</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -437,8 +438,7 @@ const roleMap = {
     'Admin':     'Administration',
     'Caretaker': 'Animal Care',
     'Vet':       'Veterinary',
-    'Cashier':   'Retail',
-    'Shop':      'Retail',
+    'Gift Shop Employee': 'Retail',
 };
 function syncDepartment() {
     const role = document.getElementById('roleSelect').value;

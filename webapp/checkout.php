@@ -1,20 +1,26 @@
 <?php
-session_start();
+require_once __DIR__ . '/session_bootstrap.php';
 if (!isset($_SESSION['customer_id'])) {
-    header('Location: sign-in.html');
+    if (!empty($_SESSION['user_id'])) {
+        header('Location: dashboard.php');
+        exit;
+    }
+    header('Location: login.html');
     exit;
 }
 require_once 'db.php';
 
 if (!isset($_SESSION['cart'])) {
-    $_SESSION['cart'] = ['food' => [], 'ticket' => []];
+    $_SESSION['cart'] = ['food' => [], 'ticket' => [], 'shop' => []];
+} elseif (!isset($_SESSION['cart']['shop']) || !is_array($_SESSION['cart']['shop'])) {
+    $_SESSION['cart']['shop'] = [];
 }
-$_SESSION['cart']['shop'] = [];
 
 
 $foodItems   = [];
 $ticketItems = [];
-$foodTotal   = $ticketTotal = 0;
+$shopItems   = [];
+$foodTotal   = $ticketTotal = $shopTotal = 0;
 
 if (!empty($_SESSION['cart']['food'])) {
     $ids  = implode(',', array_map('intval', array_keys($_SESSION['cart']['food'])));
@@ -41,7 +47,35 @@ if (!empty($_SESSION['cart']['ticket'])) {
     }
 }
 
-$grandTotal = $foodTotal + $ticketTotal;
+if (!empty($_SESSION['cart']['shop'])) {
+    $ids = implode(',', array_map('intval', array_keys($_SESSION['cart']['shop'])));
+    if ($ids !== '') {
+        $rows = $pdo->query("
+            SELECT si.ShopItemID, si.ItemName, si.Price, si.StockQty, s.ShopName
+            FROM shop_items si
+            JOIN shops s ON s.ShopID = si.ShopID
+            WHERE si.ShopItemID IN ($ids)
+        ")->fetchAll();
+        foreach ($rows as $r) {
+            $qty = (int) ($_SESSION['cart']['shop'][$r['ShopItemID']] ?? 0);
+            if ($qty < 1) {
+                continue;
+            }
+            $maxStock = (int) $r['StockQty'];
+            $qty = min($qty, max(0, $maxStock));
+            if ($qty < 1) {
+                unset($_SESSION['cart']['shop'][$r['ShopItemID']]);
+                continue;
+            }
+            $_SESSION['cart']['shop'][$r['ShopItemID']] = $qty;
+            $subtotal = (float) $r['Price'] * $qty;
+            $shopTotal += $subtotal;
+            $shopItems[] = array_merge($r, ['qty' => $qty, 'subtotal' => $subtotal]);
+        }
+    }
+}
+
+$grandTotal = $foodTotal + $ticketTotal + $shopTotal;
 $isEmpty    = ($grandTotal == 0);
 $error      = '';
 $success    = false;
@@ -83,11 +117,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$isEmpty) {
                 }
             }
 
+            // Gift shop: one order (category 6) with multiple line items (trigger deducts stock)
+            if (!empty($shopItems)) {
+                $stmt = $pdo->prepare("
+                    INSERT INTO orders (OrderDate, CustomerID, OrderCategoryID, PaymentMode, TransactionAmount, ScheduledDate)
+                    VALUES (?, ?, 6, ?, ?, NULL)
+                ");
+                $stmt->execute([$today, $customerID, $paymentMode, $shopTotal]);
+                $shopOrderID = (int) $pdo->lastInsertId();
+
+                $stmt2 = $pdo->prepare('INSERT INTO order_shop_items (OrderID, ShopItemID, Quantity) VALUES (?, ?, ?)');
+                foreach ($shopItems as $s) {
+                    $stmt2->execute([$shopOrderID, $s['ShopItemID'], $s['qty']]);
+                }
+            }
+
             $pdo->commit();
 
             // Clear the cart
-            $_SESSION['cart'] = ['food' => [], 'ticket' => []];
-            $_SESSION['cart']['shop'] = [];
+            $_SESSION['cart'] = ['food' => [], 'ticket' => [], 'shop' => []];
             $success = true;
 
         } catch (Exception $e) {
@@ -98,6 +146,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$isEmpty) {
 }
 
 $navCartCount = array_sum($_SESSION['cart']['food'] ?? [])
+    + array_sum($_SESSION['cart']['shop'] ?? [])
     + array_sum(array_column($_SESSION['cart']['ticket'] ?? [], 'qty'));
 ?>
 <!DOCTYPE html>
@@ -255,19 +304,7 @@ $navCartCount = array_sum($_SESSION['cart']['food'] ?? [])
 <body>
     <header class="site-header">
         <a class="logo" href="index.php">Greenwood Zoo</a>
-        <nav aria-label="Main">
-            <ul class="nav-links">
-                <li><a href="index.php">Home</a></li>
-                <li><a href="customer-dashboard.php">Dashboard</a></li>
-                <li><a href="restaurant.php">Restaurant</a></li>
-                <li><a href="buy_tickets.php">Buy tickets</a></li>
-                <li><a href="giftshop.php">Gift shop</a></li>
-                <li>
-                    <a href="cart.php" class="nav-cart-link">🛒 Cart<?php if ($navCartCount > 0): ?><span class="nav-cart-badge" id="cart-count"><?= (int) $navCartCount ?></span><?php endif; ?></a>
-                </li>
-                <li><a href="logout.php">Logout</a></li>
-            </ul>
-        </nav>
+        <?php require __DIR__ . '/customer_nav.php'; ?>
     </header>
 
     <main>
@@ -280,6 +317,7 @@ $navCartCount = array_sum($_SESSION['cart']['food'] ?? [])
             <div class="success-links">
                 <a href="customer_tickets_report.php" class="success-link primary">View my tickets</a>
                 <a href="customer-dashboard.php"      class="success-link outline">Back to dashboard</a>
+                <a href="giftshop.php"                class="success-link outline">Gift shop</a>
                 <a href="restaurant.php"              class="success-link outline">Order more food</a>
             </div>
         </div>
@@ -331,6 +369,19 @@ $navCartCount = array_sum($_SESSION['cart']['food'] ?? [])
                     <?php endforeach; ?>
                     <?php endif; ?>
 
+                    <?php if (!empty($shopItems)): ?>
+                    <p class="section-sub">Gift shop</p>
+                    <?php foreach ($shopItems as $s): ?>
+                    <div class="review-row">
+                        <div>
+                            <div class="label"><?= htmlspecialchars($s['ItemName']) ?> × <?= (int) $s['qty'] ?></div>
+                            <div class="meta"><?= htmlspecialchars($s['ShopName']) ?></div>
+                        </div>
+                        <div class="price">$<?= number_format($s['subtotal'], 2) ?></div>
+                    </div>
+                    <?php endforeach; ?>
+                    <?php endif; ?>
+
                 </div>
 
                 <!-- Payment Method -->
@@ -370,6 +421,9 @@ $navCartCount = array_sum($_SESSION['cart']['food'] ?? [])
                         <?php endif; ?>
                         <?php if ($foodTotal > 0): ?>
                         <div class="total-row"><span>Restaurant</span><span>$<?= number_format($foodTotal, 2) ?></span></div>
+                        <?php endif; ?>
+                        <?php if ($shopTotal > 0): ?>
+                        <div class="total-row"><span>Gift shop</span><span>$<?= number_format($shopTotal, 2) ?></span></div>
                         <?php endif; ?>
                         <div class="total-row grand">
                             <span>Total</span>

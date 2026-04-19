@@ -1,9 +1,10 @@
 <?php
-session_start();
+require_once __DIR__ . '/session_bootstrap.php';
 if (!isset($_SESSION['user_id'])) { header('Location: login.html'); exit; }
 if (!in_array(strtolower($_SESSION['role']), ['admin'])) { header('Location: dashboard.php'); exit; }
 require 'db.php';
 
+// ── Filters ──────────────────────────────────────────────────────
 $f_from     = $_GET['date_from'] ?? date('Y-m-d', strtotime('-30 days'));
 $f_to       = $_GET['date_to']   ?? date('Y-m-d');
 $f_group    = in_array($_GET['group'] ?? '', ['day','week','month','quarter','year']) ? $_GET['group'] : 'day';
@@ -13,6 +14,7 @@ $f_customer = trim($_GET['customer'] ?? '');
 $f_amt_min  = $_GET['amt_min']  ?? '';
 $f_amt_max  = $_GET['amt_max']  ?? '';
 
+// ── Period grouping SQL ───────────────────────────────────────────
 $periodMap = [
     'day'     => ["DATE_FORMAT(o.OrderDate,'%Y-%m-%d')", "DATE_FORMAT(o.OrderDate,'%b %d, %Y')"],
     'week'    => ["YEARWEEK(o.OrderDate,1)",               "CONCAT('Week of ', DATE_FORMAT(MIN(o.OrderDate),'%b %d'))"],
@@ -22,11 +24,12 @@ $periodMap = [
 ];
 [$periodKey, $periodLabel] = $periodMap[$f_group];
 
+// ── Category filter ───────────────────────────────────────────────
 $catWhere  = '';
 $catParams = [];
-if ($f_category === 'ticket') { $catWhere = 'AND o.OrderCategoryID BETWEEN 1 AND 5'; }
-elseif ($f_category === 'food')   { $catWhere = 'AND o.OrderCategoryID = 6'; }
-elseif ($f_category === 'shop')   { $catWhere = 'AND o.OrderCategoryID = 7'; }
+if ($f_category === 'ticket') { $catWhere = 'AND o.OrderCategoryID BETWEEN 1 AND 4'; }
+elseif ($f_category === 'food')   { $catWhere = 'AND o.OrderCategoryID = 5'; }
+elseif ($f_category === 'shop')   { $catWhere = 'AND o.OrderCategoryID = 6'; }
 
 $extraWhere  = '';
 $extraParams = [];
@@ -40,31 +43,33 @@ if ($f_amt_max !== '') { $extraWhere .= ' AND o.TransactionAmount <= ?'; $extraP
 
 $baseParams = [$f_from, $f_to, ...$extraParams];
 
+// ── Summary totals ────────────────────────────────────────────────
 $sumStmt = $pdo->prepare("
     SELECT
-        SUM(CASE WHEN o.OrderCategoryID BETWEEN 1 AND 5 THEN o.TransactionAmount ELSE 0 END) AS TicketRev,
-        SUM(CASE WHEN o.OrderCategoryID = 6             THEN o.TransactionAmount ELSE 0 END) AS FoodRev,
-        SUM(CASE WHEN o.OrderCategoryID = 7             THEN o.TransactionAmount ELSE 0 END) AS ShopRev,
+        SUM(CASE WHEN o.OrderCategoryID BETWEEN 1 AND 4 THEN o.TransactionAmount ELSE 0 END) AS TicketRev,
+        SUM(CASE WHEN o.OrderCategoryID = 5             THEN o.TransactionAmount ELSE 0 END) AS FoodRev,
+        SUM(CASE WHEN o.OrderCategoryID = 6             THEN o.TransactionAmount ELSE 0 END) AS ShopRev,
         SUM(o.TransactionAmount) AS TotalRev,
         COUNT(DISTINCT o.OrderID) AS TotalOrders,
         COUNT(DISTINCT o.CustomerID) AS UniqueCustomers,
         SUM(COALESCE(ot.Quantity,1)) AS TotalTickets
     FROM orders o
-    LEFT JOIN order_tickets ot ON ot.OrderID = o.OrderID AND o.OrderCategoryID BETWEEN 1 AND 5
+    LEFT JOIN order_tickets ot ON ot.OrderID = o.OrderID AND o.OrderCategoryID BETWEEN 1 AND 4
     LEFT JOIN customers c ON o.CustomerID = c.CustomerID
     WHERE o.OrderDate BETWEEN ? AND ? $extraWhere
 ");
 $sumStmt->execute($baseParams);
 $summary = $sumStmt->fetch(PDO::FETCH_ASSOC);
 
+// ── Period breakdown ──────────────────────────────────────────────
 $periodStmt = $pdo->prepare("
     SELECT
         $periodKey AS PK,
         $periodLabel AS PLabel,
         MIN(o.OrderDate) AS PeriodStart,
-        SUM(CASE WHEN o.OrderCategoryID BETWEEN 1 AND 5 THEN o.TransactionAmount ELSE 0 END) AS TicketRev,
-        SUM(CASE WHEN o.OrderCategoryID = 6             THEN o.TransactionAmount ELSE 0 END) AS FoodRev,
-        SUM(CASE WHEN o.OrderCategoryID = 7             THEN o.TransactionAmount ELSE 0 END) AS ShopRev,
+        SUM(CASE WHEN o.OrderCategoryID BETWEEN 1 AND 4 THEN o.TransactionAmount ELSE 0 END) AS TicketRev,
+        SUM(CASE WHEN o.OrderCategoryID = 5             THEN o.TransactionAmount ELSE 0 END) AS FoodRev,
+        SUM(CASE WHEN o.OrderCategoryID = 6             THEN o.TransactionAmount ELSE 0 END) AS ShopRev,
         SUM(o.TransactionAmount) AS TotalRev,
         COUNT(DISTINCT o.OrderID) AS Orders
     FROM orders o
@@ -76,6 +81,86 @@ $periodStmt = $pdo->prepare("
 $periodStmt->execute([$f_from, $f_to, ...$extraParams]);
 $periods = $periodStmt->fetchAll(PDO::FETCH_ASSOC);
 
+// ── Ticket type breakdown ─────────────────────────────────────────
+$ticketBreakdown = $pdo->prepare("
+    SELECT oc.CategoryName, oc.Price AS UnitPrice,
+           SUM(ot.Quantity) AS TotalQty,
+           SUM(o.TransactionAmount) AS Revenue,
+           COUNT(DISTINCT o.OrderID) AS Orders
+    FROM orders o
+    JOIN ordercategories oc ON o.OrderCategoryID = oc.OrderCategoryID
+    JOIN order_tickets ot   ON ot.OrderID = o.OrderID
+    LEFT JOIN customers c   ON o.CustomerID = c.CustomerID
+    WHERE o.OrderDate BETWEEN ? AND ? AND o.OrderCategoryID BETWEEN 1 AND 4 $extraWhere
+    GROUP BY oc.OrderCategoryID, oc.CategoryName, oc.Price
+    ORDER BY Revenue DESC
+");
+$ticketBreakdown->execute($baseParams);
+$ticketRows = $ticketBreakdown->fetchAll(PDO::FETCH_ASSOC);
+
+// ── Food breakdown ────────────────────────────────────────────────
+$foodBreakdown = $pdo->prepare("
+    SELECT fi.FoodName, fi.Price AS UnitPrice,
+           SUM(ofi.Quantity) AS TotalQty,
+           SUM(fi.Price * ofi.Quantity) AS Revenue
+    FROM orders o
+    JOIN order_food_items ofi ON ofi.OrderID = o.OrderID
+    JOIN fooditem fi           ON fi.FoodID  = ofi.FoodID
+    LEFT JOIN customers c      ON o.CustomerID = c.CustomerID
+    WHERE o.OrderDate BETWEEN ? AND ? $extraWhere
+    GROUP BY fi.FoodID, fi.FoodName, fi.Price
+    ORDER BY Revenue DESC
+");
+$foodBreakdown->execute($baseParams);
+$foodRows = $foodBreakdown->fetchAll(PDO::FETCH_ASSOC);
+
+// ── Shop breakdown ────────────────────────────────────────────────
+$shopBreakdown = $pdo->prepare("
+    SELECT si.ItemName, si.Price AS UnitPrice,
+           SUM(osi.Quantity) AS TotalQty,
+           SUM(si.Price * osi.Quantity) AS Revenue
+    FROM orders o
+    JOIN order_shop_items osi ON osi.OrderID = o.OrderID
+    JOIN shop_items si         ON si.ShopItemID = osi.ShopItemID
+    LEFT JOIN customers c      ON o.CustomerID = c.CustomerID
+    WHERE o.OrderDate BETWEEN ? AND ? $extraWhere
+    GROUP BY si.ShopItemID, si.ItemName, si.Price
+    ORDER BY Revenue DESC
+");
+$shopBreakdown->execute($baseParams);
+$shopRows = $shopBreakdown->fetchAll(PDO::FETCH_ASSOC);
+
+// ── Gift shop revenue by physical shop (for doughnut) ─────────────
+$shopByShopStmt = $pdo->prepare("
+    SELECT s.ShopName,
+           SUM(si.Price * osi.Quantity) AS Revenue
+    FROM orders o
+    INNER JOIN order_shop_items osi ON osi.OrderID = o.OrderID
+    INNER JOIN shop_items si ON si.ShopItemID = osi.ShopItemID
+    INNER JOIN shops s ON s.ShopID = si.ShopID
+    LEFT JOIN customers c ON o.CustomerID = c.CustomerID
+    WHERE o.OrderDate BETWEEN ? AND ? AND o.OrderCategoryID = 6 $extraWhere
+    GROUP BY s.ShopID, s.ShopName
+    ORDER BY Revenue DESC
+");
+$shopByShopStmt->execute($baseParams);
+$shopByShopRows = $shopByShopStmt->fetchAll(PDO::FETCH_ASSOC);
+
+// ── Payment method breakdown ──────────────────────────────────────
+$paymentBreakdown = $pdo->prepare("
+    SELECT o.PaymentMode,
+           COUNT(*) AS Orders,
+           SUM(o.TransactionAmount) AS Revenue
+    FROM orders o
+    LEFT JOIN customers c ON o.CustomerID = c.CustomerID
+    WHERE o.OrderDate BETWEEN ? AND ? $catWhere $extraWhere
+    GROUP BY o.PaymentMode
+    ORDER BY Revenue DESC
+");
+$paymentBreakdown->execute([$f_from, $f_to, ...$extraParams]);
+$paymentRows = $paymentBreakdown->fetchAll(PDO::FETCH_ASSOC);
+
+// ── Top customers ─────────────────────────────────────────────────
 $topCustomers = $pdo->prepare("
     SELECT CONCAT(c.FirstName,' ',c.LastName) AS Name, c.Email,
            COUNT(DISTINCT o.OrderID) AS Orders,
@@ -91,6 +176,14 @@ $topCustomers->execute([$f_from, $f_to, ...$extraParams]);
 $topCustRows = $topCustomers->fetchAll(PDO::FETCH_ASSOC);
 
 
+// ── Raw ticket orders ─────────────────────────────────────────────
+$rawTicketWhere = "o.OrderDate BETWEEN ? AND ? AND o.OrderCategoryID BETWEEN 1 AND 4";
+$rawTicketParams = [$f_from, $f_to, ...$extraParams];
+if ($f_payment)  { $rawTicketWhere .= ' AND o.PaymentMode = ?'; }
+if ($f_customer) { $rawTicketWhere .= ' AND (c.FirstName LIKE ? OR c.LastName LIKE ? OR c.Email LIKE ?)'; }
+if ($f_amt_min !== '') { $rawTicketWhere .= ' AND o.TransactionAmount >= ?'; }
+if ($f_amt_max !== '') { $rawTicketWhere .= ' AND o.TransactionAmount <= ?'; }
+
 $rawTickets = $pdo->prepare("
     SELECT o.OrderID, o.OrderDate, o.ScheduledDate,
            CONCAT(c.FirstName,' ',c.LastName) AS Customer, c.Email,
@@ -100,13 +193,14 @@ $rawTickets = $pdo->prepare("
     JOIN ordercategories oc ON o.OrderCategoryID = oc.OrderCategoryID
     JOIN order_tickets ot   ON ot.OrderID = o.OrderID
     JOIN customers c        ON o.CustomerID = c.CustomerID
-    WHERE o.OrderDate BETWEEN ? AND ? AND o.OrderCategoryID BETWEEN 1 AND 5 $catWhere $extraWhere
+    WHERE $rawTicketWhere
     ORDER BY o.OrderDate DESC
     LIMIT 200
 ");
-$rawTickets->execute($baseParams);
+$rawTickets->execute($rawTicketParams);
 $rawTicketRows = $rawTickets->fetchAll(PDO::FETCH_ASSOC);
 
+// ── Raw food orders ───────────────────────────────────────────────
 $rawFoodParams = [$f_from, $f_to, ...$extraParams];
 $rawFoodExtra  = $extraWhere;
 $rawFood = $pdo->prepare("
@@ -120,13 +214,14 @@ $rawFood = $pdo->prepare("
     JOIN fooditem fi           ON fi.FoodID   = ofi.FoodID
     JOIN foodstall fs          ON fs.StallID  = fi.StallID
     JOIN customers c           ON o.CustomerID = c.CustomerID
-    WHERE o.OrderDate BETWEEN ? AND ? $catWhere $rawFoodExtra
+    WHERE o.OrderDate BETWEEN ? AND ? $rawFoodExtra
     ORDER BY o.OrderDate DESC
     LIMIT 200
 ");
 $rawFood->execute($rawFoodParams);
 $rawFoodRows = $rawFood->fetchAll(PDO::FETCH_ASSOC);
 
+// ── Raw shop orders ───────────────────────────────────────────────
 $rawShopParams = [$f_from, $f_to, ...$extraParams];
 $rawShop = $pdo->prepare("
     SELECT o.OrderID, o.OrderDate,
@@ -139,13 +234,15 @@ $rawShop = $pdo->prepare("
     JOIN shop_items si         ON si.ShopItemID = osi.ShopItemID
     JOIN shops s               ON s.ShopID      = si.ShopID
     JOIN customers c           ON o.CustomerID  = c.CustomerID
-    WHERE o.OrderDate BETWEEN ? AND ? $catWhere $rawFoodExtra
+    WHERE o.OrderDate BETWEEN ? AND ? $rawFoodExtra
     ORDER BY o.OrderDate DESC
     LIMIT 200
 ");
 $rawShop->execute($rawShopParams);
 $rawShopRows = $rawShop->fetchAll(PDO::FETCH_ASSOC);
 
+// ── Raw payment orders ────────────────────────────────────────────
+$rawPayParams = [$f_from, $f_to, ...$extraParams];
 $rawPayCatWhere = $catWhere;
 $rawPay = $pdo->prepare("
     SELECT o.OrderID, o.OrderDate,
@@ -162,6 +259,7 @@ $rawPay = $pdo->prepare("
 $rawPay->execute([$f_from, $f_to, ...$extraParams]);
 $rawPayRows = $rawPay->fetchAll(PDO::FETCH_ASSOC);
 
+// ── Chart data ────────────────────────────────────────────────────
 $chartLabels  = array_column($periods, 'PLabel');
 $chartTicket  = array_column($periods, 'TicketRev');
 $chartFood    = array_column($periods, 'FoodRev');
@@ -188,123 +286,15 @@ $hasFilters = array_filter([$f_payment, $f_customer, $f_amt_min, $f_amt_max])
 <link rel="stylesheet" href="style.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
-body { overflow: auto; }
-.dashboard-wrapper {
-    box-sizing: border-box;
-    min-height: 100vh;
-    padding: 20px clamp(12px, 2.4vw, 18px);
-    background-color: rgba(187, 223, 158, 0.95);
-}
-.dashboard-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 16px;
-    border-bottom: 3px solid var(--accent-color);
-    padding-bottom: 12px;
-    flex-wrap: wrap;
-    gap: 12px;
-}
-.dashboard-header h1 { font-size: 1.5rem; margin: 0; font-weight: 800; color: var(--text-color); }
-.header-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-.back-btn {
-    display: inline-block;
-    margin-bottom: 14px;
-    padding: 7px 14px;
-    background-color: var(--base-color);
-    border-radius: 8px;
-    color: var(--text-color);
-    font-weight: 600;
-    text-decoration: none;
-    font-size: 0.88rem;
-}
-.back-btn:hover { background-color: var(--accent-color); }
-.logout-btn {
-    padding: 10px 22px;
-    background-color: var(--accent-color);
-    border: none;
-    border-radius: 1000px;
-    font: inherit;
-    font-weight: 600;
-    cursor: pointer;
-    color: var(--text-color);
-    text-decoration: none;
-}
-.logout-btn:hover { background-color: var(--text-color); color: white; }
-
-.filter-card {
-    background: white;
-    border-radius: 12px;
-    padding: 12px 14px;
-    margin-bottom: 14px;
-    box-shadow: 0 3px 8px rgba(0,0,0,0.05);
-}
-.filter-card h2 {
-    font-size: 0.95rem;
-    font-weight: 700;
-    margin-bottom: 10px;
-    color: var(--text-color);
-}
-.filter-card label {
-    background: none;
-    color: var(--text-color);
-    font-size: 0.85rem;
-    font-weight: 600;
-    height: auto;
-    width: auto;
-    border-radius: 0;
-    display: block;
-    text-align: left;
-    padding: 0;
-}
-.filter-card form { width: 100%; margin: 0; display: block; }
-.filter-card form > div { width: auto; display: block; }
-.filter-group {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-.filter-group label { font-size: 0.85rem; font-weight: 600; color: var(--text-color); }
-.filter-group input,
-.filter-group select {
-    padding: 6px 10px;
-    border: 2px solid #ddd;
-    border-radius: 8px;
-    font: inherit;
-    background: white;
-}
-.filter-group input:focus,
-.filter-group select:focus {
-    outline: none;
-    border-color: var(--accent-color);
-}
-.filter-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    align-items: flex-end;
-}
-.btn {
-    padding: 6px 14px;
-    border-radius: 8px;
-    text-decoration: none;
-    font-weight: 600;
-    font-size: 0.85rem;
-    border: none;
-    cursor: pointer;
-    font: inherit;
-    display: inline-block;
-}
-.btn-edit {
-    background-color: var(--accent-color);
-    color: white;
-}
-.btn-edit:hover { background-color: var(--text-color); }
-.filter-actions .btn:not(.btn-edit) {
-    background: #eee;
-    color: #555;
-}
-.filter-actions .btn:not(.btn-edit):hover { background: #ddd; }
+body{overflow:auto}
+.pw{box-sizing:border-box;min-height:100vh;padding:28px 36px;background:rgba(187,223,158,.97)}
+.ph{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;border-bottom:3px solid var(--accent-color);padding-bottom:16px;flex-wrap:wrap;gap:12px}
+.ph h1{font-size:1.7rem;margin:0}
+.hbtns{display:flex;gap:10px;flex-wrap:wrap}
+.bn{padding:8px 20px;background:var(--base-color);border:2px solid var(--accent-color);border-radius:1000px;font:inherit;font-weight:600;font-size:.88rem;color:var(--text-color);text-decoration:none;cursor:pointer}
+.bn:hover{background:var(--accent-color);text-decoration:none}
+.bl{padding:8px 20px;background:var(--accent-color);border:none;border-radius:1000px;font:inherit;font-weight:600;cursor:pointer;color:var(--text-color);text-decoration:none}
+.bl:hover{background:var(--text-color);color:white}
 
 /* KPI cards */
 .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;margin-bottom:20px}
@@ -321,12 +311,28 @@ body { overflow: auto; }
 .kpi.food   .k-fill{background:#e67e22}
 .kpi.shop   .k-fill{background:#8e44ad}
 
+/* Filter panel */
+.filter-card{background:white;border-radius:12px;padding:12px 14px;margin-bottom:14px;box-shadow:0 3px 8px rgba(0,0,0,0.05)}
+.filter-card h2{font-size:0.95rem;font-weight:700;margin-bottom:10px;color:var(--text-color)}
+.filter-card label{background:none;color:var(--text-color);font-size:0.85rem;font-weight:600;height:auto;width:auto;border-radius:0;display:block;text-align:left;padding:0}
+.filter-card form{width:100%;margin:0;display:block}
+.filter-card form > div{width:auto;display:block}
+.filter-group{display:flex;flex-direction:column;gap:4px}
+.filter-group label{font-size:0.85rem;font-weight:600;color:var(--text-color)}
+.filter-group input,.filter-group select{padding:6px 10px;border:2px solid #ddd;border-radius:8px;font:inherit;background:white}
+.filter-group input:focus,.filter-group select:focus{outline:none;border-color:var(--accent-color)}
+.filter-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end}
+.btn-edit{background-color:var(--accent-color);color:white;border:none;cursor:pointer}
+.btn-edit:hover{background-color:var(--text-color)}
+
+/* Tab nav */
 .tab-nav{display:flex;gap:4px;margin-bottom:16px;flex-wrap:wrap}
 .tab-btn{padding:8px 18px;border:2px solid #ddd;border-radius:8px 8px 0 0;background:white;font:inherit;font-size:.85rem;font-weight:600;cursor:pointer;color:#888;border-bottom:none;transition:all .15s}
 .tab-btn.active{border-color:var(--accent-color);color:var(--text-color);background:white;border-bottom:2px solid white;margin-bottom:-2px;z-index:1}
 .tab-btn:hover:not(.active){background:#f5f5f5;color:var(--text-color)}
 .tab-content{display:none}.tab-content.active{display:block}
 
+/* Charts */
 .chart-grid{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:18px}
 @media(max-width:900px){.chart-grid{grid-template-columns:1fr}}
 .chart-card{background:white;border-radius:14px;padding:18px 20px;box-shadow:0 2px 10px rgba(0,0,0,.07)}
@@ -334,6 +340,7 @@ body { overflow: auto; }
 .chart-wrap{position:relative;height:260px}
 .chart-wrap-sm{position:relative;height:220px}
 
+/* Tables */
 .tw{background:white;border-radius:14px;overflow:hidden;box-shadow:0 4px 14px rgba(0,0,0,.08);overflow-x:auto;margin-bottom:18px}
 table{width:100%;border-collapse:collapse;min-width:500px}
 th{background:var(--accent-color);color:white;padding:10px 13px;text-align:left;font-size:.78rem;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
@@ -360,9 +367,21 @@ tfoot td{background:var(--base-color);font-weight:700;padding:10px 13px;border-t
 .up{color:#27ae60;font-weight:700}
 .down{color:#e74c3c;font-weight:700}
 
-
-.raw-data-intro { font-size: .82rem; color: #555; margin: 0 0 12px; line-height: 1.45; font-weight: 600; }
-.tw-raw { background:white; border-radius:10px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,.07); overflow-x:auto; margin-bottom: 18px; }
+/* Raw data tables */
+.raw-section { margin-top: 22px; }
+.raw-toggle {
+    display: flex; align-items: center; gap: .6rem;
+    font-size: .8rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .06em; color: var(--text-color);
+    background: none; border: none; cursor: pointer; padding: 0;
+    margin-bottom: 10px;
+}
+.raw-toggle .arrow { transition: transform .2s; display: inline-block; }
+.raw-toggle.open .arrow { transform: rotate(90deg); }
+.raw-body { display: none; }
+.raw-body.open { display: block; }
+.raw-note { font-size: .75rem; color: #aaa; margin-bottom: 8px; }
+.tw-raw { background:white; border-radius:10px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,.07); overflow-x:auto; }
 .tw-raw table { min-width: 600px; }
 .tw-raw th { font-size:.72rem; padding:8px 11px; }
 .tw-raw td { font-size:.78rem; padding:7px 11px; }
@@ -373,22 +392,22 @@ tfoot td{background:var(--base-color);font-weight:700;padding:10px 13px;border-t
 </style>
 </head>
 <body>
-<div class="dashboard-wrapper">
+<div class="pw">
 
-<div class="dashboard-header">
+<!-- Header -->
+<div class="ph">
     <div>
-        <h1>Revenue &amp; sales report</h1>
-        <p style="margin:4px 0 0;font-size:.85rem;color:#666;font-weight:500">
+        <h1>Revenue &amp; Sales Report</h1>
+        <p style="margin:4px 0 0;font-size:.85rem;color:#555">
             <?= htmlspecialchars($f_from) ?> → <?= htmlspecialchars($f_to) ?>
-            · <?= htmlspecialchars($_SESSION['firstname'] ?? '') ?>
+            &nbsp;·&nbsp; Welcome, <?= htmlspecialchars($_SESSION['firstname']) ?>
         </p>
     </div>
-    <div class="header-actions">
-        <a href="logout.php" class="logout-btn">Logout</a>
+    <div class="hbtns">
+        <a href="dashboard.php#gift-shop-admin" class="bn">← Dashboard</a>
+        <a href="logout.php" class="bl">Logout</a>
     </div>
 </div>
-
-<a href="dashboard.php" class="back-btn" style="margin-bottom:12px">← Back to dashboard</a>
 
 <!-- KPI Cards -->
 <div class="kpi-grid">
@@ -424,6 +443,7 @@ tfoot td{background:var(--base-color);font-weight:700;padding:10px 13px;border-t
     </div>
 </div>
 
+<!-- Filters -->
 <div class="filter-card">
     <h2>Filter revenue</h2>
     <form method="GET">
@@ -482,16 +502,19 @@ tfoot td{background:var(--base-color);font-weight:700;padding:10px 13px;border-t
     </form>
 </div>
 
+
+<!-- Tab navigation -->
 <div class="tab-nav">
-    <button type="button" class="tab-btn active" onclick="showTab('overview', this)">Overview</button>
-    <button type="button" class="tab-btn" onclick="showTab('tickets', this)"> Tickets</button>
-    <button type="button" class="tab-btn" onclick="showTab('food', this)"> Food</button>
-    <button type="button" class="tab-btn" onclick="showTab('shop', this)">Shop</button>
-    <button type="button" class="tab-btn" onclick="showTab('payments', this)">Payments</button>
-    <button type="button" class="tab-btn" onclick="showTab('customers', this)"> Top Customers</button>
-    <button type="button" class="tab-btn" onclick="showTab('table', this)"> Period Table</button>
+    <button class="tab-btn active" onclick="showTab('overview')">📊 Overview</button>
+    <button class="tab-btn" onclick="showTab('tickets')">🎟 Tickets</button>
+    <button class="tab-btn" onclick="showTab('food')">🍽 Food</button>
+    <button class="tab-btn" onclick="showTab('shop')">🛍 Shop</button>
+    <button class="tab-btn" onclick="showTab('payments')">💳 Payments</button>
+    <button class="tab-btn" onclick="showTab('customers')">👥 Top Customers</button>
+    <button class="tab-btn" onclick="showTab('table')">📋 Period Table</button>
 </div>
 
+<!-- ═══ TAB: OVERVIEW ════════════════════════════════════════════ -->
 <div id="tab-overview" class="tab-content active">
     <div class="chart-grid">
         <div class="chart-card">
@@ -509,169 +532,323 @@ tfoot td{background:var(--base-color);font-weight:700;padding:10px 13px;border-t
     </div>
 </div>
 
+<!-- ═══ TAB: TICKETS ════════════════════════════════════════════ -->
 <div id="tab-tickets" class="tab-content">
-    <?php if (empty($rawTicketRows)): ?>
-        <div class="tw"><p class="no-data">No ticket orders for this period.</p></div>
-    <?php else: ?>
-    <div class="tw-raw"><table>
-        <thead><tr>
-            <th>Order #</th><th>Customer</th><th>Ticket type</th>
-            <th>Qty</th><th>Unit price</th><th>Total</th>
-            <th>Payment</th><th>Purchase date</th><th>Visit date</th>
-        </tr></thead>
+    <span class="section-hdr">Ticket type breakdown</span>
+    <?php if (empty($ticketRows)): ?>
+        <div class="tw"><p class="no-data">No ticket data for this period.</p></div>
+    <?php else:
+        $maxT = max(array_column($ticketRows, 'Revenue') ?: [1]);
+    ?>
+    <div class="tw"><table>
+        <thead><tr><th>Ticket type</th><th>Unit price</th><th>Qty sold</th><th>Revenue</th><th>Share</th><th>Bar</th></tr></thead>
         <tbody>
-        <?php foreach ($rawTicketRows as $r):
-            $isUp = !empty($r['ScheduledDate']) && $r['ScheduledDate'] >= date('Y-m-d');
-        ?>
+        <?php $ticketRowTotal = array_sum(array_map('floatval', array_column($ticketRows,'Revenue'))); foreach ($ticketRows as $r): $pct = $ticketRowTotal > 0 ? round((float)$r['Revenue']/$ticketRowTotal*100,1) : 0; ?>
         <tr>
-            <td class="order-id">#<?= (int) $r['OrderID'] ?></td>
-            <td>
-                <strong><?= htmlspecialchars((string) ($r['Customer'] ?? '')) ?></strong>
-                <div style="font-size:.7rem;color:#aaa"><?= htmlspecialchars((string) ($r['Email'] ?? '')) ?></div>
-            </td>
-            <td><span class="bdg bdg-t"><?= htmlspecialchars((string) ($r['TicketType'] ?? '')) ?></span></td>
-            <td style="font-weight:700"><?= (int) ($r['Quantity'] ?? 0) ?></td>
-            <td>$<?= number_format((float) ($r['UnitPrice'] ?? 0), 2) ?></td>
-            <td class="amt">$<?= number_format((float) ($r['TransactionAmount'] ?? 0), 2) ?></td>
-            <td><span class="bdg bdg-p"><?= htmlspecialchars((string) ($r['PaymentMode'] ?? '')) ?></span></td>
-            <td><?= $r['OrderDate'] ? date('M j, Y', strtotime((string) $r['OrderDate'])) : '—' ?></td>
-            <td>
-                <?php if (!empty($r['ScheduledDate'])): ?>
-                    <span class="<?= $isUp ? 'upcoming' : 'past-date' ?>">
-                        <?= date('M j, Y', strtotime((string) $r['ScheduledDate'])) ?><?= $isUp ? ' ✓' : '' ?>
-                    </span>
-                <?php else: ?><span style="color:#ccc">—</span><?php endif; ?>
-            </td>
+            <td><span class="bdg bdg-t"><?= htmlspecialchars($r['CategoryName']) ?></span></td>
+            <td>$<?= number_format($r['UnitPrice'],2) ?></td>
+            <td style="font-weight:700"><?= number_format($r['TotalQty']) ?></td>
+            <td class="amt">$<?= number_format($r['Revenue'],2) ?></td>
+            <td class="pct-cell"><?= $pct ?>%</td>
+            <td><div class="bar-cell"><div class="bar-outer"><div class="bar-inner bar-ticket" style="width:<?= $maxT>0?round($r['Revenue']/$maxT*100):0 ?>%"></div></div></div></td>
         </tr>
         <?php endforeach; ?>
         </tbody>
-        <tfoot><tr>
-            <td colspan="3">TOTALS (<?= count($rawTicketRows) ?> rows)</td>
-            <td><?= array_sum(array_column($rawTicketRows, 'Quantity')) ?></td>
-            <td>—</td>
-            <td class="amt">$<?= number_format(array_sum(array_map('floatval', array_column($rawTicketRows, 'TransactionAmount'))), 2) ?></td>
-            <td colspan="3"></td>
-        </tr></tfoot>
+        <tfoot><tr><td colspan="2">TOTAL</td><td><?= number_format(array_sum(array_column($ticketRows,'TotalQty'))) ?></td><td class="amt">$<?= number_format(array_sum(array_map('floatval', array_column($ticketRows,'Revenue'))),2) ?></td><td colspan="2"></td></tr></tfoot>
     </table></div>
+    <div class="chart-card">
+        <h3>Ticket revenue by type</h3>
+        <div style="height:220px"><canvas id="ticketChart"></canvas></div>
+    </div>
     <?php endif; ?>
+    <!-- Raw ticket orders -->
+    <div class="raw-section">
+        <button class="raw-toggle" onclick="toggleRaw(this, 'raw-tickets')">
+            <span class="arrow">▶</span> Show raw ticket orders (<?php echo count($rawTicketRows); ?> records)
+        </button>
+        <div id="raw-tickets" class="raw-body">
+            <p class="raw-note">Showing up to 200 most recent ticket orders matching your filters.</p>
+            <?php if (empty($rawTicketRows)): ?>
+                <p class="no-data" style="padding:16px;text-align:center;color:#aaa">No ticket orders found.</p>
+            <?php else: ?>
+            <div class="tw-raw"><table>
+                <thead><tr>
+                    <th>Order #</th><th>Customer</th><th>Ticket type</th>
+                    <th>Qty</th><th>Unit price</th><th>Total</th>
+                    <th>Payment</th><th>Purchase date</th><th>Visit date</th>
+                </tr></thead>
+                <tbody>
+                <?php foreach ($rawTicketRows as $r):
+                    $isUp = !empty($r['ScheduledDate']) && $r['ScheduledDate'] >= date('Y-m-d');
+                ?>
+                <tr>
+                    <td class="order-id">#<?php echo $r['OrderID']; ?></td>
+                    <td>
+                        <strong><?php echo htmlspecialchars($r['Customer']); ?></strong>
+                        <div style="font-size:.7rem;color:#aaa"><?php echo htmlspecialchars($r['Email']); ?></div>
+                    </td>
+                    <td><span class="bdg bdg-t"><?php echo htmlspecialchars($r['TicketType']); ?></span></td>
+                    <td style="font-weight:700"><?php echo $r['Quantity']; ?></td>
+                    <td>$<?php echo number_format($r['UnitPrice'],2); ?></td>
+                    <td class="amt">$<?php echo number_format($r['TransactionAmount'],2); ?></td>
+                    <td><span class="bdg bdg-p"><?php echo htmlspecialchars($r['PaymentMode']); ?></span></td>
+                    <td><?php echo date('M j, Y', strtotime($r['OrderDate'])); ?></td>
+                    <td>
+                        <?php if ($r['ScheduledDate']): ?>
+                            <span class="<?php echo $isUp ? 'upcoming' : 'past-date'; ?>">
+                                <?php echo date('M j, Y', strtotime($r['ScheduledDate'])); ?>
+                                <?php echo $isUp ? ' ✓' : ''; ?>
+                            </span>
+                        <?php else: ?><span style="color:#ccc">—</span><?php endif; ?>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+                </tbody>
+                <tfoot><tr>
+                    <td colspan="3">TOTALS (<?php echo count($rawTicketRows); ?> orders)</td>
+                    <td><?php echo array_sum(array_column($rawTicketRows,'Quantity')); ?></td>
+                    <td>—</td>
+                    <td class="amt">$<?php echo number_format(array_sum(array_column($rawTicketRows,'TransactionAmount')),2); ?></td>
+                    <td colspan="3"></td>
+                </tr></tfoot>
+            </table></div>
+            <?php endif; ?>
+        </div>
+    </div>
+
 </div>
 
-
-<div id="tab-food" class="tab-content">    
-    <?php if (empty($rawFoodRows)): ?>
-        <div class="tw"><p class="no-data">No food order lines for this period.</p></div>
-    <?php else: ?>
-    <div class="tw-raw"><table>
-        <thead><tr>
-            <th>Order #</th><th>Customer</th><th>Item</th>
-            <th>Stall</th><th>Qty</th><th>Unit price</th>
-            <th>Line total</th><th>Payment</th><th>Date</th>
-        </tr></thead>
+<!-- ═══ TAB: FOOD ════════════════════════════════════════════════ -->
+<div id="tab-food" class="tab-content">
+    <span class="section-hdr">Food item breakdown</span>
+    <?php if (empty($foodRows)): ?>
+        <div class="tw"><p class="no-data">No food orders for this period.</p></div>
+    <?php else:
+        $maxF = max(array_column($foodRows,'Revenue') ?: [1]);
+    ?>
+    <div class="tw"><table>
+        <thead><tr><th>Item</th><th>Unit price</th><th>Qty sold</th><th>Revenue</th><th>Share</th><th>Bar</th></tr></thead>
         <tbody>
-        <?php foreach ($rawFoodRows as $r): ?>
+        <?php $foodRowTotal = array_sum(array_map('floatval', array_column($foodRows,'Revenue'))); foreach ($foodRows as $r): $pct = $foodRowTotal > 0 ? round((float)$r['Revenue']/$foodRowTotal*100,1) : 0; ?>
         <tr>
-            <td class="order-id">#<?= (int) $r['OrderID'] ?></td>
-            <td>
-                <strong><?= htmlspecialchars((string) ($r['Customer'] ?? '')) ?></strong>
-                <div style="font-size:.7rem;color:#aaa"><?= htmlspecialchars((string) ($r['Email'] ?? '')) ?></div>
-            </td>
-            <td><span class="bdg bdg-f"><?= htmlspecialchars((string) ($r['FoodName'] ?? '')) ?></span></td>
-            <td style="font-size:.78rem;color:#888"><?= htmlspecialchars((string) ($r['Stall'] ?? '')) ?></td>
-            <td style="font-weight:700"><?= (int) ($r['Quantity'] ?? 0) ?></td>
-            <td>$<?= number_format((float) ($r['UnitPrice'] ?? 0), 2) ?></td>
-            <td class="amt">$<?= number_format((float) ($r['LineTotal'] ?? 0), 2) ?></td>
-            <td><span class="bdg bdg-p"><?= htmlspecialchars((string) ($r['PaymentMode'] ?? '')) ?></span></td>
-            <td><?= $r['OrderDate'] ? date('M j, Y', strtotime((string) $r['OrderDate'])) : '—' ?></td>
+            <td><span class="bdg bdg-f"><?= htmlspecialchars($r['FoodName']) ?></span></td>
+            <td>$<?= number_format($r['UnitPrice'],2) ?></td>
+            <td style="font-weight:700"><?= number_format($r['TotalQty']) ?></td>
+            <td class="amt">$<?= number_format($r['Revenue'],2) ?></td>
+            <td class="pct-cell"><?= $pct ?>%</td>
+            <td><div class="bar-cell"><div class="bar-outer"><div class="bar-inner bar-food" style="width:<?= $maxF>0?round($r['Revenue']/$maxF*100):0 ?>%"></div></div></div></td>
         </tr>
         <?php endforeach; ?>
         </tbody>
-        <tfoot><tr>
-            <td colspan="4">TOTALS (<?= count($rawFoodRows) ?> rows)</td>
-            <td><?= array_sum(array_column($rawFoodRows, 'Quantity')) ?></td>
-            <td>—</td>
-            <td class="amt">$<?= number_format(array_sum(array_map('floatval', array_column($rawFoodRows, 'LineTotal'))), 2) ?></td>
-            <td colspan="2"></td>
-        </tr></tfoot>
+        <tfoot><tr><td colspan="2">TOTAL</td><td><?= number_format(array_sum(array_column($foodRows,'TotalQty'))) ?></td><td class="amt">$<?= number_format(array_sum(array_map('floatval', array_column($foodRows,'Revenue'))),2) ?></td><td colspan="2"></td></tr></tfoot>
     </table></div>
+    <div class="chart-card">
+        <h3>Top food items by revenue</h3>
+        <div style="height:240px"><canvas id="foodChart"></canvas></div>
+    </div>
     <?php endif; ?>
+    <!-- Raw food orders -->
+    <div class="raw-section">
+        <button class="raw-toggle" onclick="toggleRaw(this, 'raw-food')">
+            <span class="arrow">▶</span> Show raw food orders (<?php echo count($rawFoodRows); ?> records)
+        </button>
+        <div id="raw-food" class="raw-body">
+            <p class="raw-note">Showing up to 200 most recent food orders matching your filters.</p>
+            <?php if (empty($rawFoodRows)): ?>
+                <p class="no-data" style="padding:16px;text-align:center;color:#aaa">No food orders found.</p>
+            <?php else: ?>
+            <div class="tw-raw"><table>
+                <thead><tr>
+                    <th>Order #</th><th>Customer</th><th>Item</th>
+                    <th>Stall</th><th>Qty</th><th>Unit price</th>
+                    <th>Line total</th><th>Payment</th><th>Date</th>
+                </tr></thead>
+                <tbody>
+                <?php foreach ($rawFoodRows as $r): ?>
+                <tr>
+                    <td class="order-id">#<?php echo $r['OrderID']; ?></td>
+                    <td>
+                        <strong><?php echo htmlspecialchars($r['Customer']); ?></strong>
+                        <div style="font-size:.7rem;color:#aaa"><?php echo htmlspecialchars($r['Email']); ?></div>
+                    </td>
+                    <td><span class="bdg bdg-f"><?php echo htmlspecialchars($r['FoodName']); ?></span></td>
+                    <td style="font-size:.78rem;color:#888"><?php echo htmlspecialchars($r['Stall']); ?></td>
+                    <td style="font-weight:700"><?php echo $r['Quantity']; ?></td>
+                    <td>$<?php echo number_format($r['UnitPrice'],2); ?></td>
+                    <td class="amt">$<?php echo number_format($r['LineTotal'],2); ?></td>
+                    <td><span class="bdg bdg-p"><?php echo htmlspecialchars($r['PaymentMode']); ?></span></td>
+                    <td><?php echo date('M j, Y', strtotime($r['OrderDate'])); ?></td>
+                </tr>
+                <?php endforeach; ?>
+                </tbody>
+                <tfoot><tr>
+                    <td colspan="4">TOTALS (<?php echo count($rawFoodRows); ?> line items)</td>
+                    <td><?php echo array_sum(array_column($rawFoodRows,'Quantity')); ?></td>
+                    <td>—</td>
+                    <td class="amt">$<?php echo number_format(array_sum(array_column($rawFoodRows,'LineTotal')),2); ?></td>
+                    <td colspan="2"></td>
+                </tr></tfoot>
+            </table></div>
+            <?php endif; ?>
+        </div>
+    </div>
+
 </div>
 
-
+<!-- ═══ TAB: SHOP ════════════════════════════════════════════════ -->
 <div id="tab-shop" class="tab-content">
-    <?php if (empty($rawShopRows)): ?>
-        <div class="tw"><p class="no-data">No shop order lines for this period.</p></div>
-    <?php else: ?>
-    <div class="tw-raw"><table>
-        <thead><tr>
-            <th>Order #</th><th>Customer</th><th>Item</th>
-            <th>Shop</th><th>Qty</th><th>Unit price</th>
-            <th>Line total</th><th>Payment</th><th>Date</th>
-        </tr></thead>
+    <span class="section-hdr">Shop item breakdown</span>
+    <?php if (empty($shopRows)): ?>
+        <div class="tw"><p class="no-data">No shop orders for this period.</p></div>
+    <?php else:
+        $maxS = max(array_column($shopRows,'Revenue') ?: [1]);
+    ?>
+    <?php if (!empty($shopByShopRows)): ?>
+    <div class="chart-card" style="margin-bottom:16px">
+        <h3>Revenue by shop</h3>
+        <p class="rc" style="margin-top:-6px;margin-bottom:12px">Gift shop line revenue attributed to each store (same filters as below).</p>
+        <div class="chart-wrap-sm"><canvas id="shopByShopDonut" aria-label="Revenue share by gift shop"></canvas></div>
+    </div>
+    <?php endif; ?>
+    <div class="tw"><table>
+        <thead><tr><th>Item</th><th>Unit price</th><th>Qty sold</th><th>Revenue</th><th>Share</th><th>Bar</th></tr></thead>
         <tbody>
-        <?php foreach ($rawShopRows as $r): ?>
+        <?php $shopRowTotal = array_sum(array_map('floatval', array_column($shopRows,'Revenue'))); foreach ($shopRows as $r): $pct = $shopRowTotal > 0 ? round((float)$r['Revenue']/$shopRowTotal*100,1) : 0; ?>
         <tr>
-            <td class="order-id">#<?= (int) $r['OrderID'] ?></td>
-            <td>
-                <strong><?= htmlspecialchars((string) ($r['Customer'] ?? '')) ?></strong>
-                <div style="font-size:.7rem;color:#aaa"><?= htmlspecialchars((string) ($r['Email'] ?? '')) ?></div>
-            </td>
-            <td><span class="bdg bdg-s"><?= htmlspecialchars((string) ($r['ItemName'] ?? '')) ?></span></td>
-            <td style="font-size:.78rem;color:#888"><?= htmlspecialchars((string) ($r['ShopName'] ?? '')) ?></td>
-            <td style="font-weight:700"><?= (int) ($r['Quantity'] ?? 0) ?></td>
-            <td>$<?= number_format((float) ($r['UnitPrice'] ?? 0), 2) ?></td>
-            <td class="amt">$<?= number_format((float) ($r['LineTotal'] ?? 0), 2) ?></td>
-            <td><span class="bdg bdg-p"><?= htmlspecialchars((string) ($r['PaymentMode'] ?? '')) ?></span></td>
-            <td><?= $r['OrderDate'] ? date('M j, Y', strtotime((string) $r['OrderDate'])) : '—' ?></td>
+            <td><span class="bdg bdg-s"><?= htmlspecialchars($r['ItemName']) ?></span></td>
+            <td>$<?= number_format($r['UnitPrice'],2) ?></td>
+            <td style="font-weight:700"><?= number_format($r['TotalQty']) ?></td>
+            <td class="amt">$<?= number_format($r['Revenue'],2) ?></td>
+            <td class="pct-cell"><?= $pct ?>%</td>
+            <td><div class="bar-cell"><div class="bar-outer"><div class="bar-inner bar-shop" style="width:<?= $maxS>0?round($r['Revenue']/$maxS*100):0 ?>%"></div></div></div></td>
         </tr>
         <?php endforeach; ?>
         </tbody>
-        <tfoot><tr>
-            <td colspan="4">TOTALS (<?= count($rawShopRows) ?> rows)</td>
-            <td><?= array_sum(array_column($rawShopRows, 'Quantity')) ?></td>
-            <td>—</td>
-            <td class="amt">$<?= number_format(array_sum(array_map('floatval', array_column($rawShopRows, 'LineTotal'))), 2) ?></td>
-            <td colspan="2"></td>
-        </tr></tfoot>
+        <tfoot><tr><td colspan="2">TOTAL</td><td><?= number_format(array_sum(array_column($shopRows,'TotalQty'))) ?></td><td class="amt">$<?= number_format(array_sum(array_map('floatval', array_column($shopRows,'Revenue'))),2) ?></td><td colspan="2"></td></tr></tfoot>
     </table></div>
+    <div class="chart-card">
+        <h3>Top shop items by revenue</h3>
+        <div style="height:240px"><canvas id="shopChart"></canvas></div>
+    </div>
     <?php endif; ?>
+    <!-- Raw shop orders -->
+    <div class="raw-section">
+        <button class="raw-toggle" onclick="toggleRaw(this, 'raw-shop')">
+            <span class="arrow">▶</span> Show raw shop orders (<?php echo count($rawShopRows); ?> records)
+        </button>
+        <div id="raw-shop" class="raw-body">
+            <p class="raw-note">Showing up to 200 most recent shop orders matching your filters.</p>
+            <?php if (empty($rawShopRows)): ?>
+                <p class="no-data" style="padding:16px;text-align:center;color:#aaa">No shop orders found.</p>
+            <?php else: ?>
+            <div class="tw-raw"><table>
+                <thead><tr>
+                    <th>Order #</th><th>Customer</th><th>Item</th>
+                    <th>Shop</th><th>Qty</th><th>Unit price</th>
+                    <th>Line total</th><th>Payment</th><th>Date</th>
+                </tr></thead>
+                <tbody>
+                <?php foreach ($rawShopRows as $r): ?>
+                <tr>
+                    <td class="order-id">#<?php echo $r['OrderID']; ?></td>
+                    <td>
+                        <strong><?php echo htmlspecialchars($r['Customer']); ?></strong>
+                        <div style="font-size:.7rem;color:#aaa"><?php echo htmlspecialchars($r['Email']); ?></div>
+                    </td>
+                    <td><span class="bdg bdg-s"><?php echo htmlspecialchars($r['ItemName']); ?></span></td>
+                    <td style="font-size:.78rem;color:#888"><?php echo htmlspecialchars($r['ShopName']); ?></td>
+                    <td style="font-weight:700"><?php echo $r['Quantity']; ?></td>
+                    <td>$<?php echo number_format($r['UnitPrice'],2); ?></td>
+                    <td class="amt">$<?php echo number_format($r['LineTotal'],2); ?></td>
+                    <td><span class="bdg bdg-p"><?php echo htmlspecialchars($r['PaymentMode']); ?></span></td>
+                    <td><?php echo date('M j, Y', strtotime($r['OrderDate'])); ?></td>
+                </tr>
+                <?php endforeach; ?>
+                </tbody>
+                <tfoot><tr>
+                    <td colspan="4">TOTALS (<?php echo count($rawShopRows); ?> line items)</td>
+                    <td><?php echo array_sum(array_column($rawShopRows,'Quantity')); ?></td>
+                    <td>—</td>
+                    <td class="amt">$<?php echo number_format(array_sum(array_column($rawShopRows,'LineTotal')),2); ?></td>
+                    <td colspan="2"></td>
+                </tr></tfoot>
+            </table></div>
+            <?php endif; ?>
+        </div>
+    </div>
+
 </div>
 
+<!-- ═══ TAB: PAYMENTS ══════════════════════════════════════════ -->
 <div id="tab-payments" class="tab-content">
-    <?php if (empty($rawPayRows)): ?>
-        <div class="tw"><p class="no-data">No transactions for this period.</p></div>
-    <?php else: ?>
-    <div class="tw-raw"><table>
-        <thead><tr>
-            <th>Order #</th><th>Customer</th><th>Category</th>
-            <th>Payment method</th><th>Amount</th><th>Date</th>
-        </tr></thead>
-        <tbody>
-        <?php foreach ($rawPayRows as $r):
-            $cat = (string) ($r['Category'] ?? '');
-            $catClass = in_array($cat, ['Adult Ticket', 'Child Ticket', 'Senior Ticket', 'Student Ticket', 'Annual Membership'], true) ? 'bdg-t' : (str_contains($cat, 'Food') || $cat === 'Food' ? 'bdg-f' : 'bdg-s');
-        ?>
-        <tr>
-            <td class="order-id">#<?= (int) $r['OrderID'] ?></td>
-            <td>
-                <strong><?= htmlspecialchars((string) ($r['Customer'] ?? '')) ?></strong>
-                <div style="font-size:.7rem;color:#aaa"><?= htmlspecialchars((string) ($r['Email'] ?? '')) ?></div>
-            </td>
-            <td><span class="bdg <?= $catClass ?>"><?= htmlspecialchars($cat) ?></span></td>
-            <td><span class="bdg bdg-p"><?= htmlspecialchars((string) ($r['PaymentMode'] ?? '')) ?></span></td>
-            <td class="amt">$<?= number_format((float) ($r['TransactionAmount'] ?? 0), 2) ?></td>
-            <td><?= $r['OrderDate'] ? date('M j, Y', strtotime((string) $r['OrderDate'])) : '—' ?></td>
-        </tr>
-        <?php endforeach; ?>
-        </tbody>
-        <tfoot><tr>
-            <td colspan="4">TOTALS (<?= count($rawPayRows) ?> rows)</td>
-            <td class="amt">$<?= number_format(array_sum(array_map('floatval', array_column($rawPayRows, 'TransactionAmount'))), 2) ?></td>
-            <td></td>
-        </tr></tfoot>
-    </table></div>
-    <?php endif; ?>
+    <span class="section-hdr">Payment method breakdown</span>
+    <div class="two-col">
+        <div class="tw"><table>
+            <thead><tr><th>Method</th><th>Orders</th><th>Revenue</th><th>Share</th></tr></thead>
+            <tbody>
+            <?php foreach ($paymentRows as $r): $pct = $totalRev > 0 ? round($r['Revenue']/$totalRev*100,1) : 0; ?>
+            <tr>
+                <td><span class="bdg bdg-p"><?= htmlspecialchars($r['PaymentMode']) ?></span></td>
+                <td><?= $r['Orders'] ?></td>
+                <td class="amt">$<?= number_format($r['Revenue'],2) ?></td>
+                <td class="pct-cell"><?= $pct ?>%</td>
+            </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table></div>
+        <div class="chart-card">
+            <h3>Payment method split</h3>
+            <div style="height:220px"><canvas id="paymentChart"></canvas></div>
+        </div>
+    </div>
+    <!-- Raw payment orders -->
+    <div class="raw-section">
+        <button class="raw-toggle" onclick="toggleRaw(this, 'raw-pay')">
+            <span class="arrow">▶</span> Show all transactions (<?php echo count($rawPayRows); ?> records)
+        </button>
+        <div id="raw-pay" class="raw-body">
+            <p class="raw-note">Showing up to 200 most recent transactions matching your filters.</p>
+            <?php if (empty($rawPayRows)): ?>
+                <p class="no-data" style="padding:16px;text-align:center;color:#aaa">No transactions found.</p>
+            <?php else: ?>
+            <div class="tw-raw"><table>
+                <thead><tr>
+                    <th>Order #</th><th>Customer</th><th>Category</th>
+                    <th>Payment method</th><th>Amount</th><th>Date</th>
+                </tr></thead>
+                <tbody>
+                <?php foreach ($rawPayRows as $r): ?>
+                <tr>
+                    <td class="order-id">#<?php echo $r['OrderID']; ?></td>
+                    <td>
+                        <strong><?php echo htmlspecialchars($r['Customer']); ?></strong>
+                        <div style="font-size:.7rem;color:#aaa"><?php echo htmlspecialchars($r['Email']); ?></div>
+                    </td>
+                    <td>
+                        <?php
+                        $catClass = in_array($r['Category'], ['Adult Ticket','Child Ticket','Senior Ticket','Student Ticket','Annual Membership']) ? 'bdg-t' : (str_contains($r['Category'],'Food') || $r['Category']==='Food' ? 'bdg-f' : 'bdg-s');
+                        ?>
+                        <span class="bdg <?php echo $catClass; ?>"><?php echo htmlspecialchars($r['Category']); ?></span>
+                    </td>
+                    <td><span class="bdg bdg-p"><?php echo htmlspecialchars($r['PaymentMode']); ?></span></td>
+                    <td class="amt">$<?php echo number_format($r['TransactionAmount'],2); ?></td>
+                    <td><?php echo date('M j, Y', strtotime($r['OrderDate'])); ?></td>
+                </tr>
+                <?php endforeach; ?>
+                </tbody>
+                <tfoot><tr>
+                    <td colspan="4">TOTALS (<?php echo count($rawPayRows); ?> transactions)</td>
+                    <td class="amt">$<?php echo number_format(array_sum(array_column($rawPayRows,'TransactionAmount')),2); ?></td>
+                    <td></td>
+                </tr></tfoot>
+            </table></div>
+            <?php endif; ?>
+        </div>
+    </div>
+
 </div>
 
+<!-- ═══ TAB: TOP CUSTOMERS ══════════════════════════════════════ -->
 <div id="tab-customers" class="tab-content">
     <span class="section-hdr">Top 10 customers by spend</span>
     <?php if (empty($topCustRows)): ?>
@@ -701,6 +878,7 @@ tfoot td{background:var(--base-color);font-weight:700;padding:10px 13px;border-t
     <?php endif; ?>
 </div>
 
+<!-- ═══ TAB: PERIOD TABLE ══════════════════════════════════════ -->
 <div id="tab-table" class="tab-content">
     <span class="section-hdr">Period-by-period breakdown</span>
     <p class="rc">Showing <?= count($periods) ?> period<?= count($periods)!==1?'s':'' ?> <?= $hasFilters?'<span style="color:var(--accent-color)">(filtered)</span>':'' ?></p>
@@ -711,9 +889,9 @@ tfoot td{background:var(--base-color);font-weight:700;padding:10px 13px;border-t
         <thead>
             <tr>
                 <th>Period</th>
-                <th>Tickets</th>
-                <th>Food</th>
-                <th>Shop</th>
+                <th>🎟 Tickets</th>
+                <th>🍽 Food</th>
+                <th>🛍 Shop</th>
                 <th>Orders</th>
                 <th>Total</th>
                 <th>Bar</th>
@@ -750,34 +928,48 @@ tfoot td{background:var(--base-color);font-weight:700;padding:10px 13px;border-t
     <?php endif; ?>
 </div>
 
-</div>
+</div><!-- end .pw -->
 
 <script>
-function showTab(name, btn) {
-    document.querySelectorAll('.tab-content').forEach(function (el) { el.classList.remove('active'); });
-    document.querySelectorAll('.tab-btn').forEach(function (el) { el.classList.remove('active'); });
-    var pane = document.getElementById('tab-' + name);
-    if (pane) pane.classList.add('active');
-    if (btn) btn.classList.add('active');
+// ── Tab switching ─────────────────────────────────────────────────
+function showTab(name) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    event.currentTarget.classList.add('active');
 }
 
+// ── Chart.js data from PHP ────────────────────────────────────────
 const labels  = <?= json_encode($chartLabels) ?>;
 const ticket  = <?= json_encode(array_map('floatval', $chartTicket)) ?>;
 const food    = <?= json_encode(array_map('floatval', $chartFood)) ?>;
 const shop    = <?= json_encode(array_map('floatval', $chartShop)) ?>;
 const total   = <?= json_encode(array_map('floatval', $chartTotal)) ?>;
 
+const ticketNames = <?= json_encode(array_column($ticketRows, 'CategoryName')) ?>;
+const ticketRevs  = <?= json_encode(array_map('floatval', array_column($ticketRows, 'Revenue'))) ?>;
+const foodNames   = <?= json_encode(array_column($foodRows, 'FoodName')) ?>;
+const foodRevs    = <?= json_encode(array_map('floatval', array_column($foodRows, 'Revenue'))) ?>;
+const shopNames   = <?= json_encode(array_column($shopRows, 'ItemName')) ?>;
+const shopRevs    = <?= json_encode(array_map('floatval', array_column($shopRows, 'Revenue'))) ?>;
+const payNames    = <?= json_encode(array_column($paymentRows, 'PaymentMode')) ?>;
+const payRevs     = <?= json_encode(array_map('floatval', array_column($paymentRows, 'Revenue'))) ?>;
+const shopByShopLabels = <?= json_encode(array_column($shopByShopRows, 'ShopName'), JSON_UNESCAPED_UNICODE) ?>;
+const shopByShopRevs   = <?= json_encode(array_map('floatval', array_column($shopByShopRows, 'Revenue'))) ?>;
+
 const green  = '#27ae60';
 const blue   = '#2980b9';
 const orange = '#e67e22';
 const purple = '#8e44ad';
 const accent = '#6ac473';
+const shopByShopPalette = ['#8e44ad','#2980b9','#e67e22','#27ae60','#9b59b6','#16a085','#d35400','#3498db','#c0392b','#1abc9c','#34495e','#f39c12'];
 
 const defaults = { responsive:true, maintainAspectRatio:false,
     plugins:{ legend:{ labels:{ font:{ family:'Montserrat,sans-serif', size:11 } } } },
     scales:{ x:{ ticks:{ font:{ size:10 } } }, y:{ ticks:{ font:{ size:10 } } } }
 };
 
+// Line chart
 new Chart(document.getElementById('lineChart'), {
     type: 'line',
     data: {
@@ -793,6 +985,7 @@ new Chart(document.getElementById('lineChart'), {
         plugins:{ ...defaults.plugins, tooltip:{ callbacks:{ label: ctx => ' $' + ctx.parsed.y.toFixed(2) } } } }
 });
 
+// Donut chart
 new Chart(document.getElementById('donutChart'), {
     type: 'doughnut',
     data: {
@@ -805,6 +998,7 @@ new Chart(document.getElementById('donutChart'), {
             tooltip:{ callbacks:{ label: ctx => ' $' + ctx.parsed.toFixed(2) } } } }
 });
 
+// Stacked bar chart
 new Chart(document.getElementById('barChart'), {
     type: 'bar',
     data: {
@@ -818,6 +1012,83 @@ new Chart(document.getElementById('barChart'), {
     options: { ...defaults, plugins:{ ...defaults.plugins, tooltip:{ mode:'index' } },
         scales:{ x:{ stacked:true, ticks:{ font:{size:10} } }, y:{ stacked:true, ticks:{ font:{size:10}, callback: v => '$'+v } } } }
 });
+
+// Ticket horizontal bar
+if (ticketNames.length) new Chart(document.getElementById('ticketChart'), {
+    type: 'bar',
+    data: { labels:ticketNames, datasets:[{ label:'Revenue', data:ticketRevs, backgroundColor:blue+'cc', borderRadius:4 }] },
+    options: { ...defaults, indexAxis:'y',
+        plugins:{ ...defaults.plugins, legend:{display:false}, tooltip:{ callbacks:{ label: ctx => ' $'+ctx.parsed.x.toFixed(2) } } },
+        scales:{ x:{ ticks:{ callback: v => '$'+v, font:{size:10} } }, y:{ ticks:{ font:{size:10} } } } }
+});
+
+// Food horizontal bar
+if (foodNames.length) new Chart(document.getElementById('foodChart'), {
+    type: 'bar',
+    data: { labels:foodNames, datasets:[{ label:'Revenue', data:foodRevs, backgroundColor:orange+'cc', borderRadius:4 }] },
+    options: { ...defaults, indexAxis:'y',
+        plugins:{ ...defaults.plugins, legend:{display:false}, tooltip:{ callbacks:{ label: ctx => ' $'+ctx.parsed.x.toFixed(2) } } },
+        scales:{ x:{ ticks:{ callback: v => '$'+v, font:{size:10} } }, y:{ ticks:{ font:{size:10} } } } }
+});
+
+// Gift shop revenue by store (doughnut)
+if (shopByShopLabels.length && document.getElementById('shopByShopDonut')) {
+    const bgShop = shopByShopLabels.map((_, i) => shopByShopPalette[i % shopByShopPalette.length]);
+    new Chart(document.getElementById('shopByShopDonut'), {
+        type: 'doughnut',
+        data: {
+            labels: shopByShopLabels,
+            datasets: [{
+                data: shopByShopRevs,
+                backgroundColor: bgShop,
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '62%',
+            plugins: {
+                legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12, padding: 12 } },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => {
+                            const v = typeof ctx.parsed === 'number' ? ctx.parsed : ctx.raw;
+                            return ' $' + Number(v).toFixed(2);
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Shop horizontal bar
+if (shopNames.length) new Chart(document.getElementById('shopChart'), {
+    type: 'bar',
+    data: { labels:shopNames, datasets:[{ label:'Revenue', data:shopRevs, backgroundColor:purple+'cc', borderRadius:4 }] },
+    options: { ...defaults, indexAxis:'y',
+        plugins:{ ...defaults.plugins, legend:{display:false}, tooltip:{ callbacks:{ label: ctx => ' $'+ctx.parsed.x.toFixed(2) } } },
+        scales:{ x:{ ticks:{ callback: v => '$'+v, font:{size:10} } }, y:{ ticks:{ font:{size:10} } } } }
+});
+
+// Payment pie
+if (payNames.length) new Chart(document.getElementById('paymentChart'), {
+    type: 'pie',
+    data: { labels:payNames, datasets:[{ data:payRevs, backgroundColor:[blue,orange,purple,green+'aa'], borderWidth:2, borderColor:'#fff' }] },
+    options: { responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ position:'bottom', labels:{ font:{size:11} } },
+            tooltip:{ callbacks:{ label: ctx => ' $'+ctx.parsed.toFixed(2) } } } }
+});
+
+function toggleRaw(btn, id) {
+    const body = document.getElementById(id);
+    body.classList.toggle('open');
+    btn.classList.toggle('open');
+    const arrow = btn.querySelector('.arrow');
+    arrow.textContent = body.classList.contains('open') ? '▼' : '▶';
+}
 
 </script>
 </body>
