@@ -1,4 +1,5 @@
-<?php require_once __DIR__ . '/../session_bootstrap.php'; ?>
+<?php require_once __DIR__ . '/../session_bootstrap.php';
+require_once __DIR__ . '/../db.php'; ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -73,13 +74,12 @@
             <div class="fact-card"><strong>Arctic Circle</strong><span>Native habitat</span></div>
         </div>
 
-        <h2>Meet Our Polar Bear</h2>
-        <table class="residents-table">
-            <thead><tr><th>Name</th><th>Age</th><th>Sex</th><th>Diet</th><th>Last Checkup</th></tr></thead>
-            <tbody>
-                <tr><td>Wojtek</td><td>8 yr</td><td>Male</td><td>Carnivore</td><td>Apr 2, 2026</td></tr>
-            </tbody>
-        </table>
+        <?php
+require_once __DIR__ . '/../db.php';
+$animalSpecies = 'Polar Bear';
+$animalLabel   = 'Polar Bear';
+require __DIR__ . '/_animal_residents.php';
+?>
 
         <h2>Conservation</h2>
         <p>

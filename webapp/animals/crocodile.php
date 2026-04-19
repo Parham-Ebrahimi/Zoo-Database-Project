@@ -1,4 +1,5 @@
-<?php require_once __DIR__ . '/../session_bootstrap.php'; ?>
+<?php require_once __DIR__ . '/../session_bootstrap.php';
+require_once __DIR__ . '/../db.php'; ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -73,13 +74,12 @@
             <div class="fact-card"><strong>Sub-Saharan Africa</strong><span>Native habitat</span></div>
         </div>
 
-        <h2>Meet Our Crocodile</h2>
-        <table class="residents-table">
-            <thead><tr><th>Name</th><th>Age</th><th>Sex</th><th>Diet</th><th>Enclosure</th></tr></thead>
-            <tbody>
-                <tr><td>King</td><td>10 yr</td><td>Male</td><td>Carnivore</td><td>Giraffe Exhibit</td></tr>
-            </tbody>
-        </table>
+        <?php
+require_once __DIR__ . '/../db.php';
+$animalSpecies = 'Nile Crocodile';
+$animalLabel   = 'Crocodile';
+require __DIR__ . '/_animal_residents.php';
+?>
 
         <h2>Conservation</h2>
         <p>

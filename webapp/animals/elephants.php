@@ -95,6 +95,13 @@
             <div class="fact-card"><strong>Africa</strong><span>Native habitat</span></div>
         </div>
 
+        <?php
+require_once __DIR__ . '/../db.php';
+$animalSpecies = 'African Savanna Elephant';
+$animalLabel   = 'Elephants';
+require __DIR__ . '/_animal_residents.php';
+?>
+
         <h2>Conservation</h2>
         <p>
             Greenwood Zoo partners with wildlife organizations to support elephant conservation in the wild.

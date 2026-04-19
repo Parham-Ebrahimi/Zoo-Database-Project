@@ -1,4 +1,5 @@
-<?php require_once __DIR__ . '/../session_bootstrap.php'; ?>
+<?php require_once __DIR__ . '/../session_bootstrap.php';
+require_once __DIR__ . '/../db.php'; ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -68,13 +69,12 @@
             <div class="fact-card"><strong>Least Concern</strong><span>Conservation status</span></div>
             <div class="fact-card"><strong>Middle East &amp; Africa</strong><span>Native habitat</span></div>
         </div>
-        <h2>Meet Our Camel</h2>
-        <table class="residents-table">
-            <thead><tr><th>Name</th><th>Age</th><th>Sex</th><th>Diet</th><th>Enclosure</th></tr></thead>
-            <tbody>
-                <tr><td>Joe</td><td>9 yr</td><td>Female</td><td>Herbivore</td><td>Woodlands Enclosure</td></tr>
-            </tbody>
-        </table>
+        <?php
+require_once __DIR__ . '/../db.php';
+$animalSpecies = 'Dromedary Camel';
+$animalLabel   = 'Camel';
+require __DIR__ . '/_animal_residents.php';
+?>
         <h2>Conservation</h2>
         <p>
             While domesticated dromedary camels are widespread, the wild Bactrian camel is critically endangered.

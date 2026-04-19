@@ -1,4 +1,5 @@
-<?php require_once __DIR__ . '/../session_bootstrap.php'; ?>
+<?php require_once __DIR__ . '/../session_bootstrap.php';
+require_once __DIR__ . '/../db.php'; ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -72,18 +73,12 @@
             <div class="fact-card"><strong>Southern Hemisphere</strong><span>Native habitat</span></div>
         </div>
 
-        <h2>Meet Our Penguins</h2>
-        <table class="residents-table">
-            <thead><tr><th>Name</th><th>Age</th><th>Sex</th><th>Diet</th></tr></thead>
-            <tbody>
-                <tr><td>Kowalski</td><td>3 yr</td><td>Male</td><td>Piscivore</td></tr>
-                <tr><td>Rico</td><td>3 yr</td><td>Male</td><td>Piscivore</td></tr>
-                <tr><td>Skipper</td><td>4 yr</td><td>Male</td><td>Piscivore</td></tr>
-                <tr><td>Private</td><td>2 yr</td><td>Male</td><td>Piscivore</td></tr>
-                <tr><td>Pingu</td><td>1 yr</td><td>Male</td><td>Piscivore</td></tr>
-                <tr><td>Cabo</td><td>1 yr</td><td>Male</td><td>Piscivore</td></tr>
-            </tbody>
-        </table>
+        <?php
+require_once __DIR__ . '/../db.php';
+$animalSpecies = ['African Penguin', 'Gentoo Penguin'];
+$animalLabel   = 'Penguins';
+require __DIR__ . '/_animal_residents.php';
+?>
 
         <h2>Conservation</h2>
         <p>

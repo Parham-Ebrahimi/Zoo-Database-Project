@@ -1,4 +1,5 @@
-<?php require_once __DIR__ . '/../session_bootstrap.php'; ?>
+<?php require_once __DIR__ . '/../session_bootstrap.php';
+require_once __DIR__ . '/../db.php'; ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -73,14 +74,12 @@
             <div class="fact-card"><strong>Northern Atlantic &amp; Pacific</strong><span>Native habitat</span></div>
         </div>
 
-        <h2>Meet Our Seals</h2>
-        <table class="residents-table">
-            <thead><tr><th>Name</th><th>Age</th><th>Sex</th><th>Diet</th><th>Enclosure</th></tr></thead>
-            <tbody>
-                <tr><td>Sally</td><td>6 yr</td><td>Female</td><td>Piscivore</td><td>Seal Pool</td></tr>
-                <tr><td>Wally</td><td>4 yr</td><td>Male</td><td>Piscivore</td><td>Seal Pool</td></tr>
-            </tbody>
-        </table>
+        <?php
+require_once __DIR__ . '/../db.php';
+$animalSpecies = 'Harbour Seal';
+$animalLabel   = 'Seals';
+require __DIR__ . '/_animal_residents.php';
+?>
 
         <h2>Conservation</h2>
         <p>

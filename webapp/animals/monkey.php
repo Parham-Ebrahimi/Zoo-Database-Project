@@ -1,4 +1,5 @@
-<?php require_once __DIR__ . '/../session_bootstrap.php'; ?>
+<?php require_once __DIR__ . '/../session_bootstrap.php';
+require_once __DIR__ . '/../db.php'; ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -72,13 +73,12 @@
             <div class="fact-card"><strong>Central America</strong><span>Native habitat</span></div>
         </div>
 
-        <h2>Meet Our Monkeys</h2>
-        <table class="residents-table">
-            <thead><tr><th>Name</th><th>Age</th><th>Sex</th><th>Diet</th><th>Enclosure</th></tr></thead>
-            <tbody>
-                <tr><td>George</td><td>4 yr</td><td>Male</td><td>Herbivore</td><td>Jungle Canopy Enclosure</td></tr>
-            </tbody>
-        </table>
+        <?php
+require_once __DIR__ . '/../db.php';
+$animalSpecies = 'Spider Monkey';
+$animalLabel   = 'Monkeys';
+require __DIR__ . '/_animal_residents.php';
+?>
 
         <h2>Conservation</h2>
         <p>
