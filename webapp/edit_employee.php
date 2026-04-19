@@ -126,11 +126,11 @@ $assignedAsVet = array_column(
 
         /* Animal checklist */
         .animal-checklist { display:grid; grid-template-columns:repeat(auto-fill, minmax(220px,1fr)); gap:8px; max-height:320px; overflow-y:auto; padding:10px; border:2px solid #ddd; border-radius:8px; background:white; }
-        .animal-check-item { display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; background:#f8faf5; border:1px solid #e8f0e0; cursor:pointer; transition:background .12s; }
+        .animal-check-item { display:flex !important; flex-direction:row !important; align-items:center !important; gap:8px; padding:7px 10px; border-radius:6px; background:#f8faf5; border:1px solid #e8f0e0; cursor:pointer; transition:background .12s; justify-content:flex-start !important; text-align:left !important; }
         .animal-check-item:hover { background:#eef5e8; }
-        .animal-check-item input[type="checkbox"] { width:16px; height:16px; accent-color:var(--accent-color); flex-shrink:0; cursor:pointer; }
-        .animal-check-item label { cursor:pointer; font-size:0.85rem; font-weight:600; color:var(--text-color); margin:0; background:none; height:auto; width:auto; border-radius:0; line-height:1.3; }
-        .animal-check-item .animal-meta { font-size:0.73rem; color:#888; display:block; }
+        .animal-check-item input[type="checkbox"] { width:16px !important; height:16px !important; accent-color:var(--accent-color); flex-shrink:0; cursor:pointer; margin:0 !important; padding:0 !important; border-radius:3px !important; }
+        .animal-check-item .check-label { cursor:pointer; font-size:0.85rem !important; font-weight:600 !important; color:var(--text-color) !important; margin:0 !important; background:none !important; height:auto !important; width:auto !important; border-radius:0 !important; text-align:left !important; padding:0 !important; display:block !important; line-height:1.3; flex:1; }
+        .animal-check-item .check-label .animal-meta { font-size:0.73rem !important; color:#888 !important; font-weight:400 !important; display:block !important; }
         .checklist-actions { display:flex; gap:8px; margin-bottom:8px; }
         .checklist-btn { padding:4px 12px; border:1px solid var(--accent-color); border-radius:6px; background:white; font:inherit; font-size:0.78rem; font-weight:600; cursor:pointer; color:var(--text-color); }
         .checklist-btn:hover { background:var(--accent-color); }
@@ -218,9 +218,9 @@ $assignedAsVet = array_column(
                                    id="ct_<?= (int)$a['Animal_ID'] ?>"
                                    value="<?= (int)$a['Animal_ID'] ?>"
                                    <?= in_array((int)$a['Animal_ID'], $assignedAsCaretaker) ? 'checked' : '' ?>>
-                            <label for="ct_<?= (int)$a['Animal_ID'] ?>" style="cursor:pointer;font-size:.85rem;font-weight:600;color:var(--text-color);margin:0;background:none;height:auto;width:auto;border-radius:0;text-align:left;padding:0;display:block">
+                            <label for="ct_<?= (int)$a['Animal_ID'] ?>" class="check-label">
                                 <?= htmlspecialchars($a['Name']) ?>
-                                <span style="font-size:.73rem;color:#888;font-weight:400;display:block"><?= htmlspecialchars($a['Species']) ?> · <?= htmlspecialchars($a['Enclosure_Name'] ?? 'No enclosure') ?></span>
+                                <span class="animal-meta"><?= htmlspecialchars($a['Species']) ?> · <?= htmlspecialchars($a['Enclosure_Name'] ?? 'No enclosure') ?></span>
                             </label>
                         </div>
                         <?php endforeach; ?>
@@ -244,9 +244,9 @@ $assignedAsVet = array_column(
                                    id="vt_<?= (int)$a['Animal_ID'] ?>"
                                    value="<?= (int)$a['Animal_ID'] ?>"
                                    <?= in_array((int)$a['Animal_ID'], $assignedAsVet) ? 'checked' : '' ?>>
-                            <label for="vt_<?= (int)$a['Animal_ID'] ?>" style="cursor:pointer;font-size:.85rem;font-weight:600;color:var(--text-color);margin:0;background:none;height:auto;width:auto;border-radius:0;text-align:left;padding:0;display:block">
+                            <label for="vt_<?= (int)$a['Animal_ID'] ?>" class="check-label">
                                 <?= htmlspecialchars($a['Name']) ?>
-                                <span style="font-size:.73rem;color:#888;font-weight:400;display:block"><?= htmlspecialchars($a['Species']) ?> · <?= htmlspecialchars($a['Enclosure_Name'] ?? 'No enclosure') ?></span>
+                                <span class="animal-meta"><?= htmlspecialchars($a['Species']) ?> · <?= htmlspecialchars($a['Enclosure_Name'] ?? 'No enclosure') ?></span>
                             </label>
                         </div>
                         <?php endforeach; ?>
