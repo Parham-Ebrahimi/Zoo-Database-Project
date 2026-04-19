@@ -213,15 +213,16 @@ $assignedAsVet = array_column(
                     </div>
                     <div class="animal-checklist" id="caretaker-checklist">
                         <?php foreach ($allAnimals as $a): ?>
-                        <label class="animal-check-item">
+                        <div class="animal-check-item">
                             <input type="checkbox" name="assigned_animals_caretaker[]"
+                                   id="ct_<?= (int)$a['Animal_ID'] ?>"
                                    value="<?= (int)$a['Animal_ID'] ?>"
                                    <?= in_array((int)$a['Animal_ID'], $assignedAsCaretaker) ? 'checked' : '' ?>>
-                            <span>
-                                <span style="font-weight:600"><?= htmlspecialchars($a['Name']) ?></span>
-                                <span class="animal-meta"><?= htmlspecialchars($a['Species']) ?> · <?= htmlspecialchars($a['Enclosure_Name'] ?? 'No enclosure') ?></span>
-                            </span>
-                        </label>
+                            <label for="ct_<?= (int)$a['Animal_ID'] ?>" style="cursor:pointer;font-size:.85rem;font-weight:600;color:var(--text-color);margin:0;background:none;height:auto;width:auto;border-radius:0;text-align:left;padding:0;display:block">
+                                <?= htmlspecialchars($a['Name']) ?>
+                                <span style="font-size:.73rem;color:#888;font-weight:400;display:block"><?= htmlspecialchars($a['Species']) ?> · <?= htmlspecialchars($a['Enclosure_Name'] ?? 'No enclosure') ?></span>
+                            </label>
+                        </div>
                         <?php endforeach; ?>
                     </div>
                     <p class="assigned-count" id="caretaker-count"><?= count($assignedAsCaretaker) ?> animal(s) currently assigned</p>
@@ -238,15 +239,16 @@ $assignedAsVet = array_column(
                     </div>
                     <div class="animal-checklist" id="vet-checklist">
                         <?php foreach ($allAnimals as $a): ?>
-                        <label class="animal-check-item">
+                        <div class="animal-check-item">
                             <input type="checkbox" name="assigned_animals_vet[]"
+                                   id="vt_<?= (int)$a['Animal_ID'] ?>"
                                    value="<?= (int)$a['Animal_ID'] ?>"
                                    <?= in_array((int)$a['Animal_ID'], $assignedAsVet) ? 'checked' : '' ?>>
-                            <span>
-                                <span style="font-weight:600"><?= htmlspecialchars($a['Name']) ?></span>
-                                <span class="animal-meta"><?= htmlspecialchars($a['Species']) ?> · <?= htmlspecialchars($a['Enclosure_Name'] ?? 'No enclosure') ?></span>
-                            </span>
-                        </label>
+                            <label for="vt_<?= (int)$a['Animal_ID'] ?>" style="cursor:pointer;font-size:.85rem;font-weight:600;color:var(--text-color);margin:0;background:none;height:auto;width:auto;border-radius:0;text-align:left;padding:0;display:block">
+                                <?= htmlspecialchars($a['Name']) ?>
+                                <span style="font-size:.73rem;color:#888;font-weight:400;display:block"><?= htmlspecialchars($a['Species']) ?> · <?= htmlspecialchars($a['Enclosure_Name'] ?? 'No enclosure') ?></span>
+                            </label>
+                        </div>
                         <?php endforeach; ?>
                     </div>
                     <p class="assigned-count" id="vet-count"><?= count($assignedAsVet) ?> animal(s) currently assigned</p>
