@@ -323,6 +323,9 @@ if ($isGiftShopEmployee) {
             font-weight: 700;
             color: var(--accent-color);
         }
+        .gift-shop-admin-section {
+            margin-top: 12px;
+        }
     </style>
 </head>
 <body>
@@ -434,13 +437,10 @@ if ($isGiftShopEmployee) {
 
         <?php if ($isAdmin): ?>
         <section id="gift-shop-admin" class="gift-shop-admin-section">
-        <div class="section-title">Gift shop</div>
+        <div class="section-title">Gift Shop</div>
         <div class="tiles-grid">
             <a href="add-gift-shop-item.php" class="tile">
                 <div class="tile-text"><strong>Add item</strong><span>New product, price, stock &amp; image for the storefront</span></div>
-            </a>
-            <a href="sales_report.php" class="tile">
-                <div class="tile-text"><strong>Gift Shop Sales report</strong><span>Line items, filters &amp; chart</span></div>
             </a>
             <a href="shop_alerts.php" class="tile">
                 <div class="tile-text"><strong>Shop restock alerts</strong><span>Low stock warnings</span></div>
@@ -452,17 +452,6 @@ if ($isGiftShopEmployee) {
         <!-- Gift Shop Section (login role must be exactly "Gift Shop Employee" on systemuser) -->
         <?php if ($isGiftShopEmployee): ?>
         <section id="gift-shop" class="gift-shop-staff-section">
-        <div class="tiles-grid">
-            <a href="add-order.php" class="tile">
-                <div class="tile-text"><strong>Record sale</strong><span>Log a customer gift shop purchase</span></div>
-            </a>
-            <a href="sales_report.php" class="tile">
-                <div class="tile-text"><strong>Gift Shop Sales report</strong><span>Line items, filters &amp; chart</span></div>
-            </a>
-            <a href="shop_alerts.php" class="tile">
-                <div class="tile-text"><strong>Shop restock alerts</strong><span>Low stock warnings</span></div>
-            </a>
-        </div>
         <?php if ($isGiftShopEmployee && $giftShopSnapshot !== null): ?>
         <div class="gift-shop-snapshot" aria-labelledby="gift-shop-snapshot-heading">
             <h2 id="gift-shop-snapshot-heading"><?= htmlspecialchars($giftShopSnapshot['monthLabel']) ?></h2>
@@ -492,6 +481,17 @@ if ($isGiftShopEmployee) {
             </p>
         </div>
         <?php endif; ?>
+        <div class="tiles-grid" style="margin-top:12px;">
+            <a href="add-order.php" class="tile">
+                <div class="tile-text"><strong>Record sale</strong><span>Log a customer gift shop purchase</span></div>
+            </a>
+            <a href="sales_report.php" class="tile">
+                <div class="tile-text"><strong>Gift Shop Sales report</strong><span>Line items, filters &amp; chart</span></div>
+            </a>
+            <a href="shop_alerts.php" class="tile">
+                <div class="tile-text"><strong>Shop restock alerts</strong><span>Low stock warnings</span></div>
+            </a>
+        </div>
         </section>
         <?php endif; ?>
 

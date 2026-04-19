@@ -37,6 +37,14 @@ $itemsStmt = $pdo->query("
     ORDER BY s.ShopName, si.ItemName
 ");
 $items = $itemsStmt->fetchAll(PDO::FETCH_ASSOC);
+$groupedItems = [];
+foreach ($items as $item) {
+    $groupName = (string) ($item['ShopName'] ?? 'Gift Shop');
+    if (!isset($groupedItems[$groupName])) {
+        $groupedItems[$groupName] = [];
+    }
+    $groupedItems[$groupName][] = $item;
+}
 
 $mostPopularShopItemID = null;
 $mostPopularLabel = '';
@@ -150,6 +158,44 @@ function gift_shop_item_image_src(string $itemName, int $shopItemId = 0): string
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
             gap: 1rem;
+        }
+        .shop-group {
+            margin-bottom: 1.4rem;
+        }
+        .shop-group-header {
+            margin: 0 0 0.85rem;
+            border-radius: 14px;
+            padding: 0.8rem 1rem;
+            background: #1f8a33;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            box-shadow: 0 3px 10px rgba(23, 103, 7, 0.16);
+        }
+        .shop-group-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.18);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+        .shop-group-title {
+            margin: 0;
+            font-size: 1.15rem;
+            font-weight: 800;
+            line-height: 1.1;
+        }
+        .shop-group-subtitle {
+            margin-top: 0.15rem;
+            font-size: 0.82rem;
+            opacity: 0.92;
+            font-weight: 600;
         }
         .shop-card {
             background: #fff;
@@ -292,39 +338,65 @@ function gift_shop_item_image_src(string $itemName, int $shopItemId = 0): string
             <?php endif; ?>
         </section>
 
-        <section class="shop-grid" aria-label="Gift shop items">
-            <?php foreach ($items as $item): ?>
+        <?php foreach ($groupedItems as $groupName => $groupItems): ?>
+            <section class="shop-group" aria-label="<?= htmlspecialchars($groupName) ?>">
                 <?php
-                    $stock = (int) $item['StockQty'];
-                    $stockClass = $stock <= 0 ? 'stock-out' : ($stock <= 3 ? 'stock-low' : 'stock-ok');
+                    $groupLower = strtolower($groupName);
+                    $groupIcon = '🛍️';
+                    $groupSubtitle = 'Zoo Gift Collection';
+                    if (str_contains($groupLower, 'arctic')) {
+                        $groupIcon = '❄️';
+                        $groupSubtitle = 'Arctic Collection';
+                    } elseif (str_contains($groupLower, 'jungle')) {
+                        $groupIcon = '🌿';
+                        $groupSubtitle = 'Rainforest Collection';
+                    } elseif (str_contains($groupLower, 'savanna') || str_contains($groupLower, 'safari')) {
+                        $groupIcon = '🦁';
+                        $groupSubtitle = 'African Plains';
+                    }
                 ?>
-                <article class="shop-card">
-                    <img src="<?= htmlspecialchars(gift_shop_resolved_image_url($item)) ?>" alt="<?= htmlspecialchars($item['ItemName']) ?>" loading="lazy" decoding="async">
-                    <div class="shop-name"><?= htmlspecialchars($item['ShopName']) ?></div>
-                    <div class="item-name"><?= htmlspecialchars($item['ItemName']) ?></div>
-                    <?php if ($mostPopularShopItemID !== null && (int) $item['ShopItemID'] === $mostPopularShopItemID): ?>
-                        <div class="badge-popular" title="<?= htmlspecialchars($mostPopularLabel !== '' ? ($mostPopularLabel . ' is the top seller this month.') : 'Top seller this month.') ?>">
-                            ★ Most popular this month
-                        </div>
-                    <?php endif; ?>
-                    <div class="meta">$<?= number_format((float) $item['Price'], 2) ?></div>
-                    <div class="meta <?= $stockClass ?>">
-                        Stock: <?= $stock <= 0 ? 'Out of stock' : $stock ?>
+                <div class="shop-group-header">
+                    <div class="shop-group-icon" aria-hidden="true"><?= $groupIcon ?></div>
+                    <div>
+                        <h2 class="shop-group-title"><?= htmlspecialchars($groupName) ?></h2>
+                        <div class="shop-group-subtitle"><?= htmlspecialchars($groupSubtitle) ?></div>
                     </div>
-                    <form class="buy-form" method="POST" action="cart_action.php">
-                        <input type="hidden" name="action" value="add">
-                        <input type="hidden" name="type" value="shop">
-                        <input type="hidden" name="id" value="<?= (int) $item['ShopItemID'] ?>">
-                        <input type="hidden" name="redirect" value="<?= !empty($staffPreview) ? 'giftshop.php?preview=1' : 'giftshop.php?added=1' ?>">
-                        <label>
-                            Quantity
-                            <input type="number" name="qty" min="1" max="<?= max(1, $stock) ?>" value="1" <?= $stock <= 0 || !empty($staffPreview) ? 'disabled' : '' ?>>
-                        </label>
-                        <button type="submit" <?= $stock <= 0 || !empty($staffPreview) ? 'disabled' : '' ?>>Add to cart</button>
-                    </form>
-                </article>
-            <?php endforeach; ?>
-        </section>
+                </div>
+                <div class="shop-grid">
+                    <?php foreach ($groupItems as $item): ?>
+                        <?php
+                            $stock = (int) $item['StockQty'];
+                            $stockClass = $stock <= 0 ? 'stock-out' : ($stock <= 3 ? 'stock-low' : 'stock-ok');
+                        ?>
+                        <article class="shop-card">
+                            <img src="<?= htmlspecialchars(gift_shop_resolved_image_url($item)) ?>" alt="<?= htmlspecialchars($item['ItemName']) ?>" loading="lazy" decoding="async">
+                            <div class="shop-name"><?= htmlspecialchars($item['ShopName']) ?></div>
+                            <div class="item-name"><?= htmlspecialchars($item['ItemName']) ?></div>
+                            <?php if ($mostPopularShopItemID !== null && (int) $item['ShopItemID'] === $mostPopularShopItemID): ?>
+                                <div class="badge-popular" title="<?= htmlspecialchars($mostPopularLabel !== '' ? ($mostPopularLabel . ' is the top seller this month.') : 'Top seller this month.') ?>">
+                                    ★ Most popular this month
+                                </div>
+                            <?php endif; ?>
+                            <div class="meta">$<?= number_format((float) $item['Price'], 2) ?></div>
+                            <div class="meta <?= $stockClass ?>">
+                                Stock: <?= $stock <= 0 ? 'Out of stock' : $stock ?>
+                            </div>
+                            <form class="buy-form" method="POST" action="cart_action.php">
+                                <input type="hidden" name="action" value="add">
+                                <input type="hidden" name="type" value="shop">
+                                <input type="hidden" name="id" value="<?= (int) $item['ShopItemID'] ?>">
+                                <input type="hidden" name="redirect" value="<?= !empty($staffPreview) ? 'giftshop.php?preview=1' : 'giftshop.php?added=1' ?>">
+                                <label>
+                                    Quantity
+                                    <input type="number" name="qty" min="1" max="<?= max(1, $stock) ?>" value="1" <?= $stock <= 0 || !empty($staffPreview) ? 'disabled' : '' ?>>
+                                </label>
+                                <button type="submit" <?= $stock <= 0 || !empty($staffPreview) ? 'disabled' : '' ?>>Add to cart</button>
+                            </form>
+                        </article>
+                    <?php endforeach; ?>
+                </div>
+            </section>
+        <?php endforeach; ?>
     </main>
 </body>
 </html>
