@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/session_bootstrap.php';
 require_once 'db.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -7,7 +7,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = $_POST['password'];
 
     if (empty($email) || empty($password)) {
-        header('Location: sign-in.html?error=' . rawurlencode('All fields are required'));
+        header('Location: login.html?error=' . rawurlencode('All fields are required'));
         exit;
     }
 
@@ -16,6 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $customer = $stmt->fetch();
 
     if ($customer && password_verify($password, $customer['Password_Hash'])) {
+        unset($_SESSION['user_id']);
         $_SESSION['customer_id']   = $customer['CustomerID'];
         $_SESSION['firstname']     = $customer['FirstName'];
         $_SESSION['role']          = 'customer';
@@ -23,7 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    header('Location: sign-in.html?error=' . rawurlencode('Invalid email or password'));
+    header('Location: login.html?error=' . rawurlencode('Invalid email or password'));
     exit;
 }
 ?>

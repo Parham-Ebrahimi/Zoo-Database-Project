@@ -1,8 +1,11 @@
 <?php
-session_start();
-
+require_once __DIR__ . '/session_bootstrap.php';
 if (!isset($_SESSION['customer_id'])) {
-    header('Location: sign-in.html');
+    if (!empty($_SESSION['user_id'])) {
+        header('Location: dashboard.php');
+        exit;
+    }
+    header('Location: login.html');
     exit;
 }
 
@@ -108,12 +111,7 @@ $animals = $result->fetchAll(PDO::FETCH_ASSOC);
     <div class="page-wrapper">
         <header class="site-header">
             <a class="logo" href="index.php">Greenwood Zoo</a>
-            <nav>
-                <a href="customer-dashboard.php">Dashboard</a>
-                <a href="customer_animals_report.php">Animals</a>
-                <a href="buy-tickets.php">Buy tickets</a>
-                <a href="logout.php">Logout</a>
-            </nav>
+            <?php require __DIR__ . '/customer_nav.php'; ?>
         </header>
 
         <main id="main">

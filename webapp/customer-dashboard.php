@@ -1,7 +1,11 @@
 <?php
-session_start();
+require_once __DIR__ . '/session_bootstrap.php';
 if (!isset($_SESSION['customer_id'])) {
-    header('Location: sign-in.html');
+    if (!empty($_SESSION['user_id'])) {
+        header('Location: dashboard.php');
+        exit;
+    }
+    header('Location: login.html');
     exit;
 }
 require_once 'db.php';
@@ -315,17 +319,7 @@ $animalSpotlightImages = [
     <div class="profile-wrapper">
         <header class="site-header">
             <a class="logo" href="index.php">Greenwood Zoo</a>
-            <nav aria-label="Main">
-                <ul class="nav-links">
-                    <li><a href="index.php">Home</a></li>
-                    <li><a href="buy_tickets.php">Buy Tickets</a></li>
-                    <li><a href="cart.php">🛒 Cart</a></li>
-                    <li><a href="giftshop.php">Gift Shop</a></li>
-                    <li><a href="customer_animals_report.php">Animals</a></li>
-                    <li><a href="customer_profile.php">Profile</a></li>
-                    <li><a href="logout.php">Logout</a></li>
-                </ul>
-            </nav>
+            <?php require __DIR__ . '/customer_nav.php'; ?>
         </header>
 
         <div class="profile-card">
@@ -350,7 +344,12 @@ $animalSpotlightImages = [
                     <div class="dash-card">
                         <h2>Dining</h2>
                         <a href="restaurant.php" class="primary">🍽️ Restaurant</a>
-                        <a href="cart.php">🛒 View cart</a>
+                        
+                    </div>
+
+                    <div class="dash-card">
+                        <h2>Gift Shop</h2>
+                        <a href="giftshop.php" class="primary">🎁 Gift shop</a>
                     </div>
                 </aside>
 

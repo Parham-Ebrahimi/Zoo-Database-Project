@@ -236,22 +236,75 @@ form div.incorrect input{
     gap: 4px;
 }
 
+/* Report filters: undo global login form rules (form { max-width 400px }, icon labels, etc.) */
+.filter-card form {
+    width: 100%;
+    max-width: none;
+    margin-top: 0;
+    margin-bottom: 0;
+    align-items: stretch;
+}
+.filter-card form > div {
+    justify-content: flex-start;
+}
+.filter-card form label {
+    flex-shrink: unset;
+    width: auto;
+    height: auto;
+    min-height: 0;
+    background: none !important;
+    color: var(--text-color);
+    border-radius: 0;
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-align: left;
+    padding: 0;
+}
+.filter-card form div:has(input:focus) > label {
+    background-color: transparent !important;
+    color: var(--text-color);
+}
+.filter-card form input,
+.filter-card form select {
+    flex-grow: 0;
+    height: auto;
+    min-height: 38px;
+    padding: 6px 10px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    background: #fff;
+}
+.filter-card form input:hover,
+.filter-card form select:hover {
+    border: 2px solid var(--accent-color);
+}
+.filter-card form input:focus,
+.filter-card form select:focus {
+    outline: none;
+    border-color: var(--accent-color);
+}
+.filter-card form button {
+    margin-top: 0;
+}
+
 /* Report filters: sit in a tight row instead of stretching (minmax … 1fr) */
 .filter-card .filter-grid {
     display: flex;
     flex-wrap: wrap;
     align-items: flex-end;
-    gap: 8px 10px;
+    justify-content: flex-start;
+    gap: 10px 14px;
 }
 .filter-card .filter-grid > .filter-group {
-    flex: 0 1 150px;
-    max-width: 220px;
-    min-width: 118px;
+    flex: 1 1 160px;
+    max-width: none;
+    min-width: min(100%, 130px);
 }
 .filter-card .filter-grid > .filter-group.filter-group--wide {
-    flex: 1 1 200px;
-    max-width: min(100%, 400px);
-    min-width: min(100%, 180px);
+    flex: 2 1 220px;
+    max-width: none;
+    min-width: min(100%, 200px);
 }
 .filter-card .filter-grid > .filter-group input,
 .filter-card .filter-grid > .filter-group select {
@@ -262,12 +315,18 @@ form div.incorrect input{
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    align-items: flex-end;
-    flex: 1 1 auto;
+    align-items: center;
+    flex: 0 0 auto;
 }
 @media (min-width: 920px) {
     .filter-card .filter-grid > .filter-actions {
         margin-left: auto;
-        flex: 0 0 auto;
+    }
+}
+@media (max-width: 520px) {
+    .filter-card .filter-grid > .filter-group,
+    .filter-card .filter-grid > .filter-group.filter-group--wide {
+        flex: 1 1 100%;
+        min-width: 0;
     }
 }

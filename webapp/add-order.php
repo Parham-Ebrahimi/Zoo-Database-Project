@@ -1,7 +1,7 @@
 <?php
-session_start();
+require_once __DIR__ . '/session_bootstrap.php';
 if (!isset($_SESSION['user_id'])) {
-    header('Location: sign-in.html');
+    header('Location: login.html');
     exit;
 }
 require_once 'db.php';
@@ -11,6 +11,9 @@ if (!in_array($role, ['admin', 'Gift Shop Employee'], true)) {
     header('Location: dashboard.php');
     exit;
 }
+$dashboardBackHref = $role === 'Gift Shop Employee'
+    ? 'dashboard.php#gift-shop'
+    : 'dashboard.php#gift-shop-admin';
 
 $success = '';
 $error = '';
@@ -136,7 +139,7 @@ $items = $pdo->query("
 <body>
     <div class="page-wrap">
         <h1>Record Gift Shop Sale</h1>
-        <a class="btn back-btn" href="dashboard.php">Back to Dashboard</a>
+        <a class="btn back-btn" href="<?= htmlspecialchars($dashboardBackHref) ?>">Back to dashboard</a>
 
         <div class="panel">
             <?php if ($success !== ''): ?><div class="msg ok"><?= htmlspecialchars($success) ?></div><?php endif; ?>
