@@ -49,7 +49,7 @@ $show = static function (string $file) use ($self): bool {
             <li><a href="restaurant.php">Restaurant</a></li>
         <?php endif; ?>
         <?php if ($show('customer_animals_report.php')): ?>
-            <li><a href="customer_animals_report.php">Animals</a></li>
+            
         <?php endif; ?>
         <?php if ($show('customer_profile.php')): ?>
             <li><a href="customer_profile.php">Profile</a></li>
