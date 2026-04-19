@@ -47,6 +47,9 @@
         .fact-card span { font-size: 0.85rem; color: #555; }
         .back-link { display: inline-block; margin-bottom: 20px; color: #2d6a2d; text-decoration: none; font-weight: 600; }
         .back-link:hover { text-decoration: underline; }
+        .residents-table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+        .residents-table th, .residents-table td { text-align: left; padding: 10px 14px; border-bottom: 1px solid #d4ebd4; font-size: 0.9rem; }
+        .residents-table th { background: #e8f5e9; color: #2d6a2d; font-weight: 600; }
     </style>
 </head>
 <body>
@@ -97,8 +100,9 @@
 
         <?php
 require_once __DIR__ . '/../db.php';
-$animalSpecies = "African Savanna Elephant";
-$animalLabel   = "Elephants";
+$animalSpecies  = "African Savanna Elephant";
+$animalKeywords = "Elephant";
+$animalLabel    = "Elephants";
 require __DIR__ . '/_animal_residents.php';
 ?>
 

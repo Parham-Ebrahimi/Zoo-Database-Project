@@ -6,48 +6,51 @@
  *
  * Required variables (set before including this file):
  *   $pdo           – active PDO connection (from db.php)
- *   $animalSpecies – string or array of species names to match (exact, case-insensitive)
- *   $animalLabel   – display label used in the heading, e.g. 'Lion', 'Penguins'
+ *   $animalSpecies – string or array of species names (tried as exact match first)
+ *   $animalLabel   – display label, e.g. "Lion", "Penguins"
+ *
+ * Optional:
+ *   $animalKeywords – string or array of short keywords for LIKE fallback
+ *                     e.g. "Lion", ["Penguin"] — used when exact species name
+ *                     doesn't match what's stored in the DB
  */
 
 if (!isset($pdo) || !isset($animalSpecies) || !isset($animalLabel)) {
     return;
 }
 
-$speciesList  = is_array($animalSpecies) ? $animalSpecies : [$animalSpecies];
-$placeholders = implode(',', array_fill(0, count($speciesList), '?'));
-
-$residents = [];
+$speciesList = is_array($animalSpecies) ? $animalSpecies : [$animalSpecies];
+$residents   = [];
 
 try {
-    // Primary: exact match by Species (case-insensitive)
+    // Step 1: exact case-insensitive match on Species
+    $ph   = implode(',', array_fill(0, count($speciesList), '?'));
     $stmt = $pdo->prepare("
-        SELECT
-            a.Name,
-            a.Age,
-            a.Sex,
-            d.Diet_Type   AS Diet,
-            e.Enclosure_Name
+        SELECT a.Name, a.Age, a.Sex, d.Diet_Type AS Diet, e.Enclosure_Name
         FROM animal a
         LEFT JOIN enclosure e ON a.Enclosure_ID = e.Enclosure_ID
         LEFT JOIN diet d      ON a.Diet_ID       = d.Diet_ID
-        WHERE LOWER(a.Species) IN ($placeholders)
+        WHERE LOWER(a.Species) IN ($ph)
         ORDER BY a.Name
     ");
     $stmt->execute(array_map('strtolower', $speciesList));
     $residents = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Fallback: LIKE match in case DB species name differs slightly
+    // Step 2: LIKE fallback using $animalKeywords if set, otherwise derive from $animalLabel
     if (empty($residents)) {
-        $orClauses  = implode(' OR ', array_fill(0, count($speciesList), 'LOWER(a.Species) LIKE ?'));
-        $likeParams = array_map(fn($s) => '%' . strtolower($s) . '%', $speciesList);
+        if (isset($animalKeywords)) {
+            $keywords = is_array($animalKeywords) ? $animalKeywords : [$animalKeywords];
+        } else {
+            // Derive from label: split on space, use meaningful words (skip "Our", plurals handled)
+            $words    = preg_split('/\s+/', trim($animalLabel));
+            $keywords = $words; // try every word in the label as a LIKE pattern
+        }
+
+        $orClauses  = implode(' OR ', array_fill(0, count($keywords), 'LOWER(a.Species) LIKE ?'));
+        $likeParams = array_map(fn($k) => '%' . strtolower(trim($k)) . '%', $keywords);
+
         $stmt2 = $pdo->prepare("
-            SELECT
-                a.Name,
-                a.Age,
-                a.Sex,
-                d.Diet_Type   AS Diet,
-                e.Enclosure_Name
+            SELECT a.Name, a.Age, a.Sex, d.Diet_Type AS Diet, e.Enclosure_Name
             FROM animal a
             LEFT JOIN enclosure e ON a.Enclosure_ID = e.Enclosure_ID
             LEFT JOIN diet d      ON a.Diet_ID       = d.Diet_ID
