@@ -71,16 +71,15 @@ $errorMsg   = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $newDiagnosis = trim($_POST['diagnosis'] ?? '');
     $newTreatment = trim($_POST['treatment'] ?? '');
-    $newVetStatus = $_POST['vet_status'] ?? 'None';
+    $vetStatus    = $_POST['vet_status'] ?? 'Pending';
     $today        = date('Y-m-d');
 
-    $statusMap = [
-        'None'                => 'Pending',
-        'Under Treatment'     => 'Sick',
-        'Not Under Treatment' => 'Pending',
-        'Healthy'             => 'Healthy',
-    ];
-    $animalHealthStatus = $statusMap[$newVetStatus] ?? 'Pending';
+    $allowedStatuses = ['Healthy', 'Sick', 'Pending', 'Under Treatment'];
+    if (!in_array($vetStatus, $allowedStatuses, true)) {
+        $vetStatus = 'Pending';
+    }
+    // "Under Treatment" is a friendly label — maps to Sick in the database
+    $animalHealthStatus = ($vetStatus === 'Under Treatment') ? 'Sick' : $vetStatus;
 
     if ($animalHealthStatus === 'Healthy' && stripos($newDiagnosis, 'cured') === false) {
         $errorMsg = 'Cannot mark as Healthy: the diagnosis must say "cured" first.';
@@ -92,11 +91,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 vet_alerts_clear_stale_resolved_sick($pdo, $id);
             }
 
-            // Update animal Health_Status
             $pdo->prepare("UPDATE animal SET Health_Status=? WHERE Animal_ID=?")
                 ->execute([$animalHealthStatus, $id]);
 
-            // Cured_Date is set only when marking Healthy
             $curedDate = ($animalHealthStatus === 'Healthy') ? $today : null;
 
             if (!empty($animal['HealthRecord_ID'])) {
@@ -143,12 +140,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $isCuredAndRecorded = !empty($animal['Cured_Date']) && $animal['Health_Status'] === 'Healthy';
 
+// Map DB status to vet dropdown value
+// Sick shows as "Under Treatment" in the dropdown
 $dbToVetStatus = [
     'Sick'    => 'Under Treatment',
-    'Pending' => 'None',
+    'Pending' => 'Pending',
     'Healthy' => 'Healthy',
 ];
-$currentVetStatus = $dbToVetStatus[$animal['Health_Status']] ?? 'None';
+$currentVetStatus = $dbToVetStatus[$animal['Health_Status']] ?? 'Pending';
 $badgeClass = strtolower($animal['Health_Status']);
 ?>
 <!DOCTYPE html>
@@ -160,179 +159,61 @@ $badgeClass = strtolower($animal['Health_Status']);
     <link rel="stylesheet" href="style.css">
     <style>
         body { overflow: auto; }
-        .page-wrap {
-            box-sizing: border-box; min-height: 100vh;
-            padding: 28px clamp(16px, 3vw, 40px);
-            background-color: rgba(187, 223, 158, 0.95);
-        }
-        .page-inner {
-            max-width: 920px;
-            margin: 0 auto;
-            width: 100%;
-        }
-
-        .page-header {
-            display: flex; justify-content: space-between; align-items: flex-start;
-            gap: 16px; margin-bottom: 20px;
-            border-bottom: 3px solid var(--accent-color); padding-bottom: 14px;
-            flex-wrap: wrap;
-        }
-        .page-header h1 {
-            margin: 0; font-size: clamp(1.2rem, 2.2vw, 1.6rem);
-            font-weight: 800; color: var(--text-color);
-        }
+        .page-wrap { box-sizing: border-box; min-height: 100vh; padding: 28px clamp(16px, 3vw, 40px); background-color: rgba(187, 223, 158, 0.95); }
+        .page-inner { max-width: 920px; margin: 0 auto; width: 100%; }
+        .page-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 20px; border-bottom: 3px solid var(--accent-color); padding-bottom: 14px; flex-wrap: wrap; }
+        .page-header h1 { margin: 0; font-size: clamp(1.2rem, 2.2vw, 1.6rem); font-weight: 800; color: var(--text-color); }
         .page-header .sub { margin: 4px 0 0; font-size: 0.85rem; color: #555; }
         .header-right { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-
-        .logout-btn {
-            padding: 9px 20px; background: var(--accent-color); border: none;
-            border-radius: 1000px; font: inherit; font-weight: 600; cursor: pointer;
-            color: var(--text-color); text-decoration: none; display: inline-block;
-        }
+        .logout-btn { padding: 9px 20px; background: var(--accent-color); border: none; border-radius: 1000px; font: inherit; font-weight: 600; cursor: pointer; color: var(--text-color); text-decoration: none; display: inline-block; }
         .logout-btn:hover { background: var(--text-color); color: white; }
-        .back-btn {
-            display: inline-block; padding: 8px 16px;
-            background: white; border: 2px solid var(--accent-color);
-            border-radius: 8px; color: var(--text-color);
-            font-weight: 600; text-decoration: none; font-size: 0.88rem;
-        }
+        .back-btn { display: inline-block; padding: 8px 16px; background: white; border: 2px solid var(--accent-color); border-radius: 8px; color: var(--text-color); font-weight: 600; text-decoration: none; font-size: 0.88rem; }
         .back-btn:hover { background: var(--accent-color); text-decoration: none; }
-
-        .info-strip {
-            background: white; border-radius: 12px; padding: 16px 20px;
-            margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 16px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-            border-left: 4px solid var(--accent-color); align-items: center;
-        }
+        .info-strip { background: white; border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border-left: 4px solid var(--accent-color); align-items: center; }
         .info-strip.sick    { border-left-color: #e74c3c; }
         .info-strip.pending { border-left-color: #f39c12; }
         .animal-name { font-size: 1.05rem; font-weight: 800; color: var(--text-color); }
         .animal-sub  { font-size: 0.8rem; color: #666; margin-top: 3px; }
-        .status-badge {
-            display: inline-block; padding: 4px 12px; border-radius: 999px;
-            font-size: 0.74rem; font-weight: 700; text-transform: uppercase;
-        }
+        .status-badge { display: inline-block; padding: 4px 12px; border-radius: 999px; font-size: 0.74rem; font-weight: 700; text-transform: uppercase; }
         .badge-healthy { background: #d4edda; color: #155724; }
         .badge-sick    { background: #f8d7da; color: #721c24; }
         .badge-pending { background: #fff3cd; color: #856505; }
         .last-checkup  { font-size: 0.82rem; color: #777; }
         .last-checkup strong { color: var(--text-color); }
-
-        .alert {
-            border-radius: 10px; padding: 12px 16px; margin-bottom: 18px;
-            font-size: 0.88rem; font-weight: 600;
-        }
+        .alert { border-radius: 10px; padding: 12px 16px; margin-bottom: 18px; font-size: 0.88rem; font-weight: 600; }
         .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
         .alert-error   { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-
-        .cured-notice {
-            background: #d4edda; border: 1px solid #c3e6cb; border-radius: 10px;
-            padding: 12px 16px; font-size: 0.85rem; color: #155724;
-            font-weight: 600; margin-bottom: 18px; line-height: 1.5;
-        }
-
-        .form-card {
-            background: white; border-radius: 14px; padding: 26px 28px;
-            max-width: 100%;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.06);
-        }
-        /* Undo global login-style form rules from style.css (form { width: min(400px,100%); … }) */
-        #updateForm {
-            width: 100%;
-            max-width: none;
-            margin-top: 0;
-            margin-bottom: 0;
-            align-items: stretch;
-        }
-        #updateForm > div {
-            justify-content: flex-start;
-            width: 100%;
-        }
-        .section-label {
-            font-size: 0.72rem; font-weight: 800; letter-spacing: 0.09em;
-            text-transform: uppercase; color: #aaa; margin-bottom: 16px;
-            padding-bottom: 6px; border-bottom: 1px solid #f0f0f0;
-        }
-
+        .cured-notice { background: #d4edda; border: 1px solid #c3e6cb; border-radius: 10px; padding: 12px 16px; font-size: 0.85rem; color: #155724; font-weight: 600; margin-bottom: 18px; line-height: 1.5; }
+        .form-card { background: white; border-radius: 14px; padding: 26px 28px; max-width: 100%; box-shadow: 0 3px 10px rgba(0,0,0,0.06); }
+        #updateForm { width: 100%; max-width: none; margin-top: 0; margin-bottom: 0; align-items: stretch; }
+        #updateForm > div { justify-content: flex-start; width: 100%; }
+        .section-label { font-size: 0.72rem; font-weight: 800; letter-spacing: 0.09em; text-transform: uppercase; color: #aaa; margin-bottom: 16px; padding-bottom: 6px; border-bottom: 1px solid #f0f0f0; }
         .field-group { display: flex; flex-direction: column; gap: 5px; margin-bottom: 18px; }
-        .field-group label {
-            font-size: 0.88rem; font-weight: 700; color: var(--text-color);
-            width: auto; height: auto; background: none;
-            border-radius: 0; text-align: left; padding: 0;
-        }
-        .field-group textarea,
-        .field-group select {
-            padding: 10px 12px; border: 2px solid #e0e0e0; border-radius: 8px;
-            font: inherit; font-size: 0.92rem; background: white;
-            box-sizing: border-box; transition: border-color 150ms; width: 100%;
-        }
+        .field-group label { font-size: 0.88rem; font-weight: 700; color: var(--text-color); width: auto; height: auto; background: none; border-radius: 0; text-align: left; padding: 0; }
+        .field-group textarea, .field-group select { padding: 10px 12px; border: 2px solid #e0e0e0; border-radius: 8px; font: inherit; font-size: 0.92rem; background: white; box-sizing: border-box; transition: border-color 150ms; width: 100%; }
         .field-group textarea { resize: vertical; min-height: 90px; height: auto; }
-        .field-group textarea:focus,
-        .field-group select:focus  { outline: none; border-color: var(--accent-color); }
-
+        .field-group textarea:focus, .field-group select:focus { outline: none; border-color: var(--accent-color); }
         .status-hint      { font-size: 0.78rem; color: #888; margin-top: 5px; line-height: 1.5; }
         .status-hint.warn { color: #c0392b; font-weight: 600; }
         .status-hint.ok   { color: #155724; font-weight: 600; }
-
-        .checkup-box {
-            background: #f7fbf4; border: 2px solid #e0f0d8; border-radius: 8px;
-            padding: 10px 14px; font-size: 0.88rem; color: var(--text-color);
-            font-weight: 600; margin-bottom: 20px;
-        }
-        .checkup-box .note {
-            color: #888; font-weight: 500; font-size: 0.79rem;
-            display: block; margin-top: 3px;
-        }
-
+        .checkup-box { background: #f7fbf4; border: 2px solid #e0f0d8; border-radius: 8px; padding: 10px 14px; font-size: 0.88rem; color: var(--text-color); font-weight: 600; margin-bottom: 20px; }
+        .checkup-box .note { color: #888; font-weight: 500; font-size: 0.79rem; display: block; margin-top: 3px; }
         .submit-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-        .save-btn {
-            padding: 11px 30px; background: var(--accent-color); border: none;
-            border-radius: 1000px; font: inherit; font-weight: 700;
-            cursor: pointer; color: var(--text-color); font-size: 0.95rem;
-        }
+        .save-btn { padding: 11px 30px; background: var(--accent-color); border: none; border-radius: 1000px; font: inherit; font-weight: 700; cursor: pointer; color: var(--text-color); font-size: 0.95rem; }
         .save-btn:hover { background: var(--text-color); color: white; }
-
-        #notifPopup {
-            display: none; position: fixed; inset: 0;
-            background: rgba(0,0,0,0.4); z-index: 1000;
-            justify-content: center; align-items: center;
-        }
+        #notifPopup { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 1000; justify-content: center; align-items: center; }
         #notifPopup.show { display: flex; }
-        .popup-card {
-            background: white; border-radius: 16px;
-            max-width: 400px; width: 90%;
-            box-shadow: 0 14px 44px rgba(0,0,0,0.2);
-            animation: popIn 280ms cubic-bezier(.34,1.56,.64,1);
-            overflow: hidden; position: relative;
-        }
-        @keyframes popIn {
-            from { opacity: 0; transform: scale(0.88) translateY(16px); }
-            to   { opacity: 1; transform: scale(1)    translateY(0); }
-        }
-        .popup-top {
-            background: #c0392b; padding: 16px 20px; position: relative;
-        }
-        .popup-top .popup-type {
-            font-size: 0.7rem; font-weight: 800; letter-spacing: 0.1em;
-            text-transform: uppercase; color: rgba(255,255,255,0.8); margin-bottom: 4px;
-        }
+        .popup-card { background: white; border-radius: 16px; max-width: 400px; width: 90%; box-shadow: 0 14px 44px rgba(0,0,0,0.2); animation: popIn 280ms cubic-bezier(.34,1.56,.64,1); overflow: hidden; position: relative; }
+        @keyframes popIn { from { opacity: 0; transform: scale(0.88) translateY(16px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+        .popup-top { background: #c0392b; padding: 16px 20px; position: relative; }
+        .popup-top .popup-type { font-size: 0.7rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.8); margin-bottom: 4px; }
         .popup-top h2 { margin: 0; font-size: 1rem; font-weight: 800; color: white; }
-        .popup-x {
-            position: absolute; top: 12px; right: 14px;
-            background: rgba(255,255,255,0.2); border: none; border-radius: 6px;
-            color: white; font-size: 0.88rem; font-weight: 700;
-            cursor: pointer; padding: 3px 8px; line-height: 1;
-        }
+        .popup-x { position: absolute; top: 12px; right: 14px; background: rgba(255,255,255,0.2); border: none; border-radius: 6px; color: white; font-size: 0.88rem; font-weight: 700; cursor: pointer; padding: 3px 8px; line-height: 1; }
         .popup-x:hover { background: rgba(255,255,255,0.35); }
         .popup-body { padding: 18px 20px 20px; }
         .popup-body p { font-size: 0.88rem; color: #444; line-height: 1.6; margin: 0 0 16px; }
         .popup-body p strong { color: var(--text-color); }
-        .popup-dismiss {
-            width: 100%; padding: 10px; background: white;
-            border: 2px solid var(--accent-color); border-radius: 8px;
-            font: inherit; font-weight: 700; cursor: pointer;
-            color: var(--text-color); font-size: 0.88rem;
-        }
+        .popup-dismiss { width: 100%; padding: 10px; background: white; border: 2px solid var(--accent-color); border-radius: 8px; font: inherit; font-weight: 700; cursor: pointer; color: var(--text-color); font-size: 0.88rem; }
         .popup-dismiss:hover { background: var(--accent-color); }
     </style>
 </head>
@@ -363,10 +244,10 @@ $badgeClass = strtolower($animal['Health_Status']);
             <div class="animal-name"><?= htmlspecialchars($animal['Name']) ?></div>
             <div class="animal-sub">
                 <?= htmlspecialchars($animal['Species']) ?>
-                <?= $animal['Category']      ? ' &middot; ' . htmlspecialchars($animal['Category']) : '' ?>
-                <?= $animal['Age'] !== null  ? ' &middot; Age ' . (int)$animal['Age'] : '' ?>
-                <?= $animal['Sex']           ? ' &middot; ' . htmlspecialchars($animal['Sex']) : '' ?>
-                <?= $animal['Enclosure_Name']? ' &middot; ' . htmlspecialchars($animal['Enclosure_Name']) : '' ?>
+                <?= $animal['Category']       ? ' &middot; ' . htmlspecialchars($animal['Category']) : '' ?>
+                <?= $animal['Age'] !== null   ? ' &middot; Age ' . (int)$animal['Age'] : '' ?>
+                <?= $animal['Sex']            ? ' &middot; ' . htmlspecialchars($animal['Sex']) : '' ?>
+                <?= $animal['Enclosure_Name'] ? ' &middot; ' . htmlspecialchars($animal['Enclosure_Name']) : '' ?>
             </div>
         </div>
         <span class="status-badge badge-<?= $badgeClass ?>"><?= htmlspecialchars($animal['Health_Status']) ?></span>
@@ -386,7 +267,7 @@ $badgeClass = strtolower($animal['Health_Status']);
     <?php if ($isCuredAndRecorded): ?>
     <div class="cured-notice">
         This animal was recorded as cured on <?= htmlspecialchars($animal['Cured_Date']) ?>.
-        You can now reset the diagnosis, treatment, and status back to None.
+        You can now reset the diagnosis, treatment, and status back to Pending.
     </div>
     <?php endif; ?>
 
@@ -396,19 +277,14 @@ $badgeClass = strtolower($animal['Health_Status']);
 
             <div class="field-group">
                 <label for="diagnosisField">Diagnosis</label>
-                <textarea
-                    id="diagnosisField"
-                    name="diagnosis"
+                <textarea id="diagnosisField" name="diagnosis"
                     placeholder="Describe the diagnosis. Type 'Cured' once the animal has fully recovered."
                 ><?= htmlspecialchars($animal['Diagnosis']) ?></textarea>
             </div>
 
-            <!-- Treatment -->
             <div class="field-group">
                 <label for="treatmentField">Treatment</label>
-                <textarea
-                    id="treatmentField"
-                    name="treatment"
+                <textarea id="treatmentField" name="treatment"
                     placeholder="Describe the treatment or medication being given."
                 ><?= htmlspecialchars($animal['Treatment']) ?></textarea>
             </div>
@@ -416,16 +292,18 @@ $badgeClass = strtolower($animal['Health_Status']);
             <div class="field-group">
                 <label for="vetStatusField">Status</label>
                 <select id="vetStatusField" name="vet_status" onchange="onStatusChange(this.value)">
-                    <option value="None"                <?= $currentVetStatus === 'None'                ? 'selected' : '' ?>>None</option>
-                    <option value="Under Treatment"     <?= $currentVetStatus === 'Under Treatment'     ? 'selected' : '' ?>>Under Treatment</option>
-                    <option value="Not Under Treatment" <?= $currentVetStatus === 'Not Under Treatment' ? 'selected' : '' ?>>Not Under Treatment</option>
-                    <option value="Healthy"             <?= $currentVetStatus === 'Healthy'             ? 'selected' : '' ?>>Healthy</option>
+                    <option value="Pending"         <?= $currentVetStatus === 'Pending'         ? 'selected' : '' ?>>Pending</option>
+                    <option value="Sick"            <?= $currentVetStatus === 'Sick'            ? 'selected' : '' ?>>Sick</option>
+                    <option value="Under Treatment" <?= $currentVetStatus === 'Under Treatment' ? 'selected' : '' ?>>Under Treatment</option>
+                    <option value="Healthy"         <?= $currentVetStatus === 'Healthy'         ? 'selected' : '' ?>>Healthy</option>
                 </select>
                 <div class="status-hint" id="statusHint">
                     <?php if ($currentVetStatus === 'Healthy'): ?>
                         Animal is recorded as healthy.
                     <?php elseif ($currentVetStatus === 'Under Treatment'): ?>
-                        Animal is currently under treatment and marked as Sick.
+                        Animal is actively under treatment — saved as Sick in the database.
+                    <?php elseif ($currentVetStatus === 'Sick'): ?>
+                        Animal is marked Sick — requires veterinary attention.
                     <?php else: ?>
                         To mark as Healthy, type "Cured" in the diagnosis field first.
                     <?php endif; ?>
@@ -499,11 +377,11 @@ function onStatusChange(val) {
             hint.classList.add('ok');
         }
     } else if (val === 'Under Treatment') {
-        hint.textContent = 'Animal will be marked Sick and listed as under active treatment.';
-    } else if (val === 'Not Under Treatment') {
-        hint.textContent = 'Animal will be marked Pending — not currently receiving treatment.';
+        hint.textContent = 'Animal is actively under treatment — will be saved as Sick in the database.';
+    } else if (val === 'Sick') {
+        hint.textContent = 'Animal will be marked Sick — requires veterinary attention.';
     } else {
-        hint.textContent = 'Status set to None — animal will show as Pending review.';
+        hint.textContent = 'Animal will be marked Pending — awaiting review.';
     }
 }
 
