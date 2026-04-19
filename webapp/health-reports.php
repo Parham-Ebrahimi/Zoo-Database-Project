@@ -348,7 +348,7 @@ tbody tr:hover td { background:rgba(187,223,158,.15); }
 <!-- Filters -->
 <div class="filter-card">
     <h2>Filter animals</h2>
-    <form method="GET">
+    <form method="GET" autocomplete="off">
         <div class="filter-grid">
             <div class="filter-group">
                 <label>Health status</label>
