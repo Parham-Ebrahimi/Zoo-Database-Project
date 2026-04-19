@@ -3,7 +3,7 @@ session_start();
 require_once 'db.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: sign-in.html');
+    header('Location: login.html');
     exit;
 }
 
@@ -11,7 +11,7 @@ $identifier = trim($_POST['identifier'] ?? '');
 $password = $_POST['password'] ?? '';
 
 if ($identifier === '' || $password === '') {
-    header('Location: sign-in.html?error=' . rawurlencode('All fields are required'));
+    header('Location: login.html?error=' . rawurlencode('All fields are required'));
     exit;
 }
 
@@ -42,10 +42,20 @@ if ($staff) {
         $_SESSION['user_id'] = $staff['UserID'];
         $_SESSION['firstname'] = $staff['FirstName'];
         $_SESSION['role'] = $staff['Role'];
-        header('Location: admin-dashboard.php');
+
+        $role = $staff['Role'];
+        if ($role === 'admin') {
+            header('Location: dashboard.php');
+        } elseif ($role === 'caretaker') {
+            header('Location: caretaker_dashboard.php');
+        } elseif ($role === 'vet') {
+            header('Location: vet_dashboard.php');
+        } else {
+            header('Location: dashboard.php');
+        }
         exit;
     }
-    header('Location: sign-in.html?error=' . rawurlencode('Invalid email/username or password'));
+    header('Location: login.html?error=' . rawurlencode('Invalid email/username or password'));
     exit;
 }
 
@@ -63,5 +73,5 @@ if ($customer && password_verify($password, $customer['Password_Hash'])) {
     exit;
 }
 
-header('Location: sign-in.html?error=' . rawurlencode('Invalid email/username or password'));
+header('Location: login.html?error=' . rawurlencode('Invalid email/username or password'));
 exit;
