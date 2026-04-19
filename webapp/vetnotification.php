@@ -14,6 +14,7 @@ if (!$isAdmin && !staff_is_vet_role()) {
 }
 
 require_once 'db.php';
+require_once __DIR__ . '/vet_alerts_helpers.php';
 
 $empStmt = $pdo->prepare("SELECT EmployeeID FROM systemuser WHERE UserID = ?");
 $empStmt->execute([(int)$_SESSION['user_id']]);
@@ -91,6 +92,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         try {
             $pdo->beginTransaction();
+
+            if ($animal['Health_Status'] === 'Sick' && $animalHealthStatus !== 'Sick') {
+                vet_alerts_clear_stale_resolved_sick($pdo, $id);
+            }
 
             $enclosureVal = $newEnclosure > 0 ? $newEnclosure : null;
             $pdo->prepare("

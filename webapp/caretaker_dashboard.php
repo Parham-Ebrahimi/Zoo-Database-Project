@@ -17,6 +17,7 @@ if (!$isAdmin && !$isCaretakerSide && !$isVet) {
 }
 
 require_once 'db.php';
+require_once __DIR__ . '/vet_alerts_helpers.php';
 
 if ($isVet)        $pageTitle = 'Animal care board';
 elseif ($isAdmin)  $pageTitle = 'Caretaker tools';
@@ -32,7 +33,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     // The SQL trigger (trg_animal_sick_alert_after_update) fires automatically:
     //   • Sick        → inserts/refreshes a row in vet_alerts (IsResolved = 0)
     //   • Healthy/Pending (was Sick) → sets IsResolved = 1 in vet_alerts
-    // No extra PHP is needed here for alert management.
+    // If an older resolved SICK row still exists, that trigger step can violate
+    // uq_open_vet_alert; vet_alerts_clear_stale_resolved_sick() removes stale rows first.
     if ($_POST['action'] === 'update_health') {
         $animalId      = (int)($_POST['animal_id'] ?? 0);
         $allowedHealth = ['Healthy', 'Sick', 'Pending'];
@@ -40,10 +42,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                          ? $_POST['health_status'] : 'Healthy';
 
         if ($animalId > 0) {
-            $stmt = $pdo->prepare("UPDATE animal SET Health_Status = ? WHERE Animal_ID = ?");
-            $stmt->execute([$healthStatus, $animalId]);
+            try {
+                $pdo->beginTransaction();
+                if ($healthStatus !== 'Sick') {
+                    $prevStmt = $pdo->prepare('SELECT Health_Status FROM animal WHERE Animal_ID = ?');
+                    $prevStmt->execute([$animalId]);
+                    $prevHealth = $prevStmt->fetchColumn();
+                    if ($prevHealth === 'Sick') {
+                        vet_alerts_clear_stale_resolved_sick($pdo, $animalId);
+                    }
+                }
+                $stmt = $pdo->prepare("UPDATE animal SET Health_Status = ? WHERE Animal_ID = ?");
+                $stmt->execute([$healthStatus, $animalId]);
+                $pdo->commit();
+            } catch (Throwable $e) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                $message     = 'Could not update health status. Please try again or contact an administrator.';
+                $messageType = 'warning';
+            }
 
-            if ($healthStatus === 'Sick') {
+            if ($message !== '') {
+                // error path: skip success copy below
+            } elseif ($healthStatus === 'Sick') {
                 $message     = 'Health status updated to Sick. A vet alert has been automatically raised.';
                 $messageType = 'warning';
             } elseif ($healthStatus === 'Healthy') {
