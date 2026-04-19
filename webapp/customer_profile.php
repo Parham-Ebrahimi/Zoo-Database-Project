@@ -1,6 +1,10 @@
 <?php
-session_start();
+require_once __DIR__ . '/session_bootstrap.php';
 if (!isset($_SESSION['customer_id'])) {
+    if (!empty($_SESSION['user_id'])) {
+        header('Location: dashboard.php');
+        exit;
+    }
     header('Location: login.html');
     exit;
 }
@@ -159,16 +163,7 @@ $myTickets = $tickets->fetchAll();
 <body>
     <header class="site-header">
         <a class="logo" href="index.php">Greenwood Zoo</a>
-        <nav aria-label="Main">
-            <ul class="nav-links">
-                <li><a href="index.php">Home</a></li>
-                <li><a href="buy_tickets.php">Buy Tickets</a></li>
-                <li><a href="giftshop.php">Gift Shop</a></li>
-                <li><a href="customer_animals_report.php">Animals</a></li>
-                <li><span>Welcome, <?= htmlspecialchars($_SESSION['firstname']) ?></span></li>
-                <li><a href="logout.php">Logout</a></li>
-            </ul>
-        </nav>
+        <?php require __DIR__ . '/customer_nav.php'; ?>
     </header>
 
     <div class="profile-wrapper">

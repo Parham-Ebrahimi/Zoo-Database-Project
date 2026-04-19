@@ -1,8 +1,22 @@
 <?php
-session_start();
+require_once __DIR__ . '/session_bootstrap.php';
 if (!isset($_SESSION['user_id'])) { header('Location: login.html'); exit; }
 if (!in_array(strtolower($_SESSION['role']), ['admin'])) { header('Location: dashboard.php'); exit; }
 require 'db.php';
+
+function display_dept(?string $dept): string
+{
+    $d = trim((string) $dept);
+    if ($d === '') return 'Unassigned';
+    return $d === 'Retail' ? 'Gift Shop' : $d;
+}
+
+function display_role(?string $role): string
+{
+    $r = trim((string) $role);
+    if ($r === '') return '—';
+    return in_array($r, ['Cashier', 'Shop'], true) ? 'Gift Shop Employee' : $r;
+}
 
 // Filters
 $f_dept      = $_GET['dept']      ?? '';
@@ -178,15 +192,21 @@ body { overflow: auto; }
 .back-btn {
     display: inline-block;
     margin-bottom: 14px;
-    padding: 7px 14px;
-    background-color: var(--base-color);
-    border-radius: 8px;
-    color: var(--text-color);
-    font-weight: 600;
+    border-radius: 9999px;
+    padding: 14px 36px;
+    background: #7cb869;
+    color: #1a3d1c;
+    font-weight: 700;
+    font-size: 0.95rem;
     text-decoration: none;
-    font-size: 0.88rem;
+    letter-spacing: 0.01em;
+    box-shadow: 0 1px 2px rgba(26, 61, 28, 0.12);
 }
-.back-btn:hover { background-color: var(--accent-color); }
+.back-btn:hover {
+    background: #6daa5a;
+    color: #132a14;
+    text-decoration: none;
+}
 .logout-btn {
     padding: 10px 22px;
     background-color: var(--accent-color);
@@ -479,7 +499,7 @@ tfoot td{background:var(--base-color);font-weight:700;padding:10px 13px;border-t
                 <select id="emp_dept" name="dept">
                     <option value="">All departments</option>
                     <?php foreach ($departments as $d): ?>
-                    <option value="<?= htmlspecialchars($d) ?>" <?= $f_dept === $d ? 'selected' : '' ?>><?= htmlspecialchars($d) ?></option>
+                    <option value="<?= htmlspecialchars($d) ?>" <?= $f_dept === $d ? 'selected' : '' ?>><?= htmlspecialchars(display_dept($d)) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
@@ -488,7 +508,7 @@ tfoot td{background:var(--base-color);font-weight:700;padding:10px 13px;border-t
                 <select id="emp_role" name="role">
                     <option value="">All roles</option>
                     <?php foreach ($roles as $r): ?>
-                    <option value="<?= htmlspecialchars($r) ?>" <?= $f_role === $r ? 'selected' : '' ?>><?= htmlspecialchars($r) ?></option>
+                    <option value="<?= htmlspecialchars($r) ?>" <?= $f_role === $r ? 'selected' : '' ?>><?= htmlspecialchars(display_role($r)) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
@@ -541,6 +561,7 @@ tfoot td{background:var(--base-color);font-weight:700;padding:10px 13px;border-t
     <button type="button" class="tab-btn" onclick="showTab('departments', this)"> Departments</button>
     <button type="button" class="tab-btn" onclick="showTab('caretakers', this)"> Caretakers</button>
     <button type="button" class="tab-btn" onclick="showTab('vets', this)"> Vets</button>
+    <button type="button" class="tab-btn" onclick="showTab('giftshop', this)"> Gift Shop Employees</button>
     <button type="button" class="tab-btn" onclick="showTab('salary', this)"> Salary</button>
     <button type="button" class="tab-btn" onclick="showTab('directory', this)">Directory</button>
 </div>
@@ -584,7 +605,7 @@ tfoot td{background:var(--base-color);font-weight:700;padding:10px 13px;border-t
         <tbody>
         <?php foreach ($deptRows as $r): ?>
         <tr>
-            <td><strong><?= htmlspecialchars($r['Department'] ?? 'Unassigned') ?></strong></td>
+            <td><strong><?= htmlspecialchars(display_dept($r['Department'] ?? null)) ?></strong></td>
             <td style="font-weight:700"><?= $r['Headcount'] ?></td>
             <td class="amt">$<?= number_format($r['TotalSalary'],0) ?></td>
             <td>$<?= number_format($r['AvgSalary'],0) ?></td>
@@ -606,7 +627,7 @@ tfoot td{background:var(--base-color);font-weight:700;padding:10px 13px;border-t
     <?php foreach ($deptRows as $dept):
         $deptEmps = array_filter($employees, fn($e) => ($e['Department'] ?? '') === ($dept['Department'] ?? ''));
     ?>
-    <span class="section-hdr" style="margin-top:18px"><?= htmlspecialchars($dept['Department'] ?? 'Unassigned') ?> (<?= count($deptEmps) ?>)</span>
+    <span class="section-hdr" style="margin-top:18px"><?= htmlspecialchars(display_dept($dept['Department'] ?? null)) ?> (<?= count($deptEmps) ?>)</span>
     <div class="tw"><table>
         <thead>
             <tr>
@@ -624,7 +645,7 @@ tfoot td{background:var(--base-color);font-weight:700;padding:10px 13px;border-t
         <?php foreach ($deptEmps as $e): ?>
         <tr>
             <td><strong><?= htmlspecialchars($e['FullName']) ?></strong></td>
-            <td><?= htmlspecialchars($e['Role']) ?></td>
+            <td><?= htmlspecialchars(display_role($e['Role'] ?? null)) ?></td>
             <td><?= $e['HireDate'] ? date('M j, Y', strtotime($e['HireDate'])) : '—' ?></td>
             <td><?= $e['YearsWorked'] ?? '—' ?> yr</td>
             <td class="amt">$<?= number_format($e['Salary'],0) ?></td>
@@ -781,6 +802,45 @@ tfoot td{background:var(--base-color);font-weight:700;padding:10px 13px;border-t
     <?php endif; ?>
 </div>
 
+<div id="tab-giftshop" class="tab-content">
+    <span class="section-hdr">Gift shop employees</span>
+    <?php
+    $giftShopEmps = array_values(array_filter($employees, function ($e) {
+        $dept = trim((string) ($e['Department'] ?? ''));
+        $role = trim((string) ($e['Role'] ?? ''));
+        $sys  = trim((string) ($e['SystemRole'] ?? ''));
+        return in_array($role, ['Cashier', 'Shop', 'Gift Shop Employee'], true)
+            || $dept === 'Retail'
+            || $sys === 'Gift Shop Employee';
+    }));
+    ?>
+    <?php if (empty($giftShopEmps)): ?>
+        <p class="no-data">No gift shop employees match the current filters.</p>
+    <?php else: ?>
+    <?php foreach ($giftShopEmps as $e):
+        $initials = strtoupper(substr((string)($e['FirstName'] ?? $e['FullName'] ?? 'G'), 0, 1));
+        $isActive = strtolower((string)($e['Status'] ?? 'active')) === 'active' ? 1 : 0;
+        $hasLogin = !empty($e['Username']) ? 1 : 0;
+    ?>
+    <div class="workload-card">
+        <div class="wl-avatar" style="background:#16a085"><?= htmlspecialchars($initials) ?></div>
+        <div class="wl-info">
+            <div class="wl-name"><?= htmlspecialchars($e['FullName']) ?></div>
+            <div class="wl-sub">
+                <?= htmlspecialchars(display_dept($e['Department'] ?? null)) ?> · <?= htmlspecialchars(display_role($e['Role'] ?? null)) ?>
+                <?php if (!empty($e['Username'])): ?>&nbsp;·&nbsp;@<?= htmlspecialchars($e['Username']) ?><?php endif; ?>
+            </div>
+        </div>
+        <div style="display:flex;gap:16px;text-align:center">
+            <div class="wl-stat"><div class="num" style="color:#27ae60"><?= $isActive ?></div><div class="lbl">active</div></div>
+            <div class="wl-stat"><div class="num" style="color:#2980b9"><?= $hasLogin ?></div><div class="lbl">login</div></div>
+            <div class="wl-stat"><div class="num"><?= (int)($e['YearsWorked'] ?? 0) ?></div><div class="lbl">years</div></div>
+        </div>
+    </div>
+    <?php endforeach; ?>
+    <?php endif; ?>
+</div>
+
 <div id="tab-salary" class="tab-content">
     <span class="section-hdr">Salary analysis</span>
     <div class="chart-grid" style="margin-bottom:18px">
@@ -818,8 +878,8 @@ tfoot td{background:var(--base-color);font-weight:700;padding:10px 13px;border-t
         ?>
         <tr>
             <td><strong><?= htmlspecialchars($e['FullName']) ?></strong></td>
-            <td style="font-size:.78rem;color:#888"><?= htmlspecialchars($e['Department'] ?? '—') ?></td>
-            <td><?= htmlspecialchars($e['Role']) ?></td>
+            <td style="font-size:.78rem;color:#888"><?= htmlspecialchars(display_dept($e['Department'] ?? null)) ?></td>
+            <td><?= htmlspecialchars(display_role($e['Role'] ?? null)) ?></td>
             <td class="amt">$<?= number_format($e['Salary'],0) ?></td>
             <td style="color:<?= $diffColor ?>;font-weight:600;font-size:.78rem"><?= ($diff>=0?'+':'').number_format($diff,1) ?>%</td>
             <td style="font-size:.78rem"><?= $e['HireDate'] ? date('M j, Y',strtotime($e['HireDate'])) : '—' ?></td>
@@ -866,8 +926,8 @@ tfoot td{background:var(--base-color);font-weight:700;padding:10px 13px;border-t
                 <div style="font-size:.7rem;color:#aaa">@<?= htmlspecialchars($e['Username']) ?></div>
                 <?php endif; ?>
             </td>
-            <td style="font-size:.78rem"><?= htmlspecialchars($e['Department'] ?? '—') ?></td>
-            <td><?= htmlspecialchars($e['Role']) ?></td>
+            <td style="font-size:.78rem"><?= htmlspecialchars(display_dept($e['Department'] ?? null)) ?></td>
+            <td><?= htmlspecialchars(display_role($e['Role'] ?? null)) ?></td>
             <td><?= htmlspecialchars($e['Sex'] ?? '—') ?></td>
             <td><?= $e['Age'] ?? '—' ?></td>
             <td style="font-size:.78rem"><?= $e['HireDate'] ? date('M j, Y',strtotime($e['HireDate'])) : '—' ?></td>
@@ -973,11 +1033,11 @@ const opts = { responsive:true, maintainAspectRatio:false,
     scales:{ x:{ ticks:{ font:{size:10} } }, y:{ ticks:{ font:{size:10} } } }
 };
 
-const deptLabels  = <?= json_encode(array_column($deptRows,'Department')) ?>;
+const deptLabels  = <?= json_encode(array_map(fn($row) => display_dept($row['Department'] ?? null), $deptRows)) ?>;
 const deptCounts  = <?= json_encode(array_map('intval', array_column($deptRows,'Headcount'))) ?>;
 const deptAvgSal  = <?= json_encode(array_map('floatval', array_column($deptRows,'AvgSalary'))) ?>;
 const deptTotSal  = <?= json_encode(array_map('floatval', array_column($deptRows,'TotalSalary'))) ?>;
-const roleLabels  = <?= json_encode(array_column($roleRows,'Role')) ?>;
+const roleLabels  = <?= json_encode(array_map(fn($row) => display_role($row['Role'] ?? null), $roleRows)) ?>;
 const roleCounts  = <?= json_encode(array_map('intval', array_column($roleRows,'Headcount'))) ?>;
 const roleAvgSal  = <?= json_encode(array_map('floatval', array_column($roleRows,'AvgSalary'))) ?>;
 const hireLabels  = <?= json_encode(array_column($hireRows,'YearHired')) ?>;

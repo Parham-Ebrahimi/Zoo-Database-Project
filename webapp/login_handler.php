@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/session_bootstrap.php';
 require_once 'db.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -53,13 +53,14 @@ if ($user && password_verify($password, $user['PasswordHash'])) {
     $_SESSION['firstname'] = $user['FirstName'];
     $_SESSION['role'] = $user['Role'];
 
-    if ($user['Role'] === 'admin') {
+    $r = $user['Role'];
+    if ($r === 'admin') {
         header('location: dashboard.php');
     }
-    else if (strtolower($user['Role']) === 'caretaker') {
+    else if (strtolower((string) $r) === 'caretaker') {
         header('location: caretaker_dashboard.php');
     }
-    else if ($user['Role'] === 'vet') {
+    else if (strtolower((string) $r) === 'vet') {
         header('location: vet_dashboard.php');
     }
     else {

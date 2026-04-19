@@ -1,20 +1,15 @@
 <?php
 /**
- * Seeds one staff login for gift shop pages (dashboard.php → Record Sale, etc.).
- * Run once in browser or: php create_gift_shop_user.php
- *
- * - systemuser.Role = "Gift Shop Employee" — this is what PHP checks (login session).
- * - employees.Role = "Cashier" — job title in the HR table; not the same field as systemuser.Role,
- *   but Cashier is the usual match for a shop role.
- *
- * Login (login.html): giftshop1 / giftshop123
+ * Sets systemuser.Role to "Gift Shop Employee" (exact string). The staff gift shop hub
+ * on dashboard.php only appears for that role. Wrong dashboard? Fix DB, e.g.:
+ * UPDATE systemuser SET Role = 'Gift Shop Employee' WHERE Username = 'gsemployee1';
  */
 require_once 'db.php';
 
 $username = 'giftshop1';
 $password = 'giftshop123';
 $systemRole = 'Gift Shop Employee';
-$employeesJobRole = 'Cashier';
+$employeesJobRole = 'Gift Shop Employee';
 $firstname = 'Gift';
 $lastname = 'Shop';
 

@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/session_bootstrap.php';
 if (!isset($_SESSION['user_id'])) { header('Location: login.html'); exit; }
 if (!in_array(strtolower($_SESSION['role']), ['admin'])) { header('Location: dashboard.php'); exit; }
 require 'db.php';
@@ -27,9 +27,9 @@ $periodMap = [
 // ── Category filter ───────────────────────────────────────────────
 $catWhere  = '';
 $catParams = [];
-if ($f_category === 'ticket') { $catWhere = 'AND o.OrderCategoryID BETWEEN 1 AND 5'; }
-elseif ($f_category === 'food')   { $catWhere = 'AND o.OrderCategoryID = 6'; }
-elseif ($f_category === 'shop')   { $catWhere = 'AND o.OrderCategoryID = 7'; }
+if ($f_category === 'ticket') { $catWhere = 'AND o.OrderCategoryID BETWEEN 1 AND 4'; }
+elseif ($f_category === 'food')   { $catWhere = 'AND o.OrderCategoryID = 5'; }
+elseif ($f_category === 'shop')   { $catWhere = 'AND o.OrderCategoryID = 6'; }
 
 $extraWhere  = '';
 $extraParams = [];
@@ -46,15 +46,15 @@ $baseParams = [$f_from, $f_to, ...$extraParams];
 // ── Summary totals ────────────────────────────────────────────────
 $sumStmt = $pdo->prepare("
     SELECT
-        SUM(CASE WHEN o.OrderCategoryID BETWEEN 1 AND 5 THEN o.TransactionAmount ELSE 0 END) AS TicketRev,
-        SUM(CASE WHEN o.OrderCategoryID = 6             THEN o.TransactionAmount ELSE 0 END) AS FoodRev,
-        SUM(CASE WHEN o.OrderCategoryID = 7             THEN o.TransactionAmount ELSE 0 END) AS ShopRev,
+        SUM(CASE WHEN o.OrderCategoryID BETWEEN 1 AND 4 THEN o.TransactionAmount ELSE 0 END) AS TicketRev,
+        SUM(CASE WHEN o.OrderCategoryID = 5             THEN o.TransactionAmount ELSE 0 END) AS FoodRev,
+        SUM(CASE WHEN o.OrderCategoryID = 6             THEN o.TransactionAmount ELSE 0 END) AS ShopRev,
         SUM(o.TransactionAmount) AS TotalRev,
         COUNT(DISTINCT o.OrderID) AS TotalOrders,
         COUNT(DISTINCT o.CustomerID) AS UniqueCustomers,
         SUM(COALESCE(ot.Quantity,1)) AS TotalTickets
     FROM orders o
-    LEFT JOIN order_tickets ot ON ot.OrderID = o.OrderID AND o.OrderCategoryID BETWEEN 1 AND 5
+    LEFT JOIN order_tickets ot ON ot.OrderID = o.OrderID AND o.OrderCategoryID BETWEEN 1 AND 4
     LEFT JOIN customers c ON o.CustomerID = c.CustomerID
     WHERE o.OrderDate BETWEEN ? AND ? $extraWhere
 ");
@@ -67,9 +67,9 @@ $periodStmt = $pdo->prepare("
         $periodKey AS PK,
         $periodLabel AS PLabel,
         MIN(o.OrderDate) AS PeriodStart,
-        SUM(CASE WHEN o.OrderCategoryID BETWEEN 1 AND 5 THEN o.TransactionAmount ELSE 0 END) AS TicketRev,
-        SUM(CASE WHEN o.OrderCategoryID = 6             THEN o.TransactionAmount ELSE 0 END) AS FoodRev,
-        SUM(CASE WHEN o.OrderCategoryID = 7             THEN o.TransactionAmount ELSE 0 END) AS ShopRev,
+        SUM(CASE WHEN o.OrderCategoryID BETWEEN 1 AND 4 THEN o.TransactionAmount ELSE 0 END) AS TicketRev,
+        SUM(CASE WHEN o.OrderCategoryID = 5             THEN o.TransactionAmount ELSE 0 END) AS FoodRev,
+        SUM(CASE WHEN o.OrderCategoryID = 6             THEN o.TransactionAmount ELSE 0 END) AS ShopRev,
         SUM(o.TransactionAmount) AS TotalRev,
         COUNT(DISTINCT o.OrderID) AS Orders
     FROM orders o
@@ -91,7 +91,7 @@ $ticketBreakdown = $pdo->prepare("
     JOIN ordercategories oc ON o.OrderCategoryID = oc.OrderCategoryID
     JOIN order_tickets ot   ON ot.OrderID = o.OrderID
     LEFT JOIN customers c   ON o.CustomerID = c.CustomerID
-    WHERE o.OrderDate BETWEEN ? AND ? AND o.OrderCategoryID BETWEEN 1 AND 5 $extraWhere
+    WHERE o.OrderDate BETWEEN ? AND ? AND o.OrderCategoryID BETWEEN 1 AND 4 $extraWhere
     GROUP BY oc.OrderCategoryID, oc.CategoryName, oc.Price
     ORDER BY Revenue DESC
 ");
@@ -130,6 +130,22 @@ $shopBreakdown = $pdo->prepare("
 $shopBreakdown->execute($baseParams);
 $shopRows = $shopBreakdown->fetchAll(PDO::FETCH_ASSOC);
 
+// ── Gift shop revenue by physical shop (for doughnut) ─────────────
+$shopByShopStmt = $pdo->prepare("
+    SELECT s.ShopName,
+           SUM(si.Price * osi.Quantity) AS Revenue
+    FROM orders o
+    INNER JOIN order_shop_items osi ON osi.OrderID = o.OrderID
+    INNER JOIN shop_items si ON si.ShopItemID = osi.ShopItemID
+    INNER JOIN shops s ON s.ShopID = si.ShopID
+    LEFT JOIN customers c ON o.CustomerID = c.CustomerID
+    WHERE o.OrderDate BETWEEN ? AND ? AND o.OrderCategoryID = 6 $extraWhere
+    GROUP BY s.ShopID, s.ShopName
+    ORDER BY Revenue DESC
+");
+$shopByShopStmt->execute($baseParams);
+$shopByShopRows = $shopByShopStmt->fetchAll(PDO::FETCH_ASSOC);
+
 // ── Payment method breakdown ──────────────────────────────────────
 $paymentBreakdown = $pdo->prepare("
     SELECT o.PaymentMode,
@@ -161,7 +177,7 @@ $topCustRows = $topCustomers->fetchAll(PDO::FETCH_ASSOC);
 
 
 // ── Raw ticket orders ─────────────────────────────────────────────
-$rawTicketWhere = "o.OrderDate BETWEEN ? AND ? AND o.OrderCategoryID BETWEEN 1 AND 5";
+$rawTicketWhere = "o.OrderDate BETWEEN ? AND ? AND o.OrderCategoryID BETWEEN 1 AND 4";
 $rawTicketParams = [$f_from, $f_to, ...$extraParams];
 if ($f_payment)  { $rawTicketWhere .= ' AND o.PaymentMode = ?'; }
 if ($f_customer) { $rawTicketWhere .= ' AND (c.FirstName LIKE ? OR c.LastName LIKE ? OR c.Email LIKE ?)'; }
@@ -268,16 +284,7 @@ $hasFilters = array_filter([$f_payment, $f_customer, $f_amt_min, $f_amt_max])
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Revenue & Sales Report</title>
 <link rel="stylesheet" href="style.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js">
-function toggleRaw(btn, id) {
-    const body = document.getElementById(id);
-    body.classList.toggle('open');
-    btn.classList.toggle('open');
-    const arrow = btn.querySelector('.arrow');
-    arrow.textContent = body.classList.contains('open') ? '▼' : '▶';
-}
-
-</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 body{overflow:auto}
 .pw{box-sizing:border-box;min-height:100vh;padding:28px 36px;background:rgba(187,223,158,.97)}
@@ -397,7 +404,7 @@ tfoot td{background:var(--base-color);font-weight:700;padding:10px 13px;border-t
         </p>
     </div>
     <div class="hbtns">
-        <a href="dashboard.php" class="bn">← Dashboard</a>
+        <a href="dashboard.php#gift-shop-admin" class="bn">← Dashboard</a>
         <a href="logout.php" class="bl">Logout</a>
     </div>
 </div>
@@ -696,6 +703,13 @@ tfoot td{background:var(--base-color);font-weight:700;padding:10px 13px;border-t
     <?php else:
         $maxS = max(array_column($shopRows,'Revenue') ?: [1]);
     ?>
+    <?php if (!empty($shopByShopRows)): ?>
+    <div class="chart-card" style="margin-bottom:16px">
+        <h3>Revenue by shop</h3>
+        <p class="rc" style="margin-top:-6px;margin-bottom:12px">Gift shop line revenue attributed to each store (same filters as below).</p>
+        <div class="chart-wrap-sm"><canvas id="shopByShopDonut" aria-label="Revenue share by gift shop"></canvas></div>
+    </div>
+    <?php endif; ?>
     <div class="tw"><table>
         <thead><tr><th>Item</th><th>Unit price</th><th>Qty sold</th><th>Revenue</th><th>Share</th><th>Bar</th></tr></thead>
         <tbody>
@@ -940,12 +954,15 @@ const shopNames   = <?= json_encode(array_column($shopRows, 'ItemName')) ?>;
 const shopRevs    = <?= json_encode(array_map('floatval', array_column($shopRows, 'Revenue'))) ?>;
 const payNames    = <?= json_encode(array_column($paymentRows, 'PaymentMode')) ?>;
 const payRevs     = <?= json_encode(array_map('floatval', array_column($paymentRows, 'Revenue'))) ?>;
+const shopByShopLabels = <?= json_encode(array_column($shopByShopRows, 'ShopName'), JSON_UNESCAPED_UNICODE) ?>;
+const shopByShopRevs   = <?= json_encode(array_map('floatval', array_column($shopByShopRows, 'Revenue'))) ?>;
 
 const green  = '#27ae60';
 const blue   = '#2980b9';
 const orange = '#e67e22';
 const purple = '#8e44ad';
 const accent = '#6ac473';
+const shopByShopPalette = ['#8e44ad','#2980b9','#e67e22','#27ae60','#9b59b6','#16a085','#d35400','#3498db','#c0392b','#1abc9c','#34495e','#f39c12'];
 
 const defaults = { responsive:true, maintainAspectRatio:false,
     plugins:{ legend:{ labels:{ font:{ family:'Montserrat,sans-serif', size:11 } } } },
@@ -1013,6 +1030,39 @@ if (foodNames.length) new Chart(document.getElementById('foodChart'), {
         plugins:{ ...defaults.plugins, legend:{display:false}, tooltip:{ callbacks:{ label: ctx => ' $'+ctx.parsed.x.toFixed(2) } } },
         scales:{ x:{ ticks:{ callback: v => '$'+v, font:{size:10} } }, y:{ ticks:{ font:{size:10} } } } }
 });
+
+// Gift shop revenue by store (doughnut)
+if (shopByShopLabels.length && document.getElementById('shopByShopDonut')) {
+    const bgShop = shopByShopLabels.map((_, i) => shopByShopPalette[i % shopByShopPalette.length]);
+    new Chart(document.getElementById('shopByShopDonut'), {
+        type: 'doughnut',
+        data: {
+            labels: shopByShopLabels,
+            datasets: [{
+                data: shopByShopRevs,
+                backgroundColor: bgShop,
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '62%',
+            plugins: {
+                legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12, padding: 12 } },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => {
+                            const v = typeof ctx.parsed === 'number' ? ctx.parsed : ctx.raw;
+                            return ' $' + Number(v).toFixed(2);
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
 
 // Shop horizontal bar
 if (shopNames.length) new Chart(document.getElementById('shopChart'), {

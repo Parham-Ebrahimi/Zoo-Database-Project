@@ -1,7 +1,10 @@
 <?php
-session_start();
-
+require_once __DIR__ . '/session_bootstrap.php';
 if (!isset($_SESSION['user_id'])) {
+    if (!empty($_SESSION['customer_id'])) {
+        header('Location: customer-dashboard.php');
+        exit;
+    }
     header('Location: login.html');
     exit;
 }
@@ -10,12 +13,70 @@ require 'db.php';
 
 $role = $_SESSION['role'];
 $firstname = $_SESSION['firstname'];
+$roleLower = strtolower(trim((string) $role));
+$isAdmin = ($role === 'admin');
+$isVet = ($roleLower === 'vet');
+$isCaretaker = ($roleLower === 'caretaker');
+$isCashier = ($roleLower === 'cashier');
+$isGiftShopEmployee = ($role === 'Gift Shop Employee');
 
 // Quick stats for admin
 $totalAnimals   = $pdo->query("SELECT COUNT(*) FROM animal")->fetchColumn();
 $totalEmployees = $pdo->query("SELECT COUNT(*) FROM employees")->fetchColumn();
 $pendingHealth  = $pdo->query("SELECT COUNT(*) FROM animal WHERE Health_Status != 'Healthy'")->fetchColumn();
 $todayRevenue   = $pdo->query("SELECT TotalRevenue FROM daily_revenue WHERE RevenueDate = CURDATE()")->fetchColumn() ?? 0;
+
+$giftShopSnapshot = null;
+if ($isGiftShopEmployee) {
+    $gsMonthStart = date('Y-m-01');
+    $gsNextMonth  = date('Y-m-01', strtotime('first day of next month'));
+    try {
+        $st = $pdo->prepare("
+            SELECT COALESCE(SUM(o.TransactionAmount), 0)
+            FROM orders o
+            WHERE o.OrderCategoryID = 6 AND o.OrderDate >= ? AND o.OrderDate < ?
+        ");
+        $st->execute([$gsMonthStart, $gsNextMonth]);
+        $mtdRevenue = (float) $st->fetchColumn();
+
+        $st = $pdo->prepare("
+            SELECT COALESCE(SUM(osi.Quantity), 0)
+            FROM order_shop_items osi
+            INNER JOIN orders o ON o.OrderID = osi.OrderID AND o.OrderCategoryID = 6
+            WHERE o.OrderDate >= ? AND o.OrderDate < ?
+        ");
+        $st->execute([$gsMonthStart, $gsNextMonth]);
+        $mtdUnits = (int) $st->fetchColumn();
+
+        $st = $pdo->prepare("
+            SELECT COUNT(DISTINCT o.OrderID)
+            FROM orders o
+            WHERE o.OrderCategoryID = 6 AND o.OrderDate >= ? AND o.OrderDate < ?
+        ");
+        $st->execute([$gsMonthStart, $gsNextMonth]);
+        $mtdOrders = (int) $st->fetchColumn();
+
+        $lowStock = (int) $pdo->query("
+            SELECT COUNT(*) FROM shop_items WHERE StockQty > 0 AND StockQty <= 3
+        ")->fetchColumn();
+
+        $giftShopSnapshot = [
+            'monthLabel' => date('F Y'),
+            'revenue'    => $mtdRevenue,
+            'units'      => $mtdUnits,
+            'orders'     => $mtdOrders,
+            'lowStock'   => $lowStock,
+        ];
+    } catch (Throwable $e) {
+        $giftShopSnapshot = [
+            'monthLabel' => date('F Y'),
+            'revenue'    => 0.0,
+            'units'      => 0,
+            'orders'     => 0,
+            'lowStock'   => 0,
+        ];
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -207,6 +268,61 @@ $todayRevenue   = $pdo->query("SELECT TotalRevenue FROM daily_revenue WHERE Reve
             background: #fff8f8;
         }
         .tile.alert-tile .tile-icon { background: #fde8e8; }
+        .gift-shop-snapshot {
+            margin-top: 22px;
+            background: #fff;
+            border-radius: 14px;
+            padding: 18px 20px 16px;
+            box-shadow: 0 3px 10px rgba(0,0,0,.06);
+            border: 1px solid rgba(46, 90, 26, 0.12);
+        }
+        .gift-shop-snapshot h2 {
+            margin: 0 0 4px;
+            font-size: 1.05rem;
+            font-weight: 800;
+            color: var(--text-color);
+        }
+        .gift-shop-snapshot .snapshot-sub {
+            margin: 0 0 14px;
+            font-size: 0.85rem;
+            color: #666;
+        }
+        .gift-shop-snapshot-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+            gap: 12px;
+        }
+        .gift-shop-snapshot .snap-card {
+            background: #f7fbf4;
+            border: 1px solid rgba(46, 90, 26, 0.12);
+            border-radius: 10px;
+            padding: 12px 14px;
+        }
+        .gift-shop-snapshot .snap-label {
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #666;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+        .gift-shop-snapshot .snap-value {
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: var(--text-color);
+            line-height: 1.1;
+        }
+        .gift-shop-snapshot .snap-value.warn { color: #c0392b; }
+        .gift-shop-snapshot .snap-foot {
+            margin-top: 14px;
+            font-size: 0.88rem;
+            color: #555;
+            line-height: 1.45;
+        }
+        .gift-shop-snapshot .snap-foot a {
+            font-weight: 700;
+            color: var(--accent-color);
+        }
     </style>
 </head>
 <body>
@@ -216,10 +332,11 @@ $todayRevenue   = $pdo->query("SELECT TotalRevenue FROM daily_revenue WHERE Reve
     <div class="dashboard-header">
         <div>
             <h1><?php
-            if ($role === 'admin') echo 'Admin dashboard';
-            elseif ($role === 'vet') echo 'Veterinarian dashboard';
-            elseif ($role === 'caretaker') echo 'Caretaker dashboard';
-            elseif ($role === 'cashier') echo 'Cashier dashboard';
+            if ($isAdmin) echo 'Admin dashboard';
+            elseif ($isVet) echo 'Veterinarian dashboard';
+            elseif ($isCaretaker) echo 'Caretaker dashboard';
+            elseif ($isGiftShopEmployee) echo 'Gift shop dashboard';
+            elseif ($isCashier) echo 'Cashier dashboard';
             else echo 'Dashboard';
             ?></h1>
             <p class="dash-meta"><?= date('l, F j, Y') ?></p>
@@ -233,7 +350,7 @@ $todayRevenue   = $pdo->query("SELECT TotalRevenue FROM daily_revenue WHERE Reve
     </div>
 
         <!-- Stats Row (adminonly) -->
-        <?php if (in_array($role, ['admin'])): ?>
+        <?php if ($isAdmin): ?>
         <div class="stats-row">
             <div class="stat-card">
                 <div class="stat-label">🐾 Total Animals</div>
@@ -254,8 +371,8 @@ $todayRevenue   = $pdo->query("SELECT TotalRevenue FROM daily_revenue WHERE Reve
         </div>
         <?php endif; ?>
 
-        <?php if ($pendingHealth > 0): ?>
-        <!-- Health Alert -->
+        <?php if ($pendingHealth > 0 && ($isAdmin || $isVet || $isCaretaker)): ?>
+        <!-- Health Alert (animal care roles only) -->
         <a href="health-reports.php" class="tile alert-tile" style="margin-bottom:20px;display:flex">
             <div class="tile-icon">🚨</div>
             <div class="tile-text">
@@ -266,10 +383,10 @@ $todayRevenue   = $pdo->query("SELECT TotalRevenue FROM daily_revenue WHERE Reve
         <?php endif; ?>
 
         <!-- Animals Section -->
-        <?php if (in_array($role, ['admin', 'caretaker', 'vet',])): ?>
+        <?php if ($isAdmin || $isCaretaker || $isVet): ?>
         <div class="section-title">Animals & Enclosures</div>
         <div class="tiles-grid">
-            <?php if (in_array($role, ['admin', 'caretaker'])): ?>
+            <?php if ($isAdmin || $isCaretaker): ?>
             <a href="add-animal.php" class="tile">
                 <div class="tile-icon">➕</div>
                 <div class="tile-text"><strong>Add Animal</strong><span>Register new animal</span></div>
@@ -278,7 +395,7 @@ $todayRevenue   = $pdo->query("SELECT TotalRevenue FROM daily_revenue WHERE Reve
             <a href="animals_report.php" class="tile">
                 <div class="tile-text"><strong>Animals Report</strong><span>Search & filter animals</span></div>
             </a>
-            <?php if (in_array($role, ['admin', 'vet'])): ?>
+            <?php if ($isAdmin || $isVet): ?>
             <a href="health-reports.php" class="tile">
                 <div class="tile-text"><strong>Health Records</strong><span>Medical history</span></div>
             </a>
@@ -287,7 +404,7 @@ $todayRevenue   = $pdo->query("SELECT TotalRevenue FROM daily_revenue WHERE Reve
         <?php endif; ?>
 
         <!-- Staff Section -->
-        <?php if (in_array($role, ['admin'])): ?>
+        <?php if ($isAdmin): ?>
         <div class="section-title">Staff Management</div>
         <div class="tiles-grid">
             <a href="add-employee.php" class="tile">
@@ -299,15 +416,15 @@ $todayRevenue   = $pdo->query("SELECT TotalRevenue FROM daily_revenue WHERE Reve
         </div>
         <?php endif; ?>
 
-        <?php if (in_array($role, ['admin', 'cashier'])): ?>
+        <?php if ($isAdmin || $isCashier): ?>
         <div class="section-title">Revenue & Tickets</div>
         <div class="tiles-grid">
-            <?php if (in_array($role, ['admin', 'cashier'])): ?>
+            <?php if ($isAdmin || $isCashier): ?>
             <a href="add-ticket.php" class="tile">
                 <div class="tile-text"><strong>Add Ticket</strong><span>Create new ticket</span></div>
             </a>
             <?php endif; ?>
-            <?php if (in_array($role, ['admin'])): ?>
+            <?php if ($isAdmin): ?>
             <a href="revenue_report.php" class="tile">
                 <div class="tile-text"><strong>Revenue Report</strong><span>Daily financial summary</span></div>
             </a>
@@ -315,14 +432,67 @@ $todayRevenue   = $pdo->query("SELECT TotalRevenue FROM daily_revenue WHERE Reve
         </div>
         <?php endif; ?>
 
-        <!-- Gift Shop Section -->
-        <?php if (in_array($role, ['admin', 'cashier'])): ?>
-        <div class="section-title">Gift Shop & Food</div>
+        <?php if ($isAdmin): ?>
+        <section id="gift-shop-admin" class="gift-shop-admin-section">
+        <div class="section-title">Gift shop</div>
         <div class="tiles-grid">
+            <a href="add-gift-shop-item.php" class="tile">
+                <div class="tile-text"><strong>Add item</strong><span>New product, price, stock &amp; image for the storefront</span></div>
+            </a>
+            <a href="sales_report.php" class="tile">
+                <div class="tile-text"><strong>Gift Shop Sales report</strong><span>Line items, filters &amp; chart</span></div>
+            </a>
             <a href="shop_alerts.php" class="tile">
-                <div class="tile-text"><strong>Shop Restock Alerts</strong><span>Low stock warnings</span></div>
+                <div class="tile-text"><strong>Shop restock alerts</strong><span>Low stock warnings</span></div>
             </a>
         </div>
+        </section>
+        <?php endif; ?>
+
+        <!-- Gift Shop Section (login role must be exactly "Gift Shop Employee" on systemuser) -->
+        <?php if ($isGiftShopEmployee): ?>
+        <section id="gift-shop" class="gift-shop-staff-section">
+        <div class="tiles-grid">
+            <a href="add-order.php" class="tile">
+                <div class="tile-text"><strong>Record sale</strong><span>Log a customer gift shop purchase</span></div>
+            </a>
+            <a href="sales_report.php" class="tile">
+                <div class="tile-text"><strong>Gift Shop Sales report</strong><span>Line items, filters &amp; chart</span></div>
+            </a>
+            <a href="shop_alerts.php" class="tile">
+                <div class="tile-text"><strong>Shop restock alerts</strong><span>Low stock warnings</span></div>
+            </a>
+        </div>
+        <?php if ($isGiftShopEmployee && $giftShopSnapshot !== null): ?>
+        <div class="gift-shop-snapshot" aria-labelledby="gift-shop-snapshot-heading">
+            <h2 id="gift-shop-snapshot-heading"><?= htmlspecialchars($giftShopSnapshot['monthLabel']) ?></h2>
+            <div class="gift-shop-snapshot-grid">
+                <div class="snap-card">
+                    <div class="snap-label">Gift shop revenue</div>
+                    <div class="snap-value">$<?= number_format($giftShopSnapshot['revenue'], 2) ?></div>
+                </div>
+                <div class="snap-card">
+                    <div class="snap-label">Units sold</div>
+                    <div class="snap-value"><?= (int) $giftShopSnapshot['units'] ?></div>
+                </div>
+                <div class="snap-card">
+                    <div class="snap-label">Orders</div>
+                    <div class="snap-value"><?= (int) $giftShopSnapshot['orders'] ?></div>
+                </div>
+                <div class="snap-card">
+                    <div class="snap-label">Low stock (≤3)</div>
+                    <div class="snap-value <?= $giftShopSnapshot['lowStock'] > 0 ? 'warn' : '' ?>"><?= (int) $giftShopSnapshot['lowStock'] ?></div>
+                </div>
+            </div>
+            <p class="snap-foot">
+                <a href="sales_report.php">Open Gift Shop Sales report</a> for filtered line items and the top-sellers chart.
+                <?php if ($giftShopSnapshot['lowStock'] > 0): ?>
+                    · <a href="shop_alerts.php">Review restock alerts</a>
+                <?php endif; ?>
+            </p>
+        </div>
+        <?php endif; ?>
+        </section>
         <?php endif; ?>
 
 </div>
