@@ -1,4 +1,7 @@
-<?php require_once __DIR__ . '/session_bootstrap.php'; ?>
+<?php
+require_once __DIR__ . '/session_bootstrap.php';
+$isCustomer = isset($_SESSION['customer_id']);
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,11 +10,29 @@
     <title>Animals – Greenwood Zoo</title>
     <link rel="stylesheet" href="index.css">
     <style>
+        .animals-page-inner {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 1rem 2.5rem;
+        }
+        .animals-back {
+            margin: 0 0 0.75rem;
+        }
+        .animals-back a {
+            display: inline-block;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--cr-accent, #2d6a2d);
+            text-decoration: none;
+        }
+        .animals-back a:hover {
+            text-decoration: underline;
+        }
         .animals-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
             gap: 24px;
-            padding: 40px 5%;
+            padding: 24px 0 40px;
         }
         .animal-tile {
             border-radius: 12px;
@@ -48,24 +69,38 @@
         .page-hero {
             background: #e8f5e9;
             text-align: center;
-            padding: 60px 5% 30px;
+            padding: 48px 5% 28px;
+            border-radius: 0 0 var(--cr-radius, 12px) var(--cr-radius, 12px);
         }
         .page-hero h1 { color: #1a4a1a; margin-bottom: 8px; }
+        .page-hero p { margin: 0; color: #3d5c3d; font-size: 1rem; }
+        .animals-customer-foot {
+            font-size: 0.85rem;
+            color: var(--cr-muted, #666);
+            margin-top: 0.5rem;
+        }
+        .animals-customer-foot a {
+            color: var(--cr-accent, #2d6a2d);
+            font-weight: 600;
+        }
     </style>
 </head>
-<body>
+<body class="<?= $isCustomer ? 'cr-body' : '' ?>">
+<?php if ($isCustomer): ?>
+    <div class="profile-wrapper">
+        <header class="site-header">
+            <a class="logo" href="index.php">Greenwood Zoo</a>
+            <?php require __DIR__ . '/customer_nav.php'; ?>
+        </header>
+        <div class="profile-card animals-page-inner">
+            <p class="animals-back"><a href="customer-dashboard.php">← Back to dashboard</a></p>
+<?php else: ?>
     <header class="site-header">
         <a class="logo" href="index.php">Greenwood Zoo</a>
         <nav aria-label="Main">
             <ul class="nav-links">
-                <?php if (isset($_SESSION['customer_id'])): ?>
-                    <li><span>Welcome, <?= $_SESSION['firstname'] ?></span></li>
-                    <li><a href="customer_profile.php">Profile</a></li>
-                    <li><a href="logout.php">Logout</a></li>
-                <?php else: ?>
-                    <li><a href="login.html">Login</a></li>
-                    <li><a href="signup.html">Sign Up</a></li>
-                <?php endif; ?>
+                <li><a href="login.html">Login</a></li>
+                <li><a href="signup.html">Sign Up</a></li>
                 <li><a href="index.php#about">About</a></li>
                 <li><a href="index.php#hours">Hours</a></li>
                 <li><a href="animals.php" aria-current="page">Animals</a></li>
@@ -73,6 +108,8 @@
             </ul>
         </nav>
     </header>
+    <div class="animals-page-inner">
+<?php endif; ?>
 
     <div class="page-hero">
         <h1>Our Animals</h1>
@@ -213,20 +250,31 @@
     <main>
         <div class="animals-grid">
             <?php foreach ($animals as $a): ?>
-            <a class="animal-tile" href="animals/<?= $a['slug'] ?>.php">
-                <img src="<?= $a['img'] ?>" alt="<?= $a['alt'] ?>" loading="lazy">
+            <a class="animal-tile" href="animals/<?= htmlspecialchars($a['slug']) ?>.php">
+                <img src="<?= htmlspecialchars($a['img']) ?>" alt="<?= htmlspecialchars($a['alt']) ?>" loading="lazy">
                 <div class="animal-tile-caption">
-                    <h3><?= $a['name'] ?></h3>
-                    <p><?= $a['blurb'] ?></p>
+                    <h3><?= htmlspecialchars($a['name']) ?></h3>
+                    <p><?= htmlspecialchars($a['blurb']) ?></p>
                 </div>
             </a>
             <?php endforeach; ?>
         </div>
+        <?php if ($isCustomer): ?>
+            <p class="animals-customer-foot">
+                Looking for every animal in our collection?
+            </p>
+        <?php endif; ?>
     </main>
 
+<?php if ($isCustomer): ?>
+        </div>
+    </div>
+<?php else: ?>
+    </div>
     <footer class="site-footer">
         <p>&copy; 2026 Team 9 COSC 3380 Zoo Database Systems Project.</p>
         <p><a href="login.html">Login</a> · <a href="signup.html">Sign up</a></p>
     </footer>
+<?php endif; ?>
 </body>
 </html>

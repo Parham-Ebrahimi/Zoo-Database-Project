@@ -19,12 +19,33 @@ $isVet = ($roleLower === 'vet');
 $isCaretaker = ($roleLower === 'caretaker');
 $isCashier = ($roleLower === 'cashier');
 $isGiftShopEmployee = ($role === 'Gift Shop Employee');
+$isRestaurantEmployee = ($role === 'Restaurant Employee');
 
 // Quick stats for admin
 $totalAnimals   = $pdo->query("SELECT COUNT(*) FROM animal")->fetchColumn();
 $totalEmployees = $pdo->query("SELECT COUNT(*) FROM employees")->fetchColumn();
 $pendingHealth  = $pdo->query("SELECT COUNT(*) FROM animal WHERE Health_Status != 'Healthy'")->fetchColumn();
 $todayRevenue   = $pdo->query("SELECT TotalRevenue FROM daily_revenue WHERE RevenueDate = CURDATE()")->fetchColumn() ?? 0;
+$pendingRestock = 0;
+if ($isAdmin || $isGiftShopEmployee) {
+    try {
+        $pendingRestock = (int) $pdo->query("
+            SELECT COUNT(*) FROM restock_alerts WHERE IsResolved = 0
+        ")->fetchColumn();
+    } catch (Throwable $e) {
+        $pendingRestock = 0;
+    }
+}
+$pendingRestaurantRestock = 0;
+if ($isRestaurantEmployee || $isAdmin) {
+    try {
+        $pendingRestaurantRestock = (int) $pdo->query("
+            SELECT COUNT(*) FROM restaurant_restock_alerts WHERE IsResolved = 0
+        ")->fetchColumn();
+    } catch (Throwable $e) {
+        $pendingRestaurantRestock = 0;
+    }
+}
 
 $giftShopSnapshot = null;
 if ($isGiftShopEmployee) {
@@ -74,6 +95,56 @@ if ($isGiftShopEmployee) {
             'units'      => 0,
             'orders'     => 0,
             'lowStock'   => 0,
+        ];
+    }
+}
+
+$restaurantSnapshot = null;
+if ($isRestaurantEmployee) {
+    $rtMonthStart = date('Y-m-01');
+    $rtNextMonth  = date('Y-m-01', strtotime('first day of next month'));
+    try {
+        $st = $pdo->prepare("
+            SELECT COALESCE(SUM(o.TransactionAmount), 0)
+            FROM orders o
+            WHERE o.OrderCategoryID = 5 AND o.OrderDate >= ? AND o.OrderDate < ?
+        ");
+        $st->execute([$rtMonthStart, $rtNextMonth]);
+        $mtdRevenue = (float) $st->fetchColumn();
+
+        $st = $pdo->prepare("
+            SELECT COALESCE(SUM(ofi.Quantity), 0)
+            FROM order_food_items ofi
+            INNER JOIN orders o ON o.OrderID = ofi.OrderID AND o.OrderCategoryID = 5
+            WHERE o.OrderDate >= ? AND o.OrderDate < ?
+        ");
+        $st->execute([$rtMonthStart, $rtNextMonth]);
+        $mtdUnits = (int) $st->fetchColumn();
+
+        $st = $pdo->prepare("
+            SELECT COUNT(DISTINCT o.OrderID)
+            FROM orders o
+            WHERE o.OrderCategoryID = 5 AND o.OrderDate >= ? AND o.OrderDate < ?
+        ");
+        $st->execute([$rtMonthStart, $rtNextMonth]);
+        $mtdOrders = (int) $st->fetchColumn();
+
+        $activeMenuItems = (int) $pdo->query("SELECT COUNT(*) FROM fooditem")->fetchColumn();
+
+        $restaurantSnapshot = [
+            'monthLabel' => date('F Y'),
+            'revenue'    => $mtdRevenue,
+            'units'      => $mtdUnits,
+            'orders'     => $mtdOrders,
+            'menuItems'  => $activeMenuItems,
+        ];
+    } catch (Throwable $e) {
+        $restaurantSnapshot = [
+            'monthLabel' => date('F Y'),
+            'revenue'    => 0.0,
+            'units'      => 0,
+            'orders'     => 0,
+            'menuItems'  => 0,
         ];
     }
 }
@@ -268,6 +339,49 @@ if ($isGiftShopEmployee) {
             background: #fff8f8;
         }
         .tile.alert-tile .tile-icon { background: #fde8e8; }
+        .attention-banner {
+            border: 2px solid #e46a5d;
+            border-radius: 14px;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            margin-bottom: 14px;
+            padding: 10px 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: var(--text-color);
+        }
+        .attention-banner:hover {
+            text-decoration: none;
+            border-color: #d4574a;
+            background: #fffdfd;
+        }
+        .attention-banner .attention-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 9px;
+            background: #fde8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 1.05rem;
+        }
+        .attention-banner strong {
+            display: block;
+            font-size: 0.95rem;
+            font-weight: 800;
+            line-height: 1.15;
+            margin-bottom: 2px;
+            color: #185f1e;
+        }
+        .attention-banner span {
+            display: block;
+            font-size: 0.82rem;
+            color: #666;
+            line-height: 1.2;
+        }
         .gift-shop-snapshot {
             margin-top: 22px;
             background: #fff;
@@ -339,6 +453,7 @@ if ($isGiftShopEmployee) {
             elseif ($isVet) echo 'Veterinarian dashboard';
             elseif ($isCaretaker) echo 'Caretaker dashboard';
             elseif ($isGiftShopEmployee) echo 'Gift shop dashboard';
+            elseif ($isRestaurantEmployee) echo 'Restaurant dashboard';
             elseif ($isCashier) echo 'Cashier dashboard';
             else echo 'Dashboard';
             ?></h1>
@@ -376,11 +491,39 @@ if ($isGiftShopEmployee) {
 
         <?php if ($pendingHealth > 0 && ($isAdmin || $isVet || $isCaretaker)): ?>
         <!-- Health Alert (animal care roles only) -->
-        <a href="health-reports.php" class="tile alert-tile" style="margin-bottom:20px;display:flex">
-            <div class="tile-icon">🚨</div>
+        <a href="health-reports.php" class="attention-banner">
+            <div class="attention-icon">🚨</div>
             <div class="tile-text">
                 <strong><?= $pendingHealth ?> animal(s) need attention</strong>
                 <span>Click to view health report</span>
+            </div>
+        </a>
+        <?php endif; ?>
+        <?php if ($isAdmin): ?>
+        <a href="shop_alerts.php" class="attention-banner">
+            <div class="attention-icon">📦</div>
+            <div class="tile-text">
+                <strong>
+                    <?= (int)$pendingRestock > 0
+                        ? $pendingRestock . ' gift shop item(s) need restocking'
+                        : 'Gift shop stock status is clear' ?>
+                </strong>
+                <?php if ((int)$pendingRestock <= 0): ?>
+                    <span>No gift shop items currently at low stock</span>
+                <?php endif; ?>
+            </div>
+        </a>
+        <a href="restaurant_alerts.php" class="attention-banner">
+            <div class="attention-icon">🍽️</div>
+            <div class="tile-text">
+                <strong>
+                    <?= (int)$pendingRestaurantRestock > 0
+                        ? $pendingRestaurantRestock . ' restaurant item(s) need restocking'
+                        : 'Restaurant stock status is clear' ?>
+                </strong>
+                <?php if ((int)$pendingRestaurantRestock <= 0): ?>
+                    <span>No restaurant items currently at low stock</span>
+                <?php endif; ?>
             </div>
         </a>
         <?php endif; ?>
@@ -440,10 +583,21 @@ if ($isGiftShopEmployee) {
         <div class="section-title">Gift Shop</div>
         <div class="tiles-grid">
             <a href="add-gift-shop-item.php" class="tile">
-                <div class="tile-text"><strong>Add item</strong><span>New product, price, stock &amp; image for the storefront</span></div>
+                <div class="tile-text"><strong>Add item</strong><span>Add new product</span></div>
             </a>
             <a href="shop_alerts.php" class="tile">
                 <div class="tile-text"><strong>Shop restock alerts</strong><span>Low stock warnings</span></div>
+            </a>
+        </div>
+        </section>
+        <section id="restaurant-shop-admin" class="gift-shop-admin-section">
+        <div class="section-title">Restaurant Shop</div>
+        <div class="tiles-grid">
+            <a href="add-restaurant-item.php" class="tile">
+                <div class="tile-text"><strong>Add item</strong><span>Add new food item</span></div>
+            </a>
+            <a href="restaurant_alerts.php" class="tile">
+                <div class="tile-text"><strong>Restaurant restock alerts</strong><span>Low stock warnings</span></div>
             </a>
         </div>
         </section>
@@ -452,6 +606,14 @@ if ($isGiftShopEmployee) {
         <!-- Gift Shop Section (login role must be exactly "Gift Shop Employee" on systemuser) -->
         <?php if ($isGiftShopEmployee): ?>
         <section id="gift-shop" class="gift-shop-staff-section">
+        <?php if ($pendingRestock > 0): ?>
+        <a href="shop_alerts.php" class="attention-banner">
+            <div class="attention-icon">📦</div>
+            <div class="tile-text">
+                <strong><?= $pendingRestock ?> gift shop item(s) need restocking now</strong>
+            </div>
+        </a>
+        <?php endif; ?>
         <?php if ($isGiftShopEmployee && $giftShopSnapshot !== null): ?>
         <div class="gift-shop-snapshot" aria-labelledby="gift-shop-snapshot-heading">
             <h2 id="gift-shop-snapshot-heading"><?= htmlspecialchars($giftShopSnapshot['monthLabel']) ?></h2>
@@ -473,15 +635,15 @@ if ($isGiftShopEmployee) {
                     <div class="snap-value <?= $giftShopSnapshot['lowStock'] > 0 ? 'warn' : '' ?>"><?= (int) $giftShopSnapshot['lowStock'] ?></div>
                 </div>
             </div>
-            <p class="snap-foot">
-                <a href="sales_report.php">Open Gift Shop Sales report</a> for filtered line items and the top-sellers chart.
-                <?php if ($giftShopSnapshot['lowStock'] > 0): ?>
-                    · <a href="shop_alerts.php">Review restock alerts</a>
-                <?php endif; ?>
-            </p>
         </div>
         <?php endif; ?>
         <div class="tiles-grid" style="margin-top:12px;">
+            <a href="add-gift-shop-item.php" class="tile">
+                <div class="tile-text"><strong>Add item</strong><span>Add new product</span></div>
+            </a>
+            <a href="giftshop.php?preview=1" class="tile">
+                <div class="tile-text"><strong>View shop</strong><span>Open customer gift shop view</span></div>
+            </a>
             <a href="add-order.php" class="tile">
                 <div class="tile-text"><strong>Record sale</strong><span>Log a customer gift shop purchase</span></div>
             </a>
@@ -490,6 +652,59 @@ if ($isGiftShopEmployee) {
             </a>
             <a href="shop_alerts.php" class="tile">
                 <div class="tile-text"><strong>Shop restock alerts</strong><span>Low stock warnings</span></div>
+            </a>
+        </div>
+        </section>
+        <?php endif; ?>
+
+        <?php if ($isRestaurantEmployee): ?>
+        <section id="restaurant-staff" class="restaurant-staff-section">
+        <?php if ($pendingRestaurantRestock > 0): ?>
+        <a href="restaurant_alerts.php" class="attention-banner">
+            <div class="attention-icon">🍽️</div>
+            <div class="tile-text">
+                <strong><?= $pendingRestaurantRestock ?> restaurant item(s) need restocking</strong>
+            </div>
+        </a>
+        <?php endif; ?>
+        <?php if ($restaurantSnapshot !== null): ?>
+        <div class="gift-shop-snapshot" aria-labelledby="restaurant-snapshot-heading">
+            <h2 id="restaurant-snapshot-heading"><?= htmlspecialchars($restaurantSnapshot['monthLabel']) ?></h2>
+            <div class="gift-shop-snapshot-grid">
+                <div class="snap-card">
+                    <div class="snap-label">Restaurant revenue</div>
+                    <div class="snap-value">$<?= number_format($restaurantSnapshot['revenue'], 2) ?></div>
+                </div>
+                <div class="snap-card">
+                    <div class="snap-label">Units sold</div>
+                    <div class="snap-value"><?= (int) $restaurantSnapshot['units'] ?></div>
+                </div>
+                <div class="snap-card">
+                    <div class="snap-label">Orders</div>
+                    <div class="snap-value"><?= (int) $restaurantSnapshot['orders'] ?></div>
+                </div>
+                <div class="snap-card">
+                    <div class="snap-label">Active menu items</div>
+                    <div class="snap-value"><?= (int) $restaurantSnapshot['menuItems'] ?></div>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
+        <div class="tiles-grid" style="margin-top:12px;">
+            <a href="add-restaurant-item.php" class="tile">
+                <div class="tile-text"><strong>Add item</strong><span>Add new food item</span></div>
+            </a>
+            <a href="add-restaurant-order.php" class="tile">
+                <div class="tile-text"><strong>Record sale</strong><span>Log a customer restaurant purchase</span></div>
+            </a>
+            <a href="restaurant.php" class="tile">
+                <div class="tile-text"><strong>Restaurant menu</strong><span>Open current menu and stall view</span></div>
+            </a>
+            <a href="restaurant_sales_report.php" class="tile">
+                <div class="tile-text"><strong>Restaurant sales report</strong><span>Food sales totals and item-level breakdown</span></div>
+            </a>
+            <a href="restaurant_alerts.php" class="tile">
+                <div class="tile-text"><strong>Restaurant restock alerts</strong><span>Items at low stock (≤3) or out of stock</span></div>
             </a>
         </div>
         </section>

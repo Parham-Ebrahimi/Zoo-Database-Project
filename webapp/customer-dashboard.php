@@ -306,6 +306,42 @@ $animalSpotlightImages = [
             margin: 0;
         }
 
+        .featured-more {
+            margin-top: 1.35rem;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.75rem 1.25rem;
+        }
+        .featured-more a.more-animals {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.65rem 1.35rem;
+            background: var(--cr-accent);
+            color: #fff;
+            font-weight: 700;
+            font-size: 0.92rem;
+            border-radius: 999px;
+            text-decoration: none;
+            border: 2px solid transparent;
+            transition: background 150ms, border-color 150ms, color 150ms;
+        }
+        .featured-more a.more-animals:hover {
+            background: #1a5c2b;
+            color: #fff;
+            text-decoration: none;
+        }
+        .featured-more a.more-animals-secondary {
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: var(--cr-accent);
+            text-decoration: none;
+        }
+        .featured-more a.more-animals-secondary:hover {
+            text-decoration: underline;
+        }
+
         .logout-area { margin-top: 1.75rem; }
         .logout-area a {
             color: var(--cr-muted);
@@ -390,8 +426,12 @@ $animalSpotlightImages = [
                                 </article>
                                 <?php endforeach; ?>
                             </div>
+                            <div class="featured-more">
+                                <a class="more-animals" href="animals.php">See more animals</a>
+                            </div>
                         <?php else: ?>
-                            <p class="attr-empty">Animal highlights will appear here when connected to the collection. <a href="customer_animals_report.php">Browse all animals</a>.</p>
+                            <p class="attr-empty">Animal highlights will appear here when connected to the collection.
+                                <a href="animals.php">See species highlights</a>
                         <?php endif; ?>
                     </div>
 

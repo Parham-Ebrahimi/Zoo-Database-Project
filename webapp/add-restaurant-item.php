@@ -4,36 +4,34 @@ if (!isset($_SESSION['user_id'])) {
     header('Location: login.html');
     exit;
 }
-if (!in_array(($_SESSION['role'] ?? ''), ['admin', 'Gift Shop Employee'], true)) {
+if (!in_array(($_SESSION['role'] ?? ''), ['admin', 'Restaurant Employee'], true)) {
     header('Location: dashboard.php');
     exit;
 }
 require_once __DIR__ . '/db.php';
- $role = $_SESSION['role'] ?? '';
+$role = $_SESSION['role'] ?? '';
 
-$uploadDir = __DIR__ . '/images/gift-shop/uploads';
+$uploadDir = __DIR__ . '/images/restaurant/uploads';
 if (!is_dir($uploadDir)) {
     mkdir($uploadDir, 0755, true);
 }
 
-$shops = $pdo->query('SELECT ShopID, ShopName FROM shops ORDER BY ShopName')->fetchAll(PDO::FETCH_ASSOC);
+$stalls = $pdo->query('SELECT StallID, Name FROM foodstall ORDER BY Name')->fetchAll(PDO::FETCH_ASSOC);
 
-$error   = '';
+$error = '';
 $success = '';
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $shopId = (int) ($_POST['shop_id'] ?? 0);
-    $name    = trim((string) ($_POST['item_name'] ?? ''));
-    $price   = (float) ($_POST['price'] ?? -1);
-    $stock   = (int) ($_POST['stock_qty'] ?? -1);
-
+    $stallId = (int) ($_POST['stall_id'] ?? 0);
+    $name = trim((string) ($_POST['food_name'] ?? ''));
+    $price = (float) ($_POST['price'] ?? -1);
+    $stock = (int) ($_POST['stock_qty'] ?? -1);
     $file = $_FILES['item_image'] ?? null;
     $hasFile = $file && isset($file['error']) && $file['error'] !== UPLOAD_ERR_NO_FILE;
 
-    if ($shopId <= 0) {
-        $error = 'Please select a shop.';
+    if ($stallId <= 0) {
+        $error = 'Please select a stall.';
     } elseif ($name === '') {
-        $error = 'Please enter an item name.';
+        $error = 'Please enter a food item name.';
     } elseif ($price < 0) {
         $error = 'Price cannot be negative.';
     } elseif ($stock < 0) {
@@ -50,61 +48,60 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $ext = null;
         if ($hasFile) {
             $finfo = new finfo(FILEINFO_MIME_TYPE);
-            $mime  = $finfo->file($file['tmp_name']);
+            $mime = $finfo->file($file['tmp_name']);
             if (!isset($mimeToExt[$mime])) {
                 $error = 'Image must be JPEG, PNG, WebP, or GIF.';
             } else {
                 $ext = $mimeToExt[$mime];
             }
         }
+    }
 
-        if ($error === '') {
-            try {
-                $pdo->beginTransaction();
+    if ($error === '') {
+        try {
+            $pdo->beginTransaction();
+            $stmt = $pdo->prepare('
+                INSERT INTO fooditem (StallID, FoodName, Price, StockQty)
+                VALUES (?, ?, ?, ?)
+            ');
+            $stmt->execute([$stallId, $name, round($price, 2), $stock]);
+            $newId = (int) $pdo->lastInsertId();
 
-                $stmt = $pdo->prepare('
-                    INSERT INTO shop_items (ShopID, ItemName, Price, StockQty)
-                    VALUES (?, ?, ?, ?)
-                ');
-                $stmt->execute([$shopId, $name, round($price, 2), $stock]);
-                $newId = (int) $pdo->lastInsertId();
-
-                if ($hasFile && $ext !== null) {
-                    foreach (glob($uploadDir . DIRECTORY_SEPARATOR . 'item-' . $newId . '.*') ?: [] as $old) {
-                        if (is_file($old)) {
-                            @unlink($old);
-                        }
-                    }
-                    $dest = $uploadDir . DIRECTORY_SEPARATOR . 'item-' . $newId . '.' . $ext;
-                    if (!move_uploaded_file($file['tmp_name'], $dest)) {
-                        throw new RuntimeException('Could not save the image file.');
+            if ($hasFile && $ext !== null) {
+                foreach (glob($uploadDir . DIRECTORY_SEPARATOR . 'item-' . $newId . '.*') ?: [] as $old) {
+                    if (is_file($old)) {
+                        @unlink($old);
                     }
                 }
-
-                $pdo->commit();
-                $success = 'Item #' . $newId . ' was added. It appears on the customer gift shop'
-                    . ($hasFile ? ' with your photo' : ' (using a default image until you add a photo later)')
-                    . '. Sales charts include it once it is sold.';
-            } catch (Throwable $e) {
-                if ($pdo->inTransaction()) {
-                    $pdo->rollBack();
+                $dest = $uploadDir . DIRECTORY_SEPARATOR . 'item-' . $newId . '.' . $ext;
+                if (!move_uploaded_file($file['tmp_name'], $dest)) {
+                    throw new RuntimeException('Could not save the image file.');
                 }
-                $error = 'Could not add item: ' . $e->getMessage();
             }
+
+            $pdo->commit();
+            $success = 'Restaurant item #' . $newId . ' was added'
+                . ($hasFile ? ' with your photo' : ' (using a default image until you add a photo later)')
+                . '.';
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            $error = 'Could not add item: ' . $e->getMessage();
         }
     }
 }
 $firstname = htmlspecialchars($_SESSION['firstname'] ?? 'Admin');
-$dashboardBackHref = $role === 'Gift Shop Employee'
-    ? 'dashboard.php#gift-shop'
-    : 'dashboard.php#gift-shop-admin';
+$dashboardBackHref = $role === 'Restaurant Employee'
+    ? 'dashboard.php#restaurant-staff'
+    : 'dashboard.php#restaurant-shop-admin';
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Add gift shop item — Greenwood Zoo</title>
+    <title>Add restaurant item — Greenwood Zoo</title>
     <link rel="stylesheet" href="style.css">
     <style>
         .gs-shell {
@@ -114,7 +111,7 @@ $dashboardBackHref = $role === 'Gift Shop Employee'
             background: linear-gradient(165deg, rgba(187, 223, 158, 0.55) 0%, rgba(187, 223, 158, 0.92) 42%, var(--base-color) 100%);
         }
         .gs-inner {
-            max-width: 720px;
+            max-width: 760px;
             margin: 0 auto;
         }
         .gs-header {
@@ -140,6 +137,11 @@ $dashboardBackHref = $role === 'Gift Shop Employee'
             color: #4a5c42;
             line-height: 1.5;
             max-width: 34em;
+        }
+        .gs-meta {
+            margin-top: 18px;
+            font-size: 0.8rem;
+            color: #888;
         }
         .gs-back {
             display: inline-flex;
@@ -210,6 +212,9 @@ $dashboardBackHref = $role === 'Gift Shop Employee'
             flex-direction: column;
             gap: 6px;
         }
+        .gs-field--full {
+            grid-column: 1 / -1;
+        }
         .gs-field label {
             font-size: 0.86rem;
             font-weight: 700;
@@ -234,7 +239,6 @@ $dashboardBackHref = $role === 'Gift Shop Employee'
             background: #fff;
             box-shadow: 0 0 0 3px rgba(76, 145, 65, 0.2);
         }
-        .gs-field--full { grid-column: 1 / -1; }
         .gs-upload-block {
             margin-top: 22px;
             padding-top: 22px;
@@ -328,11 +332,6 @@ $dashboardBackHref = $role === 'Gift Shop Employee'
             padding: 20px;
             color: #666;
         }
-        .gs-meta {
-            margin-top: 18px;
-            font-size: 0.8rem;
-            color: #888;
-        }
     </style>
 </head>
 <body>
@@ -340,7 +339,7 @@ $dashboardBackHref = $role === 'Gift Shop Employee'
         <div class="gs-inner">
             <header class="gs-header">
                 <div>
-                    <h1>Add gift shop item</h1>
+                    <h1>Add restaurant item</h1>
                     <p class="gs-meta">Signed in as <?= $firstname ?></p>
                 </div>
                 <a class="gs-back" href="<?= htmlspecialchars($dashboardBackHref) ?>">← Back to dashboard</a>
@@ -360,33 +359,33 @@ $dashboardBackHref = $role === 'Gift Shop Employee'
                     </div>
                 <?php endif; ?>
 
-                <?php if (count($shops) === 0): ?>
+                <?php if (count($stalls) === 0): ?>
                     <div class="gs-empty">
-                        <p><strong>No shops found.</strong> Add at least one row to the <code>shops</code> table before creating items.</p>
+                        <p><strong>No stalls found.</strong> Add at least one row to the <code>foodstall</code> table before creating items.</p>
                     </div>
                 <?php else: ?>
-                    <form method="post" enctype="multipart/form-data" action="" id="gs-add-form">
+                    <form method="post" enctype="multipart/form-data" action="" id="restaurant-add-form">
                         <div>
-                            <h2 class="gs-section-title">Product details</h2>
+                            <h2 class="gs-section-title">Menu details</h2>
                             <div class="gs-grid">
                                 <div class="gs-field gs-field--full">
-                                    <label for="shop_id">Shop</label>
-                                    <select id="shop_id" name="shop_id" required>
-                                        <option value="">Select shop</option>
+                                    <label for="stall_id">Stall</label>
+                                    <select id="stall_id" name="stall_id" required>
+                                        <option value="">Select stall</option>
                                         <?php
-                                        $postShop = (string) ($_POST['shop_id'] ?? '');
-                                        foreach ($shops as $s):
-                                            $sid = (int) $s['ShopID'];
+                                        $postStall = (string) ($_POST['stall_id'] ?? '');
+                                        foreach ($stalls as $stall):
+                                            $sid = (int) $stall['StallID'];
                                         ?>
-                                            <option value="<?= $sid ?>" <?= $postShop !== '' && $postShop === (string) $sid ? 'selected' : '' ?>><?= htmlspecialchars($s['ShopName']) ?></option>
+                                            <option value="<?= $sid ?>" <?= $postStall !== '' && $postStall === (string) $sid ? 'selected' : '' ?>><?= htmlspecialchars($stall['Name']) ?></option>
                                         <?php endforeach; ?>
                                     </select>
                                 </div>
                                 <div class="gs-field gs-field--full">
-                                    <label for="item_name">Item name</label>
-                                    <input id="item_name" name="item_name" type="text" required maxlength="200"
-                                           value="<?= htmlspecialchars($_POST['item_name'] ?? '') ?>"
-                                           placeholder="e.g. Greenwood Zoo enamel mug"
+                                    <label for="food_name">Item name</label>
+                                    <input id="food_name" name="food_name" type="text" required maxlength="200"
+                                           value="<?= htmlspecialchars($_POST['food_name'] ?? '') ?>"
+                                           placeholder="e.g. Savanna Burger"
                                            autocomplete="off">
                                 </div>
                                 <div class="gs-field">
@@ -403,7 +402,7 @@ $dashboardBackHref = $role === 'Gift Shop Employee'
                         </div>
 
                         <div class="gs-upload-block">
-                            <h2 class="gs-section-title">Product photo</h2>
+                            <h2 class="gs-section-title">Item photo</h2>
                             <div class="gs-file-wrap">
                                 <input id="item_image" name="item_image" type="file"
                                        accept="image/jpeg,image/png,image/webp,image/gif">
@@ -415,7 +414,7 @@ $dashboardBackHref = $role === 'Gift Shop Employee'
                         </div>
 
                         <div class="gs-actions">
-                            <button type="submit" class="gs-btn gs-btn--primary">Add to catalog</button>
+                            <button type="submit" class="gs-btn gs-btn--primary">Add to menu</button>
                         </div>
                     </form>
                 <?php endif; ?>

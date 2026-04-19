@@ -389,13 +389,8 @@ $navCartCount = array_sum($_SESSION['cart']['food'] ?? [])
                     <h2>Payment method</h2>
                     <div class="payment-grid">
                         <?php
-                        $methods = [
-                            'Credit Card' => '💳',
-                            'Debit Card'  => '💳',
-                            'Cash'        => '💵',
-                            'PayPal'      => '🅿️',
-                        ];
-                        foreach ($methods as $method => $icon):
+                        $methods = ['Credit Card', 'Debit Card', 'Cash', 'PayPal'];
+                        foreach ($methods as $method):
                         ?>
                         <div class="payment-option">
                             <input type="radio" name="payment_mode"
@@ -403,7 +398,6 @@ $navCartCount = array_sum($_SESSION['cart']['food'] ?? [])
                                    value="<?= $method ?>"
                                    <?= ($method === 'Credit Card') ? 'checked' : '' ?>>
                             <label class="payment-label" for="pm_<?= str_replace(' ','_',$method) ?>">
-                                <span class="payment-icon"><?= $icon ?></span>
                                 <?= $method ?>
                             </label>
                         </div>

@@ -356,12 +356,9 @@ $shopRevenueChartJson = json_encode([
             </form>
         </div>
 
-        <p class="filter-scope-note">The charts and table below use the same filters. Top sellers are the top 15 items by units sold in this filtered range.</p>
-
         <div class="gift-shop-charts-grid">
             <div class="gift-shop-chart-wrap">
                 <h2>Revenue by shop</h2>
-                <p class="chart-sub">Line revenue share by gift shop location (same filters as the table).</p>
                 <p class="chart-empty" id="shopRevenueDonutEmpty" <?= count($shopRevenueByShop) > 0 ? 'hidden' : '' ?>>No revenue to show for these filters.</p>
                 <div class="chart-donut-box" id="shopRevenueDonutBox" <?= count($shopRevenueByShop) === 0 ? 'hidden' : '' ?>>
                     <canvas id="giftShopRevenueByShopDonut" aria-label="Revenue by shop"></canvas>

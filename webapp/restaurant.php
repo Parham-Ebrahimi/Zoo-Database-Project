@@ -1,6 +1,8 @@
 <?php
 require_once __DIR__ . '/session_bootstrap.php';
-if (!isset($_SESSION['customer_id'])) {
+$role = $_SESSION['role'] ?? '';
+$staffPreview = !empty($_SESSION['user_id']) && in_array($role, ['admin', 'Restaurant Employee'], true);
+if (!isset($_SESSION['customer_id']) && !$staffPreview) {
     if (!empty($_SESSION['user_id'])) {
         header('Location: dashboard.php');
         exit;
@@ -18,7 +20,7 @@ if (!isset($_SESSION['cart'])) {
 
 // Load all food items with stall info
 $items = $pdo->query("
-    SELECT fi.FoodID, fi.FoodName, fi.Price, fs.Name AS StallName, fs.Location
+    SELECT fi.FoodID, fi.FoodName, fi.Price, fi.StockQty, fs.Name AS StallName, fs.Location
     FROM fooditem fi
     JOIN foodstall fs ON fi.StallID = fs.StallID
     ORDER BY fi.FoodName
@@ -46,12 +48,52 @@ function getFoodImage(string $name, array $images): string {
     return $images['default'];
 }
 
+/** Prefer admin-uploaded image (images/restaurant/uploads/item-{FoodID}.ext), else keyword stock art. */
+function restaurant_resolved_image_url(array $item, array $images): string
+{
+    $id = (int) ($item['FoodID'] ?? 0);
+    $uploadDir = __DIR__ . '/images/restaurant/uploads';
+    if ($id > 0 && is_dir($uploadDir)) {
+        $matches = glob($uploadDir . DIRECTORY_SEPARATOR . 'item-' . $id . '.*') ?: [];
+        if ($matches !== [] && is_file($matches[0])) {
+            return 'images/restaurant/uploads/' . basename($matches[0]);
+        }
+    }
+    return getFoodImage((string) ($item['FoodName'] ?? ''), $images);
+}
+
 // Cart count for badge
 $cartCount = array_sum($_SESSION['cart']['food'])
            + array_sum($_SESSION['cart']['shop'] ?? [])
            + array_sum(array_column($_SESSION['cart']['ticket'], 'qty'));
 
 $added = $_GET['added'] ?? '';
+
+$mostPopularFoodID = null;
+$mostPopularFoodLabel = '';
+try {
+    $monthStart = date('Y-m-01');
+    $nextMonth  = date('Y-m-01', strtotime('first day of next month'));
+    $topStmt = $pdo->prepare("
+        SELECT fi.FoodID, fi.FoodName, SUM(ofi.Quantity) AS qty
+        FROM order_food_items ofi
+        INNER JOIN orders o ON o.OrderID = ofi.OrderID AND o.OrderCategoryID = 5
+        INNER JOIN fooditem fi ON fi.FoodID = ofi.FoodID
+        WHERE o.OrderDate >= ? AND o.OrderDate < ?
+        GROUP BY fi.FoodID, fi.FoodName
+        ORDER BY qty DESC, fi.FoodName ASC
+        LIMIT 1
+    ");
+    $topStmt->execute([$monthStart, $nextMonth]);
+    $topRow = $topStmt->fetch(PDO::FETCH_ASSOC);
+    if ($topRow) {
+        $mostPopularFoodID = (int) $topRow['FoodID'];
+        $mostPopularFoodLabel = (string) $topRow['FoodName'];
+    }
+} catch (Throwable $e) {
+    $mostPopularFoodID = null;
+    $mostPopularFoodLabel = '';
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -109,6 +151,23 @@ $added = $_GET['added'] ?? '';
         }
         .menu-card-body h3 { margin:0 0 .3rem; font-size:1rem; font-weight:700; color:var(--cr-text); }
         .menu-card-price { font-size:1.15rem; font-weight:700; color:var(--cr-accent); margin-bottom:.85rem; }
+        .badge-popular {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            margin: 0 0 0.6rem;
+            padding: 0.28rem 0.55rem;
+            border-radius: 999px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #1f5a1a;
+            background: #ecf9e8;
+            border: 1px solid rgba(31, 90, 26, 0.18);
+        }
+        .stock-note { font-size:.82rem; margin-bottom:.7rem; font-weight:600; }
+        .stock-ok { color:#1e7a16; }
+        .stock-low { color:#9a6700; }
+        .stock-out { color:#b50000; }
 
         .add-form { display:flex; gap:.5rem; align-items:center; margin-top:auto; }
         .qty-input {
@@ -137,13 +196,20 @@ $added = $_GET['added'] ?? '';
 <body>
     <header class="site-header">
         <a class="logo" href="index.php">Greenwood Zoo</a>
-        <?php require __DIR__ . '/customer_nav.php'; ?>
+        <?php if ($staffPreview): ?>
+            <a class="staff-back" href="dashboard.php#restaurant-staff" style="margin-left:auto;font-size:.88rem;font-weight:700;color:#1f5a1a;text-decoration:underline;text-underline-offset:2px;">← Back to dashboard</a>
+        <?php else: ?>
+            <?php require __DIR__ . '/customer_nav.php'; ?>
+        <?php endif; ?>
     </header>
 
     <main>
         <div class="page-hero">
             <h1>🍽️ Restaurant</h1>
-            <p>Fresh food served daily at our on-site food stalls. Add items to your cart and pay at checkout.</p>
+            <?php if ($staffPreview): ?>
+                <p>Staff preview mode. This shows the customer-facing restaurant menu.</p>
+            <?php else: ?>
+            <?php endif; ?>
         </div>
 
         <?php
@@ -165,7 +231,7 @@ $added = $_GET['added'] ?? '';
 
         <div class="menu-grid" style="margin-bottom:2.5rem">
             <?php foreach ($stallItems as $item):
-                $img = getFoodImage($item['FoodName'], $foodImages);
+                $img = restaurant_resolved_image_url($item, $foodImages);
             ?>
             <div class="menu-card">
                 <img class="menu-card-img"
@@ -173,16 +239,26 @@ $added = $_GET['added'] ?? '';
                      alt="<?= htmlspecialchars($item['FoodName']) ?>"
                      loading="lazy">
                 <div class="menu-card-body">
+                    <?php
+                    $stock = (int)($item['StockQty'] ?? 0);
+                    $stockClass = $stock <= 0 ? 'stock-out' : ($stock <= 3 ? 'stock-low' : 'stock-ok');
+                    ?>
                     <h3><?= htmlspecialchars($item['FoodName']) ?></h3>
+                    <?php if ($mostPopularFoodID !== null && (int) $item['FoodID'] === $mostPopularFoodID): ?>
+                        <div class="badge-popular" title="<?= htmlspecialchars($mostPopularFoodLabel !== '' ? ($mostPopularFoodLabel . ' is the top seller this month.') : 'Top seller this month.') ?>">
+                            ★ Most popular this month
+                        </div>
+                    <?php endif; ?>
                     <div class="menu-card-price">$<?= number_format($item['Price'], 2) ?></div>
+                    <div class="stock-note <?= $stockClass ?>">Stock: <?= $stock <= 0 ? 'Out of stock' : $stock ?></div>
                     <form class="add-form" method="POST" action="cart_action.php"
                           onsubmit="showToast('<?= htmlspecialchars($item['FoodName'], ENT_QUOTES) ?> added!')">
                         <input type="hidden" name="action"   value="add">
                         <input type="hidden" name="type"     value="food">
                         <input type="hidden" name="id"       value="<?= $item['FoodID'] ?>">
                         <input type="hidden" name="redirect" value="restaurant.php">
-                        <input class="qty-input" type="number" name="qty" value="1" min="1" max="20">
-                        <button class="add-btn" type="submit">Add to cart</button>
+                        <input class="qty-input" type="number" name="qty" value="1" min="1" max="<?= max(1, $stock) ?>" <?= $staffPreview || $stock <= 0 ? 'disabled' : '' ?>>
+                        <button class="add-btn" type="submit" <?= $staffPreview || $stock <= 0 ? 'disabled' : '' ?>>Add to cart</button>
                     </form>
                 </div>
             </div>
@@ -202,6 +278,7 @@ function showToast(msg) {
 }
 
 // Intercept all add-to-cart forms with AJAX so page doesn't reload
+<?php if (!$staffPreview): ?>
 document.querySelectorAll('.add-form').forEach(form => {
     form.addEventListener('submit', e => {
         e.preventDefault();
@@ -225,6 +302,7 @@ document.querySelectorAll('.add-form').forEach(form => {
         });
     });
 });
+<?php endif; ?>
 </script>
 </body>
 </html>
