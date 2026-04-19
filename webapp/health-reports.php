@@ -126,8 +126,8 @@ foreach ($animals as $a) {
     $byCategory[$cat][$a['Health_Status']] = ($byCategory[$cat][$a['Health_Status']] ?? 0) + 1;
 }
 
-// For each of the last 30 days, find each animal's latest status on or before that day
-// Simple approach: get all health records, then compute per-animal latest status per day in PHP
+// For each of the last 30 days, find each animal's latest status on or before that day.
+// Animals with no health records use their current Health_Status from the animal table.
 $allRecordsStmt = $pdo->query("
     SELECT Animal_ID, DATE(Record_Date) AS RecordDay, Health_Status,
            ROW_NUMBER() OVER (PARTITION BY Animal_ID, DATE(Record_Date) ORDER BY Record_Date DESC) AS rn
@@ -135,6 +135,7 @@ $allRecordsStmt = $pdo->query("
     ORDER BY Animal_ID, RecordDay
 ");
 $allRecords = $allRecordsStmt->fetchAll(PDO::FETCH_ASSOC);
+
 // Keep only one record per animal per day (latest)
 $recordsByAnimalDay = [];
 foreach ($allRecords as $r) {
@@ -142,24 +143,33 @@ foreach ($allRecords as $r) {
         $recordsByAnimalDay[$r['Animal_ID']][$r['RecordDay']] = $r['Health_Status'];
     }
 }
+
+// Get all animals with their default status
+$allAnimalsStmt = $pdo->query("SELECT Animal_ID, COALESCE(Health_Status, 'Healthy') AS Health_Status FROM animal");
+$allAnimals = $allAnimalsStmt->fetchAll(PDO::FETCH_ASSOC);
+
 // For each of the last 30 days, find each animal's current status
 $cumulativeRows = [];
 for ($i = 29; $i >= 0; $i--) {
     $day = date('Y-m-d', strtotime("-$i days"));
     $counts = ['Day' => $day, 'Healthy' => 0, 'Sick' => 0, 'Pending' => 0];
-    foreach ($recordsByAnimalDay as $animalId => $dayMap) {
-        // Find the latest record on or before this day
+    foreach ($allAnimals as $animal) {
+        $animalId = $animal['Animal_ID'];
+        $defaultStatus = $animal['Health_Status'];
+        // Find the latest health record on or before this day
         $latestStatus = null;
         $latestDay = null;
-        foreach ($dayMap as $recordDay => $status) {
-            if ($recordDay <= $day && ($latestDay === null || $recordDay > $latestDay)) {
-                $latestDay = $recordDay;
-                $latestStatus = $status;
+        if (isset($recordsByAnimalDay[$animalId])) {
+            foreach ($recordsByAnimalDay[$animalId] as $recordDay => $status) {
+                if ($recordDay <= $day && ($latestDay === null || $recordDay > $latestDay)) {
+                    $latestDay = $recordDay;
+                    $latestStatus = $status;
+                }
             }
         }
-        if ($latestStatus !== null) {
-            $counts[$latestStatus] = ($counts[$latestStatus] ?? 0) + 1;
-        }
+        // Use health record status if found, otherwise use animal's default status
+        $finalStatus = $latestStatus ?? $defaultStatus;
+        $counts[$finalStatus] = ($counts[$finalStatus] ?? 0) + 1;
     }
     $cumulativeRows[] = $counts;
 }
