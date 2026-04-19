@@ -15,12 +15,11 @@ if (!$isAdmin && !staff_is_vet_role()) {
 
 require_once 'db.php';
 
-// ── Handle POST actions (manual resolve / reopen) ─────────────────────────────
+// ── Handle POST actions ───────────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH'])
               && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
 
-    // Manually resolve a single alert
     if ($_POST['action'] === 'resolve_alert') {
         $alertId = (int)($_POST['alert_id'] ?? 0);
         if ($alertId > 0) {
@@ -34,7 +33,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         header('Location: vet_dashboard.php'); exit;
     }
 
-    // Resolve all open alerts at once
     if ($_POST['action'] === 'resolve_all_alerts') {
         $pdo->prepare("
             UPDATE vet_alerts SET IsResolved = 1, ResolvedAt = NOW() WHERE IsResolved = 0
@@ -57,31 +55,52 @@ $totalAnimals   = (int)($summary['TotalAnimals']   ?? 0);
 $sickAnimals    = (int)($summary['SickAnimals']    ?? 0);
 $pendingAnimals = (int)($summary['PendingAnimals'] ?? 0);
 
-// ── Fetch alerts from vet_alerts ──────────────────────────────────────────────
-// Open alerts (IsResolved = 0) first, then recently resolved, joined to animal for extra detail
-$allAlerts = $pdo->query("
+// ── Initial alert load (open only — resolved tab loads on demand) ─────────────
+$openAlerts = $pdo->query("
     SELECT
         va.AlertID,
         va.Animal_ID,
         va.AlertType,
         va.Message,
         va.CreatedAt,
-        va.IsResolved,
-        va.ResolvedAt,
-        a.Name        AS AnimalName,
-        a.Species     AS AnimalSpecies,
-        a.Category    AS AnimalCategory,
+        a.Name          AS AnimalName,
+        a.Species       AS AnimalSpecies,
         e.Enclosure_Name
     FROM vet_alerts va
-    JOIN animal a ON va.Animal_ID = a.Animal_ID
+    JOIN  animal a    ON va.Animal_ID    = a.Animal_ID
     LEFT JOIN enclosure e ON a.Enclosure_ID = e.Enclosure_ID
-    ORDER BY va.IsResolved ASC, va.CreatedAt DESC
-    LIMIT 60
+    WHERE va.IsResolved = 0
+    ORDER BY va.CreatedAt DESC
 ")->fetchAll(PDO::FETCH_ASSOC);
 
-$openAlerts     = array_filter($allAlerts, fn($r) => !(int)$r['IsResolved']);
-$openCount      = count($openAlerts);
-$resolvedAlerts = array_filter($allAlerts, fn($r) =>  (int)$r['IsResolved']);
+$resolvedAlerts = $pdo->query("
+    SELECT
+        va.AlertID,
+        va.Animal_ID,
+        va.Message,
+        va.CreatedAt,
+        va.ResolvedAt,
+        a.Name          AS AnimalName,
+        a.Species       AS AnimalSpecies,
+        e.Enclosure_Name
+    FROM vet_alerts va
+    JOIN  animal a    ON va.Animal_ID    = a.Animal_ID
+    LEFT JOIN enclosure e ON a.Enclosure_ID = e.Enclosure_ID
+    WHERE va.IsResolved = 1
+    ORDER BY va.ResolvedAt DESC
+    LIMIT 40
+")->fetchAll(PDO::FETCH_ASSOC);
+
+$openCount = count($openAlerts);
+
+function human_time_diff(string $dateStr): string {
+    $diff = time() - strtotime($dateStr);
+    if ($diff < 60)     return 'Just now';
+    if ($diff < 3600)   return floor($diff / 60) . 'm ago';
+    if ($diff < 86400)  return floor($diff / 3600) . 'h ago';
+    if ($diff < 604800) return floor($diff / 86400) . 'd ago';
+    return date('M j, Y', strtotime($dateStr));
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -95,31 +114,19 @@ $resolvedAlerts = array_filter($allAlerts, fn($r) =>  (int)$r['IsResolved']);
         body { overflow: auto; margin: 0; }
 
         .dashboard-wrapper {
-            box-sizing: border-box;
-            width: 100%;
-            min-height: 100vh;
-            min-height: 100dvh;
+            box-sizing: border-box; width: 100%;
+            min-height: 100vh; min-height: 100dvh;
             background-color: rgba(187, 223, 158, 0.95);
             text-align: left;
         }
         .dashboard-inner {
-            box-sizing: border-box;
-            max-width: 1200px;
+            box-sizing: border-box; max-width: 1200px;
             margin: 0 auto;
             padding: 20px clamp(12px, 2.4vw, 18px);
         }
 
         /* ── Header ──────────────────────────────────────────── */
-        .dashboard-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 16px;
-            margin-bottom: 20px;
-            border-bottom: 3px solid var(--accent-color);
-            padding-bottom: 14px;
-            flex-wrap: wrap;
-        }
+        .dashboard-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 20px; border-bottom: 3px solid var(--accent-color); padding-bottom: 14px; flex-wrap: wrap; }
         .dashboard-header h1 { margin: 0; font-size: clamp(1.35rem, 2.5vw, 1.75rem); font-weight: 800; color: var(--text-color); }
         .dashboard-header .dash-meta { margin: 6px 0 0; font-size: 0.9rem; color: #666; font-weight: 500; }
         .dashboard-header-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -132,44 +139,75 @@ $resolvedAlerts = array_filter($allAlerts, fn($r) =>  (int)$r['IsResolved']);
 
         /* ── Bell button ─────────────────────────────────────── */
         .bell-btn {
-            position: relative;
-            background: white;
-            border: 2px solid var(--accent-color);
-            border-radius: 1000px;
-            padding: 8px 16px 8px 14px;
-            font: inherit;
-            font-size: 0.88rem;
-            font-weight: 600;
-            cursor: pointer;
-            color: var(--text-color);
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            transition: 150ms ease;
+            position: relative; background: white; border: 2px solid var(--accent-color);
+            border-radius: 1000px; padding: 8px 16px 8px 14px; font: inherit;
+            font-size: 0.88rem; font-weight: 600; cursor: pointer; color: var(--text-color);
+            display: flex; align-items: center; gap: 6px; transition: 150ms ease;
         }
         .bell-btn:hover { background: var(--accent-color); }
-        .bell-badge { background: #e74c3c; color: white; font-size: 0.7rem; font-weight: 800; min-width: 18px; height: 18px; border-radius: 1000px; display: inline-flex; align-items: center; justify-content: center; padding: 0 4px; line-height: 1; }
+        .bell-badge {
+            background: #e74c3c; color: white; font-size: 0.7rem; font-weight: 800;
+            min-width: 18px; height: 18px; border-radius: 1000px; display: inline-flex;
+            align-items: center; justify-content: center; padding: 0 4px; line-height: 1;
+            transition: transform 300ms cubic-bezier(.34,1.56,.64,1);
+        }
+        /* pulse animation when a NEW alert arrives */
+        .bell-badge.pulse { animation: badgePop 400ms cubic-bezier(.34,1.56,.64,1); }
+        @keyframes badgePop { 0%{transform:scale(1)} 50%{transform:scale(1.5)} 100%{transform:scale(1)} }
+
+        /* ── Live indicator dot ──────────────────────────────── */
+        .live-dot {
+            display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+            background: #2ecc71; margin-left: 2px;
+            animation: livePulse 2s ease-in-out infinite;
+        }
+        @keyframes livePulse {
+            0%, 100% { opacity: 1;   transform: scale(1); }
+            50%       { opacity: 0.4; transform: scale(0.8); }
+        }
+
+        /* ── Toast notification ──────────────────────────────── */
+        #toastContainer {
+            position: fixed; bottom: 24px; right: 24px;
+            z-index: 2000; display: flex; flex-direction: column; gap: 10px;
+            pointer-events: none;
+        }
+        .toast {
+            background: #2c3e50; color: white; border-radius: 12px;
+            padding: 14px 20px; font-size: 0.88rem; font-weight: 600;
+            box-shadow: 0 6px 24px rgba(0,0,0,0.2); max-width: 340px;
+            display: flex; align-items: flex-start; gap: 10px;
+            animation: toastIn 350ms cubic-bezier(.34,1.56,.64,1);
+            pointer-events: all;
+        }
+        .toast.danger { background: #c0392b; border-left: 4px solid #e74c3c; }
+        .toast-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
+        .toast-body { flex: 1; line-height: 1.4; }
+        .toast-title { font-size: 0.8rem; opacity: 0.8; margin-bottom: 2px; }
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateY(20px) scale(0.95); }
+            to   { opacity: 1; transform: translateY(0)    scale(1); }
+        }
+        @keyframes toastOut {
+            from { opacity: 1; transform: translateY(0)    scale(1); }
+            to   { opacity: 0; transform: translateY(10px) scale(0.95); }
+        }
 
         /* ── Slide-over panel ────────────────────────────────── */
         .notif-panel-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.25); z-index: 999; }
         .notif-panel-backdrop.open { display: block; }
         .notif-panel {
             position: fixed; top: 0; right: -460px;
-            width: min(460px, 100vw); height: 100vh;
-            background: white;
-            box-shadow: -6px 0 32px rgba(0,0,0,0.14);
-            z-index: 1000;
+            width: min(460px, 100vw); height: 100vh; background: white;
+            box-shadow: -6px 0 32px rgba(0,0,0,0.14); z-index: 1000;
             display: flex; flex-direction: column;
-            transition: right 280ms cubic-bezier(.4,0,.2,1);
-            overflow: hidden;
+            transition: right 280ms cubic-bezier(.4,0,.2,1); overflow: hidden;
         }
         .notif-panel.open { right: 0; }
         .notif-panel-header {
             display: flex; align-items: center; justify-content: space-between;
-            padding: 18px 20px;
-            border-bottom: 2px solid #f0f0f0;
-            background: var(--accent-color);
-            flex-shrink: 0;
+            padding: 18px 20px; border-bottom: 2px solid #f0f0f0;
+            background: var(--accent-color); flex-shrink: 0;
         }
         .notif-panel-header h2 { margin: 0; font-size: 1.05rem; font-weight: 800; color: var(--text-color); }
         .notif-panel-actions { display: flex; gap: 8px; align-items: center; }
@@ -189,6 +227,14 @@ $resolvedAlerts = array_filter($allAlerts, fn($r) =>  (int)$r['IsResolved']);
         .notif-item { border-radius: 10px; padding: 14px 16px; border: 2px solid #f0f0f0; background: #fff; position: relative; }
         .notif-item.open-alert { background: #fff8f8; border-color: #f5c6cb; }
         .notif-item.open-alert::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: #e74c3c; border-radius: 10px 0 0 10px; }
+        /* slide-in animation for newly polled alerts */
+        .notif-item.new-alert {
+            animation: slideIn 400ms cubic-bezier(.34,1.56,.64,1);
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(20px); }
+            to   { opacity: 1; transform: translateX(0); }
+        }
         .notif-item.resolved-alert { opacity: 0.7; }
         .notif-animal { font-size: 0.88rem; font-weight: 800; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
         .notif-animal.danger { color: #e74c3c; }
@@ -235,11 +281,14 @@ $resolvedAlerts = array_filter($allAlerts, fn($r) =>  (int)$r['IsResolved']);
             <span class="user-name"><?= htmlspecialchars($_SESSION['firstname']) ?></span>
             <span class="role-badge"><?= htmlspecialchars($_SESSION['role']) ?></span>
 
-            <button class="bell-btn" onclick="openNotifPanel()">
+            <!-- Bell button — badge and count updated by JS poller -->
+            <button class="bell-btn" id="bellBtn" onclick="openNotifPanel()">
                 🔔 Alerts
-                <?php if ($openCount > 0): ?>
-                    <span class="bell-badge" id="bellCount"><?= $openCount ?></span>
-                <?php endif; ?>
+                <span class="bell-badge" id="bellCount"
+                      style="<?= $openCount === 0 ? 'display:none' : '' ?>">
+                    <?= $openCount ?>
+                </span>
+                <span class="live-dot" title="Live updates active"></span>
             </button>
 
             <?php if ($isAdmin): ?>
@@ -250,7 +299,7 @@ $resolvedAlerts = array_filter($allAlerts, fn($r) =>  (int)$r['IsResolved']);
         </div>
     </div>
 
-    <!-- ── Stats ─────────────────────────────────────────────── -->
+    <!-- ── Stats (open alert count updated live by JS) ───────── -->
     <div class="stats-row">
         <div class="stat-card">
             <div class="stat-label">Animals in view</div>
@@ -264,9 +313,9 @@ $resolvedAlerts = array_filter($allAlerts, fn($r) =>  (int)$r['IsResolved']);
             <div class="stat-label">Pending review</div>
             <div class="stat-value"><?= $pendingAnimals ?></div>
         </div>
-        <div class="stat-card <?= $openCount > 0 ? 'danger' : '' ?>">
+        <div class="stat-card" id="openAlertCard" class="<?= $openCount > 0 ? 'danger' : '' ?>">
             <div class="stat-label">Open alerts</div>
-            <div class="stat-value"><?= $openCount ?></div>
+            <div class="stat-value" id="openAlertCount"><?= $openCount ?></div>
         </div>
     </div>
 
@@ -287,6 +336,8 @@ $resolvedAlerts = array_filter($allAlerts, fn($r) =>  (int)$r['IsResolved']);
 </div><!-- /.dashboard-inner -->
 </div><!-- /.dashboard-wrapper -->
 
+<!-- ── Toast container ───────────────────────────────────────── -->
+<div id="toastContainer"></div>
 
 <!-- ── Slide-over alert panel ────────────────────────────────── -->
 <div class="notif-panel-backdrop" id="notifBackdrop" onclick="closeNotifPanel()"></div>
@@ -295,50 +346,35 @@ $resolvedAlerts = array_filter($allAlerts, fn($r) =>  (int)$r['IsResolved']);
     <div class="notif-panel-header">
         <h2>🔔 Vet Alerts</h2>
         <div class="notif-panel-actions">
-            <?php if ($openCount > 0): ?>
-                <button class="btn-resolve-all" id="resolveAllBtn" onclick="resolveAll()">Resolve all</button>
-            <?php endif; ?>
+            <button class="btn-resolve-all" id="resolveAllBtn"
+                    style="<?= $openCount === 0 ? 'display:none' : '' ?>"
+                    onclick="resolveAll()">Resolve all</button>
             <button class="notif-close" onclick="closeNotifPanel()">✕</button>
         </div>
     </div>
 
-    <!-- Tabs: Open / Resolved -->
+    <!-- Tabs -->
     <div class="panel-tabs">
-        <button class="panel-tab active" onclick="switchTab('open', this)">
-            Open <?php if ($openCount > 0): ?>(<?= $openCount ?>)<?php endif; ?>
+        <button class="panel-tab active" id="tabBtnOpen"     onclick="switchTab('open', this)">
+            Open (<span id="openTabCount"><?= $openCount ?></span>)
         </button>
-        <button class="panel-tab" onclick="switchTab('resolved', this)">
+        <button class="panel-tab"        id="tabBtnResolved" onclick="switchTab('resolved', this)">
             Resolved (<?= count($resolvedAlerts) ?>)
         </button>
     </div>
 
-    <!-- Open alerts tab -->
+    <!-- Open alerts -->
     <div class="panel-tab-content active" id="tab-open">
         <?php if (empty($openAlerts)): ?>
-            <div class="notif-empty">✅ No open alerts.<br>All animals are healthy!</div>
+            <div class="notif-empty" id="openEmptyState">✅ No open alerts.<br>All animals are healthy!</div>
         <?php else: ?>
             <?php foreach ($openAlerts as $alert): ?>
-                <div class="notif-item open-alert" id="alert-<?= (int)$alert['AlertID'] ?>">
-                    <div class="notif-animal danger">
-                        🔴 <?= htmlspecialchars($alert['AnimalName']) ?>
-                        <span style="font-weight:500;color:#555;">(<?= htmlspecialchars($alert['AnimalSpecies']) ?>)</span>
-                    </div>
-                    <?php if (!empty($alert['Enclosure_Name'])): ?>
-                        <div class="notif-enclosure">📍 <?= htmlspecialchars($alert['Enclosure_Name']) ?></div>
-                    <?php endif; ?>
-                    <div class="notif-msg"><?= htmlspecialchars($alert['Message']) ?></div>
-                    <div class="notif-footer">
-                        <span class="notif-time">⏱ <?= human_time_diff($alert['CreatedAt']) ?></span>
-                        <button class="btn-resolve" onclick="resolveAlert(<?= (int)$alert['AlertID'] ?>, this)">
-                            ✓ Resolve
-                        </button>
-                    </div>
-                </div>
+                <?= renderAlertItem($alert) ?>
             <?php endforeach; ?>
         <?php endif; ?>
     </div>
 
-    <!-- Resolved alerts tab -->
+    <!-- Resolved alerts -->
     <div class="panel-tab-content" id="tab-resolved">
         <?php if (empty($resolvedAlerts)): ?>
             <div class="notif-empty">No resolved alerts yet.</div>
@@ -367,8 +403,24 @@ $resolvedAlerts = array_filter($allAlerts, fn($r) =>  (int)$r['IsResolved']);
 
 
 <script>
-function openNotifPanel()  { document.getElementById('notifPanel').classList.add('open');    document.getElementById('notifBackdrop').classList.add('open'); }
-function closeNotifPanel() { document.getElementById('notifPanel').classList.remove('open'); document.getElementById('notifBackdrop').classList.remove('open'); }
+// ── State tracked by the poller ───────────────────────────────
+// Store alert IDs already visible so we can detect truly new ones
+const knownAlertIds = new Set([
+    <?php echo implode(',', array_column($openAlerts, 'AlertID')); ?>
+]);
+
+let pollInterval = null;
+const POLL_EVERY_MS = 7000; // poll every 7 seconds
+
+// ── Panel open/close ──────────────────────────────────────────
+function openNotifPanel()  {
+    document.getElementById('notifPanel').classList.add('open');
+    document.getElementById('notifBackdrop').classList.add('open');
+}
+function closeNotifPanel() {
+    document.getElementById('notifPanel').classList.remove('open');
+    document.getElementById('notifBackdrop').classList.remove('open');
+}
 
 function switchTab(name, btn) {
     document.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
@@ -377,7 +429,124 @@ function switchTab(name, btn) {
     document.getElementById('tab-' + name).classList.add('active');
 }
 
-// Resolve a single alert via AJAX
+// ── Build an alert card HTML string (mirrors PHP renderAlertItem) ─
+function buildAlertHTML(alert, isNew = false) {
+    const enclosure = alert.enclosure
+        ? `<div class="notif-enclosure">📍 ${escHtml(alert.enclosure)}</div>` : '';
+    return `
+        <div class="notif-item open-alert${isNew ? ' new-alert' : ''}" id="alert-${alert.alertId}">
+            <div class="notif-animal danger">
+                🔴 ${escHtml(alert.animalName)}
+                <span style="font-weight:500;color:#555;">(${escHtml(alert.animalSpecies)})</span>
+            </div>
+            ${enclosure}
+            <div class="notif-msg">${escHtml(alert.message)}</div>
+            <div class="notif-footer">
+                <span class="notif-time" data-created="${escHtml(alert.createdAt)}">⏱ ${escHtml(alert.timeAgo)}</span>
+                <button class="btn-resolve" onclick="resolveAlert(${alert.alertId}, this)">✓ Resolve</button>
+            </div>
+        </div>`;
+}
+
+function escHtml(str) {
+    return String(str)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+
+async function pollAlerts() {
+    try {
+        const res  = await fetch('vet_alerts_real_time.php', { cache: 'no-store' });
+        if (!res.ok) return; // silently ignore network hiccups
+        const data = await res.json();
+
+        const freshIds   = new Set(data.alerts.map(a => a.alertId));
+        const newAlerts  = data.alerts.filter(a => !knownAlertIds.has(a.alertId));
+        const goneIds    = [...knownAlertIds].filter(id => !freshIds.has(id));
+
+        // ── Remove alerts that were resolved elsewhere (e.g. another vet) ──
+        goneIds.forEach(id => {
+            knownAlertIds.delete(id);
+            const el = document.getElementById(`alert-${id}`);
+            if (el) el.remove();
+        });
+
+        // ── Inject new alerts at the top of the open tab ─────────────────
+        if (newAlerts.length > 0) {
+            const tab = document.getElementById('tab-open');
+            const emptyState = document.getElementById('openEmptyState');
+            if (emptyState) emptyState.remove();
+
+            newAlerts.forEach(alert => {
+                knownAlertIds.add(alert.alertId);
+                tab.insertAdjacentHTML('afterbegin', buildAlertHTML(alert, true));
+                showToast(alert);
+            });
+        }
+
+        // ── Sync open count everywhere ────────────────────────────────────
+        updateOpenCount(data.openCount);
+
+    } catch (e) {
+        // Network error — just wait for the next poll
+    }
+}
+
+function updateOpenCount(count) {
+    // Bell badge
+    const badge = document.getElementById('bellCount');
+    const prev  = parseInt(badge.textContent || '0', 10);
+    badge.textContent = count;
+    badge.style.display = count > 0 ? 'inline-flex' : 'none';
+    if (count > prev) {
+        badge.classList.remove('pulse');
+        void badge.offsetWidth; // reflow to restart animation
+        badge.classList.add('pulse');
+    }
+
+    // Stat card
+    document.getElementById('openAlertCount').textContent = count;
+    const card = document.getElementById('openAlertCard');
+    card.classList.toggle('danger', count > 0);
+
+    // Tab label
+    document.getElementById('openTabCount').textContent = count;
+
+    // "Resolve all" button
+    document.getElementById('resolveAllBtn').style.display = count > 0 ? '' : 'none';
+
+    // If open tab is now empty, show the empty state
+    const tab = document.getElementById('tab-open');
+    if (count === 0 && !tab.querySelector('.notif-item')) {
+        if (!document.getElementById('openEmptyState')) {
+            tab.innerHTML = '<div class="notif-empty" id="openEmptyState">✅ No open alerts.<br>All animals are healthy!</div>';
+        }
+    }
+}
+
+// ── Toast pop-up for new alerts ───────────────────────────────
+function showToast(alert) {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = 'toast danger';
+    toast.innerHTML = `
+        <span class="toast-icon">🔴</span>
+        <div class="toast-body">
+            <div class="toast-title">New sick animal alert</div>
+            <strong>${escHtml(alert.animalName)}</strong> (${escHtml(alert.animalSpecies)})
+            ${alert.enclosure ? ' · ' + escHtml(alert.enclosure) : ''}
+        </div>`;
+    container.appendChild(toast);
+
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+        toast.style.animation = 'toastOut 300ms ease forwards';
+        toast.addEventListener('animationend', () => toast.remove());
+    }, 5000);
+}
+
+// ── Resolve a single alert ────────────────────────────────────
 function resolveAlert(alertId, btn) {
     fetch('vet_dashboard.php', {
         method: 'POST',
@@ -387,20 +556,14 @@ function resolveAlert(alertId, btn) {
     .then(r => r.json())
     .then(data => {
         if (!data.success) return;
+        knownAlertIds.delete(alertId);
         const item = document.getElementById(`alert-${alertId}`);
         if (item) item.remove();
-        decrementBadge();
-        // If no more open alerts, show empty state
-        const openTab = document.getElementById('tab-open');
-        if (!openTab.querySelector('.notif-item')) {
-            openTab.innerHTML = '<div class="notif-empty">✅ No open alerts.<br>All animals are healthy!</div>';
-            const resolveAllBtn = document.getElementById('resolveAllBtn');
-            if (resolveAllBtn) resolveAllBtn.remove();
-        }
+        updateOpenCount(knownAlertIds.size);
     });
 }
 
-// Resolve all open alerts via AJAX
+// ── Resolve all open alerts ───────────────────────────────────
 function resolveAll() {
     fetch('vet_dashboard.php', {
         method: 'POST',
@@ -410,35 +573,60 @@ function resolveAll() {
     .then(r => r.json())
     .then(data => {
         if (!data.success) return;
+        knownAlertIds.clear();
         document.querySelectorAll('#tab-open .notif-item').forEach(el => el.remove());
-        document.getElementById('tab-open').innerHTML =
-            '<div class="notif-empty">✅ No open alerts.<br>All animals are healthy!</div>';
-        const badge = document.getElementById('bellCount');
-        if (badge) badge.remove();
-        const resolveAllBtn = document.getElementById('resolveAllBtn');
-        if (resolveAllBtn) resolveAllBtn.remove();
+        updateOpenCount(0);
     });
 }
 
-function decrementBadge() {
-    const badge = document.getElementById('bellCount');
-    if (!badge) return;
-    const current = parseInt(badge.textContent, 10);
-    if (current <= 1) badge.remove();
-    else badge.textContent = current - 1;
+// ── Refresh relative timestamps every minute ──────────────────
+function refreshTimestamps() {
+    document.querySelectorAll('.notif-time[data-created]').forEach(el => {
+        const created = el.getAttribute('data-created');
+        if (!created) return;
+        const diff = Math.floor((Date.now() - new Date(created).getTime()) / 1000);
+        let label;
+        if (diff < 60)     label = 'Just now';
+        else if (diff < 3600)  label = Math.floor(diff/60)   + 'm ago';
+        else if (diff < 86400) label = Math.floor(diff/3600)  + 'h ago';
+        else                   label = Math.floor(diff/86400) + 'd ago';
+        el.textContent = '⏱ ' + label;
+    });
 }
+
+// ── Start polling on page load ────────────────────────────────
+pollAlerts(); // immediate first check
+pollInterval = setInterval(pollAlerts, POLL_EVERY_MS);
+setInterval(refreshTimestamps, 60000); // refresh "X ago" labels every minute
 </script>
 
 </body>
 </html>
 
 <?php
-function human_time_diff(string $dateStr): string {
-    $diff = time() - strtotime($dateStr);
-    if ($diff < 60)     return 'Just now';
-    if ($diff < 3600)   return floor($diff / 60) . 'm ago';
-    if ($diff < 86400)  return floor($diff / 3600) . 'h ago';
-    if ($diff < 604800) return floor($diff / 86400) . 'd ago';
-    return date('M j, Y', strtotime($dateStr));
+
+function renderAlertItem(array $alert): string {
+    $id        = (int)$alert['AlertID'];
+    $name      = htmlspecialchars($alert['AnimalName']);
+    $species   = htmlspecialchars($alert['AnimalSpecies']);
+    $enclosure = !empty($alert['Enclosure_Name'])
+        ? '<div class="notif-enclosure">📍 ' . htmlspecialchars($alert['Enclosure_Name']) . '</div>'
+        : '';
+    $msg  = htmlspecialchars($alert['Message']);
+    $time = human_time_diff($alert['CreatedAt']);
+    $created = htmlspecialchars($alert['CreatedAt']);
+    return "
+        <div class=\"notif-item open-alert\" id=\"alert-{$id}\">
+            <div class=\"notif-animal danger\">
+                🔴 {$name}
+                <span style=\"font-weight:500;color:#555;\">({$species})</span>
+            </div>
+            {$enclosure}
+            <div class=\"notif-msg\">{$msg}</div>
+            <div class=\"notif-footer\">
+                <span class=\"notif-time\" data-created=\"{$created}\">⏱ {$time}</span>
+                <button class=\"btn-resolve\" onclick=\"resolveAlert({$id}, this)\">✓ Resolve</button>
+            </div>
+        </div>";
 }
 ?>
