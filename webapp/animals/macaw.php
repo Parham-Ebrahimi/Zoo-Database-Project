@@ -46,7 +46,7 @@
     </header>
 
     <div class="animal-hero">
-        <img src="https://images.unsplash.com/photo-1552728089-57bdde30beb3?auto=format&fit=crop&w=1600&q=80" alt="Macaw at Greenwood Zoo">
+        <img src="https://images.unsplash.com/photo-1664545141018-c70ca9e78a76?q=80&w=1625&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="Macaw at Greenwood Zoo">
         <div class="animal-hero-text">
             <h1>Macaw</h1>
             <p>Scarlet Macaw · <em>Ara macao</em></p>

@@ -46,7 +46,7 @@
     </header>
 
     <div class="animal-hero">
-        <img src="https://images.unsplash.com/photo-1619368100791-5ef5b3600e6c?auto=format&fit=crop&w=1600&q=80" alt="Capybara at Greenwood Zoo">
+        <img src="https://images.unsplash.com/photo-1701772164869-dfb2cac483dc?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="Capybara at Greenwood Zoo">
         <div class="animal-hero-text">
             <h1>Capybara</h1>
             <p>Capybara · <em>Hydrochoerus hydrochaeris</em></p>

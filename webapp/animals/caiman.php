@@ -46,7 +46,7 @@
     </header>
 
     <div class="animal-hero">
-        <img src="https://images.unsplash.com/photo-1589656966895-2f33e7653819?auto=format&fit=crop&w=1600&q=80" alt="Caiman at Greenwood Zoo">
+        <img src="https://images.unsplash.com/photo-1557868363-8d9d44d5b9e4?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="Caiman at Greenwood Zoo">
         <div class="animal-hero-text">
             <h1>Caiman</h1>
             <p>Black Caiman · <em>Melanosuchus niger</em></p>

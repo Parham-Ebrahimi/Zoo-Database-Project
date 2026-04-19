@@ -46,7 +46,7 @@
     </header>
 
     <div class="animal-hero">
-        <img src="https://images.unsplash.com/photo-1591389703635-e15a07b842d7?auto=format&fit=crop&w=1600&q=80" alt="Crocodile at Greenwood Zoo">
+        <img src="https://images.unsplash.com/photo-1611069648374-733e7bb73e5c?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="Crocodile at Greenwood Zoo">
         <div class="animal-hero-text">
             <h1>Crocodile</h1>
             <p>Nile Crocodile · <em>Crocodylus niloticus</em></p>

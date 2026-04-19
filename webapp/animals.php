@@ -134,50 +134,50 @@
             "name" => "Seals",
             "slug" => "seal",
             "blurb" => "Playful and graceful marine mammals at home in both water and on land.",
-            "img" => "https://images.unsplash.com/photo-1564349683136-77e08dba1ef7?auto=format&fit=crop&w=800&q=80",
+            "img" => "https://images.unsplash.com/photo-1572880393162-0518ac760495?q=80&w=1674&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
             "alt" => "Seal resting on a rock"
         ],
         [
             "name" => "Anaconda",
             "slug" => "anaconda",
             "blurb" => "The world's heaviest snake, a stealthy constrictor of South American rivers.",
-            "img" => "https://images.unsplash.com/photo-1531386151447-fd76ad50012f?auto=format&fit=crop&w=800&q=80",
+            "img" => "https://images.unsplash.com/photo-1600682322637-95c40966e79f?q=80&w=2100&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
             "alt" => "Large green anaconda"
         ],
         [
             "name" => "Crocodile",
             "slug" => "crocodile",
             "blurb" => "Ancient reptiles that have outlasted the dinosaurs, unchanged for millions of years.",
-            "img" => "https://images.unsplash.com/photo-1591389703635-e15a07b842d7?auto=format&fit=crop&w=800&q=80",
+            "img" => "https://images.unsplash.com/photo-1611069648374-733e7bb73e5c?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
             "alt" => "Crocodile with open jaws"
         ],
         [
             "name" => "Caiman",
             "slug" => "caiman",
             "blurb" => "A formidable crocodilian and apex predator of South American river systems.",
-            "img" => "https://images.unsplash.com/photo-1589656966895-2f33e7653819?auto=format&fit=crop&w=800&q=80",
+            "img" => "https://images.unsplash.com/photo-1557868363-8d9d44d5b9e4?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
             "alt" => "Caiman on a riverbank"
         ],
         [
             "name" => "Shark",
             "slug" => "shark",
             "blurb" => "Ocean's ultimate predator, evolving virtually unchanged for over 450 million years.",
-            "img" => "https://images.unsplash.com/photo-1560275619-4cc5fa59d3ae?auto=format&fit=crop&w=800&q=80",
+            "img" => "https://images.unsplash.com/photo-1586115457457-b3753fe50cf1?q=80&w=1688&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
             "alt" => "Shark swimming underwater"
         ],
         [
             "name" => "Otter",
             "slug" => "otter",
             "blurb" => "Playful and intelligent river mammals with a love for water and fish.",
-            "img" => "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=800&q=80",
+            "img" => "https://images.unsplash.com/photo-1633967920376-33b2d94f091f?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
             "alt" => "Otter floating in water"
         ],
         [
             "name" => "Macaw",
             "slug" => "macaw",
-            "blurb" => "Brilliantly coloured parrots renowned for their intelligence and long lifespans.",
-            "img" => "https://images.unsplash.com/photo-1552728089-57bdde30beb3?auto=format&fit=crop&w=800&q=80",
-            "alt" => "Colourful macaw perched on a branch"
+            "blurb" => "Brilliantly colored parrots renowned for their intelligence and long lifespans.",
+            "img" => "https://images.unsplash.com/photo-1664545141018-c70ca9e78a76?q=80&w=1625&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+            "alt" => "Colorful macaw perched on a branch"
         ],
         [
             "name" => "Monkey",
@@ -190,21 +190,21 @@
             "name" => "Capybara",
             "slug" => "capybara",
             "blurb" => "The world's largest rodent — gentle, sociable, and surprisingly good swimmers.",
-            "img" => "https://images.unsplash.com/photo-1619368100791-5ef5b3600e6c?auto=format&fit=crop&w=800&q=80",
+            "img" => "https://images.unsplash.com/photo-1701772164869-dfb2cac483dc?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
             "alt" => "Capybara resting near water"
         ],
         [
             "name" => "Tapir",
             "slug" => "tapir",
             "blurb" => "A living fossil with a prehensile snout, unchanged for tens of millions of years.",
-            "img" => "https://images.unsplash.com/photo-1611689342806-0863700ce1e4?auto=format&fit=crop&w=800&q=80",
+            "img" => "https://images.unsplash.com/photo-1712938548647-8f92b804eb82?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
             "alt" => "Tapir in a jungle setting"
         ],
         [
             "name" => "Camel",
             "slug" => "camel",
             "blurb" => "Desert survivors built to endure extreme heat and long stretches without water.",
-            "img" => "https://images.unsplash.com/photo-1548767797-d8c844163c4a?auto=format&fit=crop&w=800&q=80",
+            "img" => "https://images.unsplash.com/photo-1598113972215-96c018fb1a0b?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
             "alt" => "Camel in a desert landscape"
         ],
     ];

@@ -46,7 +46,7 @@
     </header>
 
     <div class="animal-hero">
-        <img src="https://images.unsplash.com/photo-1531386151447-fd76ad50012f?auto=format&fit=crop&w=1600&q=80" alt="Anaconda at Greenwood Zoo">
+        <img src="https://images.unsplash.com/photo-1600682322637-95c40966e79f?q=80&w=2100&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="Anaconda at Greenwood Zoo">
         <div class="animal-hero-text">
             <h1>Anaconda</h1>
             <p>Green Anaconda · <em>Eunectes murinus</em></p>

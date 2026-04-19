@@ -46,7 +46,7 @@
     </header>
 
     <div class="animal-hero">
-        <img src="https://images.unsplash.com/photo-1560275619-4cc5fa59d3ae?auto=format&fit=crop&w=1600&q=80" alt="Shark at Greenwood Zoo">
+        <img src="https://images.unsplash.com/photo-1586115457457-b3753fe50cf1?q=80&w=1688&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="Shark at Greenwood Zoo">
         <div class="animal-hero-text">
             <h1>Shark</h1>
             <p>Sand Tiger Shark · <em>Carcharias taurus</em></p>

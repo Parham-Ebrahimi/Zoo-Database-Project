@@ -46,7 +46,7 @@
     </header>
 
     <div class="animal-hero">
-        <img src="https://images.unsplash.com/photo-1611689342806-0863700ce1e4?auto=format&fit=crop&w=1600&q=80" alt="Tapir at Greenwood Zoo">
+        <img src="https://images.unsplash.com/photo-1712938548647-8f92b804eb82?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="Tapir at Greenwood Zoo">
         <div class="animal-hero-text">
             <h1>Tapir</h1>
             <p>Baird's Tapir · <em>Tapirus bairdii</em></p>

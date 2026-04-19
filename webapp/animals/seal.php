@@ -46,7 +46,7 @@
     </header>
 
     <div class="animal-hero">
-        <img src="https://images.unsplash.com/photo-1564349683136-77e08dba1ef7?auto=format&fit=crop&w=1600&q=80" alt="Seals at Greenwood Zoo">
+        <img src="https://images.unsplash.com/photo-1572880393162-0518ac760495?q=80&w=1674&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="Seals at Greenwood Zoo">
         <div class="animal-hero-text">
             <h1>Seals</h1>
             <p>Harbour Seal · <em>Phoca vitulina</em></p>
