@@ -46,7 +46,7 @@
     </header>
 
     <div class="animal-hero">
-        <img src="https://images.unsplash.com/photo-1517840901100-8179e982acb7?auto=format&fit=crop&w=1600&q=80" alt="Polar Bear at Greenwood Zoo">
+        <img src="https://images.unsplash.com/photo-1589656966895-2f33e7653819?auto=format&fit=crop&w=1600&q=80" alt="Polar Bear at Greenwood Zoo">
         <div class="animal-hero-text">
             <h1>Polar Bear</h1>
             <p>Polar Bear · <em>Ursus maritimus</em></p>

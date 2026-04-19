@@ -120,14 +120,14 @@
             "name" => "Polar Bear",
             "slug" => "polar-bear",
             "blurb" => "The world's largest land carnivore, perfectly adapted to Arctic life.",
-            "img" => "https://images.unsplash.com/photo-1517840901100-8179e982acb7?auto=format&fit=crop&w=800&q=80",
+            "img" => "https://images.unsplash.com/photo-1589656966895-2f33e7653819?auto=format&fit=crop&w=1600&q=80",
             "alt" => "Polar bear in a snowy landscape"
         ],
         [
             "name" => "Jaguar",
             "slug" => "jaguar",
             "blurb" => "The Americas' largest cat, built for power with a beautifully spotted coat.",
-            "img" => "https://images.unsplash.com/photo-1605559424843-9e4c228bf1c2?auto=format&fit=crop&w=800&q=80",
+            "img" => "https://images.unsplash.com/photo-1616128417743-c3a6992a65e7?q=80&w=2072&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
             "alt" => "Jaguar with spotted coat"
         ],
         [
