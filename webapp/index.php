@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/session_bootstrap.php';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -13,24 +13,20 @@ session_start();
     <header class="site-header">
         <a class="logo" href="index.php">Greenwood Zoo</a>
 
-        <nav aria-label="Main">
-            <ul class="nav-links">
-
-                <?php if (isset($_SESSION['customer_id'])): ?>
-                    <li><span>Welcome, <?= $_SESSION['firstname'] ?></span></li>
-                    <li><a href="customer-dashboard.php">Dashboard</a></li>
-                    <li><a href="logout.php">Logout</a></li>
-                <?php else: ?>
+        <?php if (isset($_SESSION['customer_id'])): ?>
+            <?php require __DIR__ . '/customer_nav.php'; ?>
+        <?php else: ?>
+            <nav aria-label="Main">
+                <ul class="nav-links">
                     <li><a href="login.html">Login</a></li>
                     <li><a href="signup.html">Sign Up</a></li>
-                <?php endif; ?>
-
-                <li><a href="#about">About</a></li>
-                <li><a href="#hours">Hours</a></li>
-                <li><a href="animals.php">Animals</a></li>
-                <li><a href="#visit">Visit</a></li>
-            </ul>
-        </nav>
+                    <li><a href="#about">About</a></li>
+                    <li><a href="#hours">Hours</a></li>
+                    <li><a href="animals.php">Animals</a></li>
+                    <li><a href="#visit">Visit</a></li>
+                </ul>
+            </nav>
+        <?php endif; ?>
     </header>
 
     <section class="hero" aria-labelledby="hero-title">

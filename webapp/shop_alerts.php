@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/session_bootstrap.php';
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.html');
     exit;
@@ -11,6 +11,9 @@ if (!in_array($role, ['admin', 'Gift Shop Employee'], true)) {
     header('Location: dashboard.php');
     exit;
 }
+$dashboardBackHref = $role === 'Gift Shop Employee'
+    ? 'dashboard.php#gift-shop'
+    : 'dashboard.php#gift-shop-admin';
 
 $restockError = '';
 $restockOk = false;
@@ -103,11 +106,40 @@ $alerts = $alertsStmt->fetchAll(PDO::FETCH_ASSOC);
         .low { background: #fff4db; color: #8b5a00; }
         .open { color: #8a1111; font-weight: 700; }
         .resolved { color: #2a6e26; font-weight: 700; }
-        .top-actions a {
-            display: inline-block;
-            margin-right: 1rem;
-            font-weight: 600;
+        .top-actions {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.65rem 1.25rem;
+            margin: 0.75rem 0 1rem;
         }
+        .top-actions a.back-dash-pill {
+            display: inline-block;
+            border-radius: 9999px;
+            padding: 14px 36px;
+            background: #7cb869;
+            color: #1a3d1c;
+            font-weight: 700;
+            font-size: 0.95rem;
+            text-decoration: underline;
+            text-decoration-color: #1a3d1c;
+            text-underline-offset: 3px;
+            letter-spacing: 0.01em;
+            box-shadow: 0 1px 2px rgba(26, 61, 28, 0.12);
+        }
+        .top-actions a.back-dash-pill:hover {
+            background: #6daa5a;
+            color: #132a14;
+            text-decoration-color: #132a14;
+        }
+        .top-actions a:not(.back-dash-pill) {
+            display: inline-block;
+            font-weight: 600;
+            color: #1a3d1c;
+            text-decoration: underline;
+            text-underline-offset: 2px;
+        }
+        .top-actions a:not(.back-dash-pill):hover { color: #0f2410; }
         button {
             border: none;
             background: var(--accent-color);
@@ -149,8 +181,8 @@ $alerts = $alertsStmt->fetchAll(PDO::FETCH_ASSOC);
             <p style="background:#ffeaea;color:#8a1111;padding:.65rem 1rem;border-radius:8px;font-weight:600;margin:.75rem 0 0;"><?= htmlspecialchars($restockError) ?></p>
         <?php endif; ?>
         <div class="top-actions">
-            <a href="dashboard.php">Back to Dashboard</a>
-            <a href="giftshop.php">Customer Gift Shop</a>
+            <a class="back-dash-pill" href="<?= htmlspecialchars($dashboardBackHref) ?>">Back to dashboard</a>
+            <a href="giftshop.php?preview=1">Customer Gift Shop</a>
         </div>
 
         <div class="panel">

@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/session_bootstrap.php';
 require_once 'db.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -44,11 +44,12 @@ if ($staff) {
         $_SESSION['role'] = $staff['Role'];
 
         $role = $staff['Role'];
+        $rl = strtolower((string) $role);
         if ($role === 'admin') {
             header('Location: dashboard.php');
-        } elseif ($role === 'caretaker') {
+        } elseif ($rl === 'caretaker') {
             header('Location: caretaker_dashboard.php');
-        } elseif ($role === 'vet') {
+        } elseif ($rl === 'vet') {
             header('Location: vet_dashboard.php');
         } else {
             header('Location: dashboard.php');

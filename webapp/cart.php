@@ -1,6 +1,10 @@
 <?php
-session_start();
+require_once __DIR__ . '/session_bootstrap.php';
 if (!isset($_SESSION['customer_id'])) {
+    if (!empty($_SESSION['user_id'])) {
+        header('Location: dashboard.php');
+        exit;
+    }
     header('Location: login.html');
     exit;
 }
@@ -250,19 +254,7 @@ $isEmpty    = $cartCount === 0;
 <body>
     <header class="site-header">
         <a class="logo" href="index.php">Greenwood Zoo</a>
-        <nav aria-label="Main">
-            <ul class="nav-links">
-                <li><a href="index.php">Home</a></li>
-                <li><a href="customer-dashboard.php">Dashboard</a></li>
-                <li><a href="restaurant.php">Restaurant</a></li>
-                <li><a href="buy_tickets.php">Buy tickets</a></li>
-                <li><a href="giftshop.php">Gift shop</a></li>
-                <li>
-                    <a href="cart.php" class="nav-cart-link">🛒 Cart<?php if ($cartCount > 0): ?><span class="nav-cart-badge" id="cart-count"><?= (int) $cartCount ?></span><?php endif; ?></a>
-                </li>
-                <li><a href="logout.php">Logout</a></li>
-            </ul>
-        </nav>
+        <?php require __DIR__ . '/customer_nav.php'; ?>
     </header>
 
     <main>
