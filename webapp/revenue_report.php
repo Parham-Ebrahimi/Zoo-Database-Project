@@ -1,7 +1,12 @@
 <?php
 require_once __DIR__ . '/session_bootstrap.php';
 if (!isset($_SESSION['user_id'])) { header('Location: login.html'); exit; }
-if (!in_array(strtolower($_SESSION['role']), ['admin'])) { header('Location: dashboard.php'); exit; }
+$role = $_SESSION['role'] ?? '';
+$roleLower = strtolower((string)$role);
+$isAdmin = ($roleLower === 'admin');
+$isRestaurantEmployee = ($role === 'Restaurant Employee');
+$isGiftShopEmployee = ($role === 'Gift Shop Employee');
+if (!$isAdmin && !$isRestaurantEmployee && !$isGiftShopEmployee) { header('Location: dashboard.php'); exit; }
 require 'db.php';
 
 // ── Filters ──────────────────────────────────────────────────────
@@ -13,6 +18,13 @@ $f_payment  = $_GET['payment']  ?? '';
 $f_customer = trim($_GET['customer'] ?? '');
 $f_amt_min  = $_GET['amt_min']  ?? '';
 $f_amt_max  = $_GET['amt_max']  ?? '';
+
+if ($isRestaurantEmployee) {
+    $f_category = 'food';
+}
+if ($isGiftShopEmployee) {
+    $f_category = 'shop';
+}
 
 // ── Period grouping SQL ───────────────────────────────────────────
 $periodMap = [
@@ -404,7 +416,7 @@ tfoot td{background:var(--base-color);font-weight:700;padding:10px 13px;border-t
         </p>
     </div>
     <div class="hbtns">
-        <a href="dashboard.php#gift-shop-admin" class="bn">← Dashboard</a>
+        <a href="<?= $isRestaurantEmployee ? 'dashboard.php#restaurant-staff' : ($isGiftShopEmployee ? 'dashboard.php#gift-shop' : 'dashboard.php#gift-shop-admin') ?>" class="bn">← Dashboard</a>
         <a href="logout.php" class="bl">Logout</a>
     </div>
 </div>
@@ -496,7 +508,7 @@ tfoot td{background:var(--base-color);font-weight:700;padding:10px 13px;border-t
             </div>
             <div class="filter-actions">
                 <button type="submit" class="btn btn-edit">Search</button>
-                <a href="revenue_report.php" class="btn">Reset</a>
+                <a href="<?= $isRestaurantEmployee ? 'revenue_report.php?category=food' : ($isGiftShopEmployee ? 'revenue_report.php?category=shop' : 'revenue_report.php') ?>" class="btn">Reset</a>
             </div>
         </div>
     </form>

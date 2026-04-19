@@ -143,7 +143,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <main>
         <div class="shop-page-header">
             <h1>Buy tickets</h1>
-            <p>Select your ticket type, quantity and visit date. Tickets are added to your cart so you can check out together with restaurant orders.</p>
         </div>
 
         <?php if ($error): ?>
@@ -176,7 +175,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </option>
                         <?php endforeach; ?>
                     </select>
-                    <span class="ticket-price" id="priceHint"></span>
                 </div>
 
                 <div class="form-group">
@@ -250,17 +248,14 @@ function updatePrice() {
     const price  = parseFloat(opt.dataset.price) || 0;
     const name   = opt.dataset.name || '';
     const total  = price * qty;
-    const hint   = document.getElementById('priceHint');
     const row    = document.getElementById('totalRow');
 
     document.getElementById('category_name_hidden').value = name;
 
     if (price > 0) {
-        hint.textContent = '$' + price.toFixed(2) + ' per ticket';
         row.style.display = 'block';
         document.getElementById('totalAmount').textContent = '$' + total.toFixed(2);
     } else {
-        hint.textContent = '';
         row.style.display = 'none';
     }
 }

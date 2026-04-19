@@ -202,7 +202,7 @@ $alerts = $alertsStmt->fetchAll(PDO::FETCH_ASSOC);
                     </thead>
                     <tbody>
                         <?php foreach ($alerts as $a): ?>
-                            <tr>
+                            <tr style="<?= ((int)$a['StockQty'] <= 3) ? 'background:#fff4f4;' : '' ?>">
                                 <td>
                                     <?php if ($a['AlertType'] === 'OUT_OF_STOCK'): ?>
                                         <span class="pill out">OUT OF STOCK</span>

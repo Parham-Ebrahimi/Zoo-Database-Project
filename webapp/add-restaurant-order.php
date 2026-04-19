@@ -7,51 +7,53 @@ if (!isset($_SESSION['user_id'])) {
 require_once 'db.php';
 
 $role = $_SESSION['role'] ?? '';
-if (!in_array($role, ['admin', 'Gift Shop Employee'], true)) {
+if (!in_array($role, ['admin', 'Restaurant Employee'], true)) {
     header('Location: dashboard.php');
     exit;
 }
-$dashboardBackHref = $role === 'Gift Shop Employee'
-    ? 'dashboard.php#gift-shop'
-    : 'dashboard.php#gift-shop-admin';
+$dashboardBackHref = $role === 'Restaurant Employee'
+    ? 'dashboard.php#restaurant-staff'
+    : 'dashboard.php#restaurant-shop-admin';
 
 $success = '';
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $customerID = (int) ($_POST['customer_id'] ?? 0);
-    $shopID = (int) ($_POST['shop_id'] ?? 0);
-    $itemID = (int) ($_POST['shop_item_id'] ?? 0);
+    $stallID = (int) ($_POST['stall_id'] ?? 0);
+    $foodID = (int) ($_POST['food_id'] ?? 0);
     $quantity = (int) ($_POST['quantity'] ?? 1);
     $paymentMode = trim((string) ($_POST['payment_mode'] ?? ''));
 
     $validPaymentModes = ['Credit Card', 'Debit Card', 'Cash', 'PayPal'];
-
-    if ($customerID <= 0 || $shopID <= 0 || $itemID <= 0 || $quantity <= 0 || !in_array($paymentMode, $validPaymentModes, true)) {
+    if ($customerID <= 0 || $stallID <= 0 || $foodID <= 0 || $quantity <= 0 || !in_array($paymentMode, $validPaymentModes, true)) {
         $error = 'Please complete all required fields.';
     } else {
         try {
             $pdo->beginTransaction();
 
-            $itemStmt = $pdo->prepare('SELECT ItemName, Price FROM shop_items WHERE ShopItemID = ? AND ShopID = ?');
-            $itemStmt->execute([$itemID, $shopID]);
-            $item = $itemStmt->fetch(PDO::FETCH_ASSOC);
-            if (!$item) {
-                throw new RuntimeException('Selected item does not match the gift type.');
+            $foodStmt = $pdo->prepare('
+                SELECT FoodName, Price
+                FROM fooditem
+                WHERE FoodID = ? AND StallID = ?
+            ');
+            $foodStmt->execute([$foodID, $stallID]);
+            $food = $foodStmt->fetch(PDO::FETCH_ASSOC);
+            if (!$food) {
+                throw new RuntimeException('Selected item does not match the stall.');
             }
 
-            $total = round((float) $item['Price'] * $quantity, 2);
-
+            $total = round((float) $food['Price'] * $quantity, 2);
             $orderStmt = $pdo->prepare("
                 INSERT INTO orders (OrderDate, CustomerID, OrderCategoryID, PaymentMode, TransactionAmount, ScheduledDate)
-                VALUES (CURDATE(), ?, 6, ?, ?, NULL)
+                VALUES (CURDATE(), ?, 5, ?, ?, NULL)
             ");
             $orderStmt->execute([$customerID, $paymentMode, $total]);
             $orderID = (int) $pdo->lastInsertId();
 
             // Trigger handles stock validation/deduction.
-            $lineStmt = $pdo->prepare('INSERT INTO order_shop_items (OrderID, ShopItemID, Quantity) VALUES (?, ?, ?)');
-            $lineStmt->execute([$orderID, $itemID, $quantity]);
+            $lineStmt = $pdo->prepare('INSERT INTO order_food_items (OrderID, FoodID, Quantity) VALUES (?, ?, ?)');
+            $lineStmt->execute([$orderID, $foodID, $quantity]);
 
             $pdo->commit();
             $success = "Sale recorded successfully (Order #{$orderID}).";
@@ -72,25 +74,27 @@ $customers = $pdo->query("
     ORDER BY FirstName, LastName, CustomerID
 ")->fetchAll(PDO::FETCH_ASSOC);
 
-$items = $pdo->query("
-    SELECT si.ShopItemID, si.ShopID, si.ItemName, si.Price, si.StockQty, s.ShopName
-    FROM shop_items si
-    JOIN shops s ON s.ShopID = si.ShopID
-    ORDER BY s.ShopName, si.ItemName
+$foodItems = $pdo->query("
+    SELECT fi.FoodID, fi.StallID, fi.FoodName, fi.Price, fi.StockQty, fs.Name AS StallName
+    FROM fooditem fi
+    JOIN foodstall fs ON fs.StallID = fi.StallID
+    ORDER BY fs.Name, fi.FoodName
 ")->fetchAll(PDO::FETCH_ASSOC);
-$giftTypes = $pdo->query("
-    SELECT ShopID, ShopName
-    FROM shops
-    ORDER BY ShopName
+
+$stalls = $pdo->query("
+    SELECT StallID, Name
+    FROM foodstall
+    ORDER BY Name
 ")->fetchAll(PDO::FETCH_ASSOC);
+
+$firstname = htmlspecialchars($_SESSION['firstname'] ?? 'Staff');
 ?>
-<?php $firstname = htmlspecialchars($_SESSION['firstname'] ?? 'Staff'); ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Record Gift Shop Sale</title>
+    <title>Record Restaurant Sale</title>
     <link rel="stylesheet" href="style.css">
     <style>
         .gs-shell { box-sizing: border-box; min-height: 100vh; padding: clamp(18px, 3vw, 36px); background: linear-gradient(165deg, rgba(187, 223, 158, 0.55) 0%, rgba(187, 223, 158, 0.92) 42%, var(--base-color) 100%); }
@@ -125,7 +129,7 @@ $giftTypes = $pdo->query("
         <div class="gs-inner">
             <header class="gs-header">
                 <div>
-                    <h1>Record Gift Shop Sale</h1>
+                    <h1>Record Restaurant Sale</h1>
                     <p class="gs-meta">Signed in as <?= $firstname ?></p>
                 </div>
                 <a class="gs-back" href="<?= htmlspecialchars($dashboardBackHref) ?>">← Back to dashboard</a>
@@ -145,7 +149,7 @@ $giftTypes = $pdo->query("
                     </div>
                 <?php endif; ?>
 
-                <form method="POST" id="record-sale-form">
+                <form method="POST" id="record-restaurant-sale-form">
                     <h2 class="gs-section-title">Sale details</h2>
                     <div class="gs-grid">
                         <div class="gs-field gs-field--full">
@@ -161,24 +165,24 @@ $giftTypes = $pdo->query("
                         </div>
 
                         <div class="gs-field">
-                            <label for="shop_id">Gift Type</label>
-                            <select id="shop_id" name="shop_id" required>
-                                <option value="">Select gift type</option>
-                                <?php foreach ($giftTypes as $t): ?>
-                                    <option value="<?= (int) $t['ShopID'] ?>">
-                                        <?= htmlspecialchars($t['ShopName']) ?>
+                            <label for="stall_id">Stall</label>
+                            <select id="stall_id" name="stall_id" required>
+                                <option value="">Select stall</option>
+                                <?php foreach ($stalls as $s): ?>
+                                    <option value="<?= (int) $s['StallID'] ?>">
+                                        <?= htmlspecialchars($s['Name']) ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
 
                         <div class="gs-field">
-                            <label for="shop_item_id">Item</label>
-                            <select id="shop_item_id" name="shop_item_id" required>
+                            <label for="food_id">Item</label>
+                            <select id="food_id" name="food_id" required>
                                 <option value="">Select item</option>
-                                <?php foreach ($items as $i): ?>
-                                    <option value="<?= (int) $i['ShopItemID'] ?>" data-shop-id="<?= (int) $i['ShopID'] ?>">
-                                        <?= htmlspecialchars($i['ShopName']) ?> - <?= htmlspecialchars($i['ItemName']) ?> ($<?= number_format((float) $i['Price'], 2) ?>, stock: <?= (int) $i['StockQty'] ?>)
+                                <?php foreach ($foodItems as $f): ?>
+                                    <option value="<?= (int) $f['FoodID'] ?>" data-stall-id="<?= (int) $f['StallID'] ?>">
+                                        <?= htmlspecialchars($f['StallName']) ?> - <?= htmlspecialchars($f['FoodName']) ?> ($<?= number_format((float) $f['Price'], 2) ?>, stock: <?= (int) $f['StockQty'] ?>)
                                     </option>
                                 <?php endforeach; ?>
                             </select>
@@ -209,24 +213,24 @@ $giftTypes = $pdo->query("
     </div>
     <script>
         (function () {
-            const typeSelect = document.getElementById('shop_id');
-            const itemSelect = document.getElementById('shop_item_id');
-            if (!typeSelect || !itemSelect) return;
+            const stallSelect = document.getElementById('stall_id');
+            const itemSelect = document.getElementById('food_id');
+            if (!stallSelect || !itemSelect) return;
 
-            function filterItemsByType() {
-                const selectedType = typeSelect.value;
+            function filterItemsByStall() {
+                const selectedStall = stallSelect.value;
                 itemSelect.value = '';
                 Array.from(itemSelect.options).forEach((opt, idx) => {
-                    if (idx === 0) return; // keep placeholder
-                    const shopId = opt.getAttribute('data-shop-id');
-                    const show = selectedType !== '' && shopId === selectedType;
+                    if (idx === 0) return;
+                    const stallId = opt.getAttribute('data-stall-id');
+                    const show = selectedStall !== '' && stallId === selectedStall;
                     opt.hidden = !show;
                     opt.disabled = !show;
                 });
             }
 
-            typeSelect.addEventListener('change', filterItemsByType);
-            filterItemsByType();
+            stallSelect.addEventListener('change', filterItemsByStall);
+            filterItemsByStall();
         })();
     </script>
 </body>
