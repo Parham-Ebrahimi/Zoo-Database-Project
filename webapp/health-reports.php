@@ -422,7 +422,7 @@ tbody tr:hover td { background:rgba(187,223,158,.15); }
             </div>
             <div class="filter-group">
                 <label>Animal ID</label>
-                <input type="number" name="animal_id" value="<?= $animalId > 0 ? $animalId : '' ?>" min="1" placeholder="Optional">
+                <input type="number" name="animal_id" id="animal_id_input" autocomplete="off" autocomplete="new-password" value="<?= $animalId > 0 ? $animalId : '' ?>" min="1" placeholder="Optional">
             </div>
             <div class="filter-group">
                 <label>Sort by</label>
@@ -524,7 +524,14 @@ tbody tr:hover td { background:rgba(187,223,158,.15); }
 </div><!-- end wrapper -->
 
 <script>
-function toggleDetail(id) {
+// Clear animal_id field on load if not explicitly in URL
+document.addEventListener('DOMContentLoaded', function() {
+    const params = new URLSearchParams(window.location.search);
+    if (!params.has('animal_id') || params.get('animal_id') === '') {
+        const input = document.getElementById('animal_id_input');
+        if (input) input.value = '';
+    }
+});
     const row = document.getElementById('detail-' + id);
     row.classList.toggle('open');
     const btn = row.previousElementSibling.querySelector('.expand-btn');
