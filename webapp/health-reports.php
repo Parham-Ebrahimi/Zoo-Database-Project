@@ -55,7 +55,7 @@ if ($f_enclosure)  { $where[] = "a.Enclosure_ID = ?"; $params[] = (int)$f_enclos
 if ($f_category)   { $where[] = "a.Category = ?";     $params[] = $f_category; }
 if ($f_species)    { $where[] = "a.Species = ?";       $params[] = $f_species; }
 if ($f_caretaker)  { $where[] = "a.Caretaker_EmployeeID = ?"; $params[] = (int)$f_caretaker; }
-if ($f_vet)        { $where[] = "hr.Veterinarian_ID = ?";      $params[] = (int)$f_vet; }
+if ($f_vet)        { $where[] = "EXISTS (SELECT 1 FROM health_record hr_vet WHERE hr_vet.Animal_ID = a.Animal_ID AND hr_vet.Veterinarian_ID = ?)"; $params[] = (int)$f_vet; }
 if ($f_food_max !== '') { $where[] = "COALESCE(a.food_stock,50) <= ?"; $params[] = (int)$f_food_max; }
 if ($f_date_from)  { $where[] = "hr.Record_Date >= ?"; $params[] = $f_date_from; }
 if ($f_date_to)    { $where[] = "hr.Record_Date <= ?"; $params[] = $f_date_to; }
