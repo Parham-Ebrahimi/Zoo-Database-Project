@@ -126,35 +126,43 @@ foreach ($animals as $a) {
     $byCategory[$cat][$a['Health_Status']] = ($byCategory[$cat][$a['Health_Status']] ?? 0) + 1;
 }
 
-// Cumulative animal health status over last 30 days
-// For each day, count how many animals had each status as their most recent record on or before that day
-$cumulativeStmt = $pdo->query("
-    SELECT d.Day,
-        SUM(CASE WHEN latest_status.Health_Status = 'Healthy' THEN 1 ELSE 0 END) AS Healthy,
-        SUM(CASE WHEN latest_status.Health_Status = 'Sick'    THEN 1 ELSE 0 END) AS Sick,
-        SUM(CASE WHEN latest_status.Health_Status = 'Pending' THEN 1 ELSE 0 END) AS Pending
-    FROM (
-        SELECT DATE(d2) AS Day FROM (
-            SELECT CURDATE() - INTERVAL seq DAY AS d2
-            FROM (
-                SELECT 0 AS seq UNION SELECT 1 UNION SELECT 2 UNION SELECT 3 UNION SELECT 4
-                UNION SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION SELECT 9
-                UNION SELECT 10 UNION SELECT 11 UNION SELECT 12 UNION SELECT 13 UNION SELECT 14
-                UNION SELECT 15 UNION SELECT 16 UNION SELECT 17 UNION SELECT 18 UNION SELECT 19
-                UNION SELECT 20 UNION SELECT 21 UNION SELECT 22 UNION SELECT 23 UNION SELECT 24
-                UNION SELECT 25 UNION SELECT 26 UNION SELECT 27 UNION SELECT 28 UNION SELECT 29
-            ) seq_tbl
-        ) dates
-    ) d
-    LEFT JOIN (
-        SELECT hr.Animal_ID, DATE(hr.Record_Date) AS RecordDay, hr.Health_Status,
-               ROW_NUMBER() OVER (PARTITION BY hr.Animal_ID, DATE(hr.Record_Date) ORDER BY hr.Record_Date DESC) AS rn
-        FROM health_record hr
-    ) latest_status ON latest_status.RecordDay <= d.Day AND latest_status.rn = 1
-    GROUP BY d.Day
-    ORDER BY d.Day ASC
+// For each of the last 30 days, find each animal's latest status on or before that day
+// Simple approach: get all health records, then compute per-animal latest status per day in PHP
+$allRecordsStmt = $pdo->query("
+    SELECT Animal_ID, DATE(Record_Date) AS RecordDay, Health_Status,
+           ROW_NUMBER() OVER (PARTITION BY Animal_ID, DATE(Record_Date) ORDER BY Record_Date DESC) AS rn
+    FROM health_record
+    ORDER BY Animal_ID, RecordDay
 ");
-$cumulativeRows = $cumulativeStmt->fetchAll(PDO::FETCH_ASSOC);
+$allRecords = $allRecordsStmt->fetchAll(PDO::FETCH_ASSOC);
+// Keep only one record per animal per day (latest)
+$recordsByAnimalDay = [];
+foreach ($allRecords as $r) {
+    if ((int)$r['rn'] === 1) {
+        $recordsByAnimalDay[$r['Animal_ID']][$r['RecordDay']] = $r['Health_Status'];
+    }
+}
+// For each of the last 30 days, find each animal's current status
+$cumulativeRows = [];
+for ($i = 29; $i >= 0; $i--) {
+    $day = date('Y-m-d', strtotime("-$i days"));
+    $counts = ['Day' => $day, 'Healthy' => 0, 'Sick' => 0, 'Pending' => 0];
+    foreach ($recordsByAnimalDay as $animalId => $dayMap) {
+        // Find the latest record on or before this day
+        $latestStatus = null;
+        $latestDay = null;
+        foreach ($dayMap as $recordDay => $status) {
+            if ($recordDay <= $day && ($latestDay === null || $recordDay > $latestDay)) {
+                $latestDay = $recordDay;
+                $latestStatus = $status;
+            }
+        }
+        if ($latestStatus !== null) {
+            $counts[$latestStatus] = ($counts[$latestStatus] ?? 0) + 1;
+        }
+    }
+    $cumulativeRows[] = $counts;
+}
 
 $dashHref = staff_home_href();
 $hasFilters = $healthFilter !== 'all' || $search || $animalId || $f_enclosure || $f_category || $f_species || $f_caretaker || $f_vet || $f_food_max !== '' || $f_date_from || $f_date_to;
