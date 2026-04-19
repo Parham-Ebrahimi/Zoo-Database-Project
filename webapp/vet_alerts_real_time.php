@@ -2,7 +2,6 @@
 
 session_start();
 
-// Must be a logged-in vet (or admin)
 if (!isset($_SESSION['user_id'])) {
     http_response_code(401);
     echo json_encode(['error' => 'Unauthorized']);
@@ -22,7 +21,6 @@ if (!$isAdmin && !staff_is_vet_role()) {
 
 require_once 'db.php';
 
-// Fetch all open alerts joined to animal + enclosure for display
 $rows = $pdo->query("
     SELECT
         va.AlertID,
