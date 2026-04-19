@@ -1,48 +1,21 @@
-<?php require_once __DIR__ . '/../session_bootstrap.php'; ?>
+<?php require_once __DIR__ . '/../session_bootstrap.php';
+require_once __DIR__ . '/../db.php'; ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Elephants – Greenwood Zoo</title>
+    <title>Penguins – Greenwood Zoo</title>
     <link rel="stylesheet" href="../index.css">
     <style>
-        .animal-hero {
-            position: relative;
-            height: 420px;
-            overflow: hidden;
-        }
-        .animal-hero img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            filter: brightness(0.65);
-        }
-        .animal-hero-text {
-            position: absolute;
-            bottom: 40px;
-            left: 5%;
-            color: white;
-        }
+        .animal-hero { position: relative; height: 420px; overflow: hidden; }
+        .animal-hero img { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.65); }
+        .animal-hero-text { position: absolute; bottom: 40px; left: 5%; color: white; }
         .animal-hero-text h1 { font-size: 3rem; margin: 0; }
         .animal-hero-text p { font-size: 1.1rem; opacity: 0.9; }
-        .animal-detail {
-            max-width: 860px;
-            margin: 40px auto;
-            padding: 0 5%;
-        }
-        .fact-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-            gap: 16px;
-            margin: 24px 0;
-        }
-        .fact-card {
-            background: #e8f5e9;
-            border-radius: 10px;
-            padding: 16px;
-            text-align: center;
-        }
+        .animal-detail { max-width: 860px; margin: 40px auto; padding: 0 5%; }
+        .fact-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; margin: 24px 0; }
+        .fact-card { background: #e8f5e9; border-radius: 10px; padding: 16px; text-align: center; }
         .fact-card strong { display: block; color: #2d6a2d; font-size: 1.3rem; }
         .fact-card span { font-size: 0.85rem; color: #555; }
         .back-link { display: inline-block; margin-bottom: 20px; color: #2d6a2d; text-decoration: none; font-weight: 600; }
@@ -74,48 +47,53 @@
     </header>
 
     <div class="animal-hero">
-        <img src="https://images.unsplash.com/photo-1771341398737-b2467b6776a7?auto=format&fit=crop&w=1600&q=80" alt="Elephants at Greenwood Zoo">
+        <img src="https://images.unsplash.com/photo-1737498352674-aadc9f986eea?auto=format&fit=crop&w=1600&q=80" alt="Penguins at Greenwood Zoo">
         <div class="animal-hero-text">
-            <h1>Elephants</h1>
-            <p>African Savanna Elephant · <em>Loxodonta africana</em></p>
+            <h1>Penguins</h1>
+            <p>African & Gentoo Penguin · <em>Spheniscus demersus / Pygoscelis papua</em></p>
         </div>
     </div>
 
     <main class="animal-detail">
         <a class="back-link" href="../animals.php">← Back to all animals</a>
 
-        <h2>About our Elephants</h2>
+        <h2>About our Penguins</h2>
         <p>
-            Our herd of African savanna elephants is one of the most beloved attractions at Greenwood Zoo.
-            Known for their remarkable intelligence, strong family bonds, and incredible memory, elephants
-            are among the most complex animals on Earth.
+            Greenwood Zoo is home to a lively colony of penguins, one of our most popular exhibits.
+            Despite their tuxedo-like appearance, penguins are remarkable athletes — they can swim
+            at speeds up to 25 mph and hold their breath for several minutes while hunting fish beneath
+            the surface. Highly social birds, our penguins live in a close-knit group and are known
+            for their entertaining antics both in and out of the water.
         </p>
 
         <div class="fact-grid">
-            <div class="fact-card"><strong>6,000 kg</strong><span>Average weight</span></div>
-            <div class="fact-card"><strong>60–70 yrs</strong><span>Lifespan</span></div>
+            <div class="fact-card"><strong>2–5 kg</strong><span>Average weight</span></div>
+            <div class="fact-card"><strong>15–20 yrs</strong><span>Lifespan</span></div>
             <div class="fact-card"><strong>Vulnerable</strong><span>Conservation status</span></div>
-            <div class="fact-card"><strong>Africa</strong><span>Native habitat</span></div>
+            <div class="fact-card"><strong>Southern Hemisphere</strong><span>Native habitat</span></div>
         </div>
 
         <?php
 require_once __DIR__ . '/../db.php';
-$animalSpecies  = "African Savanna Elephant";
-$animalKeywords = "Elephant";
-$animalLabel    = "Elephants";
+$animalSpecies  = ["African Penguin", "Gentoo Penguin"];
+$animalKeywords = "Penguin";
+$animalLabel    = "Penguins";
 require __DIR__ . '/_animal_residents.php';
 ?>
 
         <h2>Conservation</h2>
         <p>
-            Greenwood Zoo partners with wildlife organizations to support elephant conservation in the wild.
-            Every ticket purchased contributes directly to anti-poaching programs and habitat protection across sub-Saharan Africa.
+            Several penguin species face significant threats from climate change, overfishing, and habitat loss.
+            Greenwood Zoo actively supports ocean conservation programs and sustainable fisheries initiatives
+            to protect wild penguin populations along the southern coasts of Africa and South America.
         </p>
 
         <h2>Feeding & Care</h2>
         <p>
-            Our elephants receive specialized dietary plans curated by our veterinary team, consuming up to
-            150 kg of vegetation daily. Daily enrichment activities keep them mentally stimulated and socially engaged.
+            Our penguins are fed a carefully managed diet of fresh fish, including herring and capelin,
+            tailored to each individual's age and health. The Penguin Enclosure features both an indoor
+            climate-controlled habitat and an outdoor splash pool, giving visitors a chance to watch
+            these incredible swimmers in action year-round.
         </p>
     </main>
 
