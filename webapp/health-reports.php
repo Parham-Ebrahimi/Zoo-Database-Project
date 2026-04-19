@@ -444,8 +444,7 @@ tbody tr:hover td { background:rgba(187,223,158,.15); }
             </div>
             <div class="filter-actions">
                 <button type="submit" class="btn btn-edit">Search</button>
-                <a href="health-reports.php" class="btn">Reset</a>
-            </div>
+                <a href="health-reports.php?health=all&search=&enclosure=&category=&species=&caretaker=&vet=&date_from=&date_to=&food_max=&animal_id=&sort=status&dir=ASC" class="btn">Reset</a>            </div>
         </div>
     </form>
 </div>
