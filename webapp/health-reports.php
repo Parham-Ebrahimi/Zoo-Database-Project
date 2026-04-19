@@ -21,6 +21,7 @@ $f_enclosure  = $_GET['enclosure']  ?? '';
 $f_category   = $_GET['category']   ?? '';
 $f_species    = $_GET['species']    ?? '';
 $f_caretaker  = $_GET['caretaker']  ?? '';
+$f_vet        = $_GET['vet']        ?? '';
 $f_date_from  = $_GET['date_from']  ?? '';
 $f_date_to    = $_GET['date_to']    ?? '';
 $f_food_max   = $_GET['food_max']   ?? '';
@@ -38,6 +39,10 @@ $caretakers = $pdo->query("
     SELECT e.EmployeeID, CONCAT(e.FirstName,' ',e.LastName) AS FullName
     FROM employees e WHERE LOWER(TRIM(e.Role)) IN ('caretaker','keeper') ORDER BY e.FirstName
 ")->fetchAll();
+$vets = $pdo->query("
+    SELECT e.EmployeeID, CONCAT(e.FirstName,' ',e.LastName) AS FullName
+    FROM employees e WHERE LOWER(TRIM(e.Role)) IN ('vet','veterinarian') ORDER BY e.FirstName
+")->fetchAll();
 
 // Build query
 $where  = ['1=1'];
@@ -50,6 +55,7 @@ if ($f_enclosure)  { $where[] = "a.Enclosure_ID = ?"; $params[] = (int)$f_enclos
 if ($f_category)   { $where[] = "a.Category = ?";     $params[] = $f_category; }
 if ($f_species)    { $where[] = "a.Species = ?";       $params[] = $f_species; }
 if ($f_caretaker)  { $where[] = "a.Caretaker_EmployeeID = ?"; $params[] = (int)$f_caretaker; }
+if ($f_vet)        { $where[] = "hr.Veterinarian_ID = ?";      $params[] = (int)$f_vet; }
 if ($f_food_max !== '') { $where[] = "COALESCE(a.food_stock,50) <= ?"; $params[] = (int)$f_food_max; }
 if ($f_date_from)  { $where[] = "hr.Record_Date >= ?"; $params[] = $f_date_from; }
 if ($f_date_to)    { $where[] = "hr.Record_Date <= ?"; $params[] = $f_date_to; }
@@ -120,18 +126,38 @@ foreach ($animals as $a) {
     $byCategory[$cat][$a['Health_Status']] = ($byCategory[$cat][$a['Health_Status']] ?? 0) + 1;
 }
 
-// Recent health records timeline (last 30 days)
-$timelineStmt = $pdo->query("
-    SELECT DATE(Record_Date) AS Day, Health_Status, COUNT(*) AS Count
-    FROM health_record
-    WHERE Record_Date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
-    GROUP BY DATE(Record_Date), Health_Status
-    ORDER BY Day ASC
+// Cumulative animal health status over last 30 days
+// For each day, count how many animals had each status as their most recent record on or before that day
+$cumulativeStmt = $pdo->query("
+    SELECT d.Day,
+        SUM(CASE WHEN latest_status.Health_Status = 'Healthy' THEN 1 ELSE 0 END) AS Healthy,
+        SUM(CASE WHEN latest_status.Health_Status = 'Sick'    THEN 1 ELSE 0 END) AS Sick,
+        SUM(CASE WHEN latest_status.Health_Status = 'Pending' THEN 1 ELSE 0 END) AS Pending
+    FROM (
+        SELECT DATE(d2) AS Day FROM (
+            SELECT CURDATE() - INTERVAL seq DAY AS d2
+            FROM (
+                SELECT 0 AS seq UNION SELECT 1 UNION SELECT 2 UNION SELECT 3 UNION SELECT 4
+                UNION SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION SELECT 9
+                UNION SELECT 10 UNION SELECT 11 UNION SELECT 12 UNION SELECT 13 UNION SELECT 14
+                UNION SELECT 15 UNION SELECT 16 UNION SELECT 17 UNION SELECT 18 UNION SELECT 19
+                UNION SELECT 20 UNION SELECT 21 UNION SELECT 22 UNION SELECT 23 UNION SELECT 24
+                UNION SELECT 25 UNION SELECT 26 UNION SELECT 27 UNION SELECT 28 UNION SELECT 29
+            ) seq_tbl
+        ) dates
+    ) d
+    LEFT JOIN (
+        SELECT hr.Animal_ID, DATE(hr.Record_Date) AS RecordDay, hr.Health_Status,
+               ROW_NUMBER() OVER (PARTITION BY hr.Animal_ID, DATE(hr.Record_Date) ORDER BY hr.Record_Date DESC) AS rn
+        FROM health_record hr
+    ) latest_status ON latest_status.RecordDay <= d.Day AND latest_status.rn = 1
+    GROUP BY d.Day
+    ORDER BY d.Day ASC
 ");
-$timelineRows = $timelineStmt->fetchAll(PDO::FETCH_ASSOC);
+$cumulativeRows = $cumulativeStmt->fetchAll(PDO::FETCH_ASSOC);
 
 $dashHref = staff_home_href();
-$hasFilters = $healthFilter !== 'all' || $search || $animalId || $f_enclosure || $f_category || $f_species || $f_caretaker || $f_food_max !== '' || $f_date_from || $f_date_to;
+$hasFilters = $healthFilter !== 'all' || $search || $animalId || $f_enclosure || $f_category || $f_species || $f_caretaker || $f_vet || $f_food_max !== '' || $f_date_from || $f_date_to;
 
 function sLink(string $col, string $label, string $cur, string $dir): string {
     $p = $_GET; $p['sort'] = $col; $p['dir'] = ($cur === $col && $dir === 'ASC') ? 'DESC' : 'ASC';
@@ -296,7 +322,7 @@ tbody tr:hover td { background:rgba(187,223,158,.15); }
         <div class="cw"><canvas id="enclosureChart"></canvas></div>
     </div>
     <div class="cc">
-        <h3>Health records (last 30 days)</h3>
+        <h3>Animal health status over time (30 days)</h3>
         <div class="cw"><canvas id="timelineChart"></canvas></div>
     </div>
 </div>
@@ -352,6 +378,15 @@ tbody tr:hover td { background:rgba(187,223,158,.15); }
                     <option value="">Any caretaker</option>
                     <?php foreach ($caretakers as $c): ?>
                     <option value="<?= $c['EmployeeID'] ?>" <?= (int)$f_caretaker===$c['EmployeeID']?'selected':'' ?>><?= htmlspecialchars($c['FullName']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Vet</label>
+                <select name="vet">
+                    <option value="">Any vet</option>
+                    <?php foreach ($vets as $v): ?>
+                    <option value="<?= $v['EmployeeID'] ?>" <?= (int)$f_vet===$v['EmployeeID']?'selected':'' ?>><?= htmlspecialchars($v['FullName']) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
@@ -511,23 +546,32 @@ new Chart(document.getElementById('enclosureChart'), {
         scales:{ x:{ stacked:true, ticks:{font:{size:9}} }, y:{ stacked:true, ticks:{ stepSize:1, font:{size:10} } } } }
 });
 
-// Timeline (last 30 days)
-const tlRaw = <?= json_encode($timelineRows) ?>;
-const tlDays = [...new Set(tlRaw.map(r => r.Day))].sort();
-function tlData(status) { return tlDays.map(d => { const r = tlRaw.find(x => x.Day===d && x.Health_Status===status); return r ? parseInt(r.Count) : 0; }); }
+// Cumulative health status over time
+const cumRaw     = <?= json_encode($cumulativeRows) ?>;
+const cumDays    = cumRaw.map(r => { const p = r.Day.split('-'); return p[1]+'/'+p[2]; });
+const cumHealthy = cumRaw.map(r => parseInt(r.Healthy) || 0);
+const cumSick    = cumRaw.map(r => parseInt(r.Sick)    || 0);
+const cumPending = cumRaw.map(r => parseInt(r.Pending) || 0);
 new Chart(document.getElementById('timelineChart'), {
     type: 'line',
     data: {
-        labels: tlDays.map(d => { const p = d.split('-'); return p[1]+'/'+p[2]; }),
+        labels: cumDays,
         datasets: [
-            { label:'Sick',    data:tlData('Sick'),    borderColor:'#e74c3c', backgroundColor:'#e74c3c22', fill:true, tension:.3, borderWidth:2, pointRadius:2 },
-            { label:'Healthy', data:tlData('Healthy'), borderColor:'#2ecc71', backgroundColor:'transparent', tension:.3, borderWidth:1.5, pointRadius:2 },
-            { label:'Pending', data:tlData('Pending'), borderColor:'#f39c12', backgroundColor:'transparent', tension:.3, borderWidth:1.5, pointRadius:2 },
+            { label:'Healthy', data:cumHealthy, borderColor:'#2ecc71', backgroundColor:'#2ecc7122', fill:true,  tension:.3, borderWidth:2, pointRadius:2 },
+            { label:'Sick',    data:cumSick,    borderColor:'#e74c3c', backgroundColor:'#e74c3c22', fill:true,  tension:.3, borderWidth:2, pointRadius:2 },
+            { label:'Pending', data:cumPending, borderColor:'#f39c12', backgroundColor:'transparent',           tension:.3, borderWidth:1.5,pointRadius:2 },
         ]
     },
     options: { responsive:true, maintainAspectRatio:false,
-        plugins:{ legend:{ labels:{font:{size:10}} } },
-        scales:{ x:{ ticks:{font:{size:9},maxRotation:45} }, y:{ ticks:{ stepSize:1, font:{size:10} } } } }
+        interaction:{ mode:'index', intersect:false },
+        plugins:{ legend:{ labels:{font:{size:10}} },
+            tooltip:{ callbacks:{ title: ctx => 'Date: '+ctx[0].label } } },
+        scales:{
+            x:{ ticks:{font:{size:9},maxRotation:45} },
+            y:{ beginAtZero:true, ticks:{ stepSize:1, font:{size:10} },
+                title:{ display:true, text:'Animals', font:{size:10} } }
+        }
+    }
 });
 </script>
 </body>
