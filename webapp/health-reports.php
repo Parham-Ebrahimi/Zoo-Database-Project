@@ -422,7 +422,7 @@ tbody tr:hover td { background:rgba(187,223,158,.15); }
             </div>
             <div class="filter-group">
                 <label>Animal ID</label>
-                <input type="number" name="animal_id" id="animal_id_input" autocomplete="off" autocomplete="new-password" value="<?= $animalId > 0 ? $animalId : '' ?>" min="1" placeholder="Optional">
+                <input type="number" name="animal_id" id="animal_id_input" autocomplete="off" value="<?= $animalId > 0 ? $animalId : '' ?>" min="1" placeholder="Optional">
             </div>
             <div class="filter-group">
                 <label>Sort by</label>
@@ -524,7 +524,7 @@ tbody tr:hover td { background:rgba(187,223,158,.15); }
 </div><!-- end wrapper -->
 
 <script>
-// Clear animal_id field on load if not explicitly in URL
+// Clear animal_id field if not in URL
 document.addEventListener('DOMContentLoaded', function() {
     const params = new URLSearchParams(window.location.search);
     if (!params.has('animal_id') || params.get('animal_id') === '') {
@@ -532,71 +532,77 @@ document.addEventListener('DOMContentLoaded', function() {
         if (input) input.value = '';
     }
 });
+
+function toggleDetail(id) {
     const row = document.getElementById('detail-' + id);
     row.classList.toggle('open');
     const btn = row.previousElementSibling.querySelector('.expand-btn');
     btn.textContent = row.classList.contains('open') ? '▼ Less' : '▶ More';
 }
 
-// Overall health donut
-new Chart(document.getElementById('overallChart'), {
-    type: 'doughnut',
-    data: {
-        labels: ['Healthy', 'Sick', 'Pending'],
-        datasets: [{ data: [<?= $healthy ?>, <?= $sick ?>, <?= $pending ?>],
-            backgroundColor: ['#2ecc71','#e74c3c','#f39c12'], borderWidth: 2, borderColor: '#fff' }]
-    },
-    options: { responsive:true, maintainAspectRatio:false, cutout:'58%',
-        plugins:{ legend:{ position:'bottom', labels:{ font:{size:11} } } } }
-});
+document.addEventListener('DOMContentLoaded', function() {
 
-// Health by enclosure stacked bar
-const encLabels  = <?= json_encode(array_keys($byEnclosure)) ?>;
-const encHealthy = <?= json_encode(array_map(fn($e) => $e['Healthy'], $byEnclosure)) ?>;
-const encSick    = <?= json_encode(array_map(fn($e) => $e['Sick'],    $byEnclosure)) ?>;
-const encPending = <?= json_encode(array_map(fn($e) => $e['Pending'], $byEnclosure)) ?>;
-new Chart(document.getElementById('enclosureChart'), {
-    type: 'bar',
-    data: {
-        labels: encLabels,
-        datasets: [
-            { label:'Healthy', data:encHealthy, backgroundColor:'#2ecc71cc', stack:'s' },
-            { label:'Sick',    data:encSick,    backgroundColor:'#e74c3ccc', stack:'s' },
-            { label:'Pending', data:encPending, backgroundColor:'#f39c12cc', stack:'s' },
-        ]
-    },
-    options: { responsive:true, maintainAspectRatio:false,
-        plugins:{ legend:{ labels:{font:{size:10}} } },
-        scales:{ x:{ stacked:true, ticks:{font:{size:9}} }, y:{ stacked:true, ticks:{ stepSize:1, font:{size:10} } } } }
-});
+    // Overall health donut
+    new Chart(document.getElementById('overallChart'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Healthy', 'Sick', 'Pending'],
+            datasets: [{ data: [<?= $healthy ?>, <?= $sick ?>, <?= $pending ?>],
+                backgroundColor: ['#2ecc71','#e74c3c','#f39c12'], borderWidth: 2, borderColor: '#fff' }]
+        },
+        options: { responsive:true, maintainAspectRatio:false, cutout:'58%',
+            plugins:{ legend:{ position:'bottom', labels:{ font:{size:11} } } } }
+    });
 
-// Cumulative health status over time
-const cumRaw     = <?= json_encode($cumulativeRows) ?>;
-const cumDays    = cumRaw.map(r => { const p = r.Day.split('-'); return p[1]+'/'+p[2]; });
-const cumHealthy = cumRaw.map(r => parseInt(r.Healthy) || 0);
-const cumSick    = cumRaw.map(r => parseInt(r.Sick)    || 0);
-const cumPending = cumRaw.map(r => parseInt(r.Pending) || 0);
-new Chart(document.getElementById('timelineChart'), {
-    type: 'line',
-    data: {
-        labels: cumDays,
-        datasets: [
-            { label:'Healthy', data:cumHealthy, borderColor:'#2ecc71', backgroundColor:'#2ecc7122', fill:true,  tension:.3, borderWidth:2, pointRadius:2 },
-            { label:'Sick',    data:cumSick,    borderColor:'#e74c3c', backgroundColor:'#e74c3c22', fill:true,  tension:.3, borderWidth:2, pointRadius:2 },
-            { label:'Pending', data:cumPending, borderColor:'#f39c12', backgroundColor:'transparent',           tension:.3, borderWidth:1.5,pointRadius:2 },
-        ]
-    },
-    options: { responsive:true, maintainAspectRatio:false,
-        interaction:{ mode:'index', intersect:false },
-        plugins:{ legend:{ labels:{font:{size:10}} },
-            tooltip:{ callbacks:{ title: ctx => 'Date: '+ctx[0].label } } },
-        scales:{
-            x:{ ticks:{font:{size:9},maxRotation:45} },
-            y:{ beginAtZero:true, ticks:{ stepSize:1, font:{size:10} },
-                title:{ display:true, text:'Animals', font:{size:10} } }
+    // Health by enclosure stacked bar
+    const encLabels  = <?= json_encode(array_keys($byEnclosure)) ?>;
+    const encHealthy = <?= json_encode(array_map(fn($e) => $e['Healthy'], $byEnclosure)) ?>;
+    const encSick    = <?= json_encode(array_map(fn($e) => $e['Sick'],    $byEnclosure)) ?>;
+    const encPend    = <?= json_encode(array_map(fn($e) => $e['Pending'], $byEnclosure)) ?>;
+    new Chart(document.getElementById('enclosureChart'), {
+        type: 'bar',
+        data: {
+            labels: encLabels,
+            datasets: [
+                { label:'Healthy', data:encHealthy, backgroundColor:'#2ecc71cc', stack:'s' },
+                { label:'Sick',    data:encSick,    backgroundColor:'#e74c3ccc', stack:'s' },
+                { label:'Pending', data:encPend,    backgroundColor:'#f39c12cc', stack:'s' },
+            ]
+        },
+        options: { responsive:true, maintainAspectRatio:false,
+            plugins:{ legend:{ labels:{font:{size:10}} } },
+            scales:{ x:{ stacked:true, ticks:{font:{size:9}} }, y:{ stacked:true, ticks:{ stepSize:1, font:{size:10} } } } }
+    });
+
+    // Cumulative health status over time
+    const cumRaw     = <?= json_encode($cumulativeRows) ?>;
+    const cumDays    = cumRaw.map(r => { const p = r.Day.split('-'); return p[1]+'/'+p[2]; });
+    const cumHealthy = cumRaw.map(r => parseInt(r.Healthy) || 0);
+    const cumSick    = cumRaw.map(r => parseInt(r.Sick)    || 0);
+    const cumPend    = cumRaw.map(r => parseInt(r.Pending) || 0);
+    new Chart(document.getElementById('timelineChart'), {
+        type: 'line',
+        data: {
+            labels: cumDays,
+            datasets: [
+                { label:'Healthy', data:cumHealthy, borderColor:'#2ecc71', backgroundColor:'#2ecc7122', fill:true,  tension:.3, borderWidth:2, pointRadius:2 },
+                { label:'Sick',    data:cumSick,    borderColor:'#e74c3c', backgroundColor:'#e74c3c22', fill:true,  tension:.3, borderWidth:2, pointRadius:2 },
+                { label:'Pending', data:cumPend,    borderColor:'#f39c12', backgroundColor:'transparent',           tension:.3, borderWidth:1.5,pointRadius:2 },
+            ]
+        },
+        options: { responsive:true, maintainAspectRatio:false,
+            interaction:{ mode:'index', intersect:false },
+            plugins:{ legend:{ labels:{font:{size:10}} },
+                tooltip:{ callbacks:{ title: ctx => 'Date: '+ctx[0].label } } },
+            scales:{
+                x:{ ticks:{font:{size:9},maxRotation:45} },
+                y:{ beginAtZero:true, ticks:{ stepSize:1, font:{size:10} },
+                    title:{ display:true, text:'Animals', font:{size:10} } }
+            }
         }
-    }
-});
+    });
+
+}); // end DOMContentLoaded
 </script>
 </body>
 </html>
