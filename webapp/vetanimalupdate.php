@@ -160,6 +160,11 @@ $badgeClass = strtolower($animal['Health_Status']);
             padding: 28px clamp(16px, 3vw, 40px);
             background-color: rgba(187, 223, 158, 0.95);
         }
+        .page-inner {
+            max-width: 920px;
+            margin: 0 auto;
+            width: 100%;
+        }
 
         .page-header {
             display: flex; justify-content: space-between; align-items: flex-start;
@@ -223,7 +228,20 @@ $badgeClass = strtolower($animal['Health_Status']);
 
         .form-card {
             background: white; border-radius: 14px; padding: 26px 28px;
-            max-width: 680px; box-shadow: 0 3px 10px rgba(0,0,0,0.06);
+            max-width: 100%;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.06);
+        }
+        /* Undo global login-style form rules from style.css (form { width: min(400px,100%); … }) */
+        #updateForm {
+            width: 100%;
+            max-width: none;
+            margin-top: 0;
+            margin-bottom: 0;
+            align-items: stretch;
+        }
+        #updateForm > div {
+            justify-content: flex-start;
+            width: 100%;
         }
         .section-label {
             font-size: 0.72rem; font-weight: 800; letter-spacing: 0.09em;
@@ -315,6 +333,7 @@ $badgeClass = strtolower($animal['Health_Status']);
 </head>
 <body>
 <div class="page-wrap">
+<div class="page-inner">
 
     <div class="page-header">
         <div>
@@ -424,6 +443,7 @@ $badgeClass = strtolower($animal['Health_Status']);
         </form>
     </div>
 
+</div>
 </div>
 
 <?php if ($animal['Health_Status'] === 'Sick' || $animal['Health_Status'] === 'Pending'): ?>
