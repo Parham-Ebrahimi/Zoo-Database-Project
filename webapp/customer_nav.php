@@ -48,8 +48,8 @@ $show = static function (string $file) use ($self): bool {
         <?php if ($show('restaurant.php')): ?>
             <li><a href="restaurant.php">Restaurant</a></li>
         <?php endif; ?>
-        <?php if ($show('customer_animals_report.php')): ?>
-            
+        <?php if ($show('animals.php')): ?>
+            <li><a href="animals.php">Animals</a></li>
         <?php endif; ?>
         <?php if ($show('customer_profile.php')): ?>
             <li><a href="customer_profile.php">Profile</a></li>
