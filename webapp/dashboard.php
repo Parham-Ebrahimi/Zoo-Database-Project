@@ -595,6 +595,9 @@ if ($isRestaurantEmployee) {
             <a href="add-gift-shop-item.php" class="tile">
                 <div class="tile-text"><strong>Add item</strong><span>Add new product</span></div>
             </a>
+            <a href="manage_gift_shop_items.php" class="tile">
+                <div class="tile-text"><strong>Remove item</strong><span>Delete products from the catalog</span></div>
+            </a>
             <a href="shop_alerts.php" class="tile">
                 <div class="tile-text"><strong>Shop restock alerts</strong><span>Low stock warnings</span></div>
             </a>
@@ -605,6 +608,9 @@ if ($isRestaurantEmployee) {
         <div class="tiles-grid">
             <a href="add-restaurant-item.php" class="tile">
                 <div class="tile-text"><strong>Add item</strong><span>Add new food item</span></div>
+            </a>
+            <a href="manage_restaurant_items.php" class="tile">
+                <div class="tile-text"><strong>Remove item</strong><span>Delete menu items</span></div>
             </a>
             <a href="restaurant_alerts.php" class="tile">
                 <div class="tile-text"><strong>Restaurant restock alerts</strong><span>Low stock warnings</span></div>
@@ -650,6 +656,9 @@ if ($isRestaurantEmployee) {
         <div class="tiles-grid" style="margin-top:12px;">
             <a href="add-gift-shop-item.php" class="tile">
                 <div class="tile-text"><strong>Add item</strong><span>Add new product</span></div>
+            </a>
+            <a href="manage_gift_shop_items.php" class="tile">
+                <div class="tile-text"><strong>Remove item</strong><span>Delete products from the catalog</span></div>
             </a>
             <a href="giftshop.php?preview=1" class="tile">
                 <div class="tile-text"><strong>View shop</strong><span>Open customer gift shop view</span></div>
@@ -700,6 +709,9 @@ if ($isRestaurantEmployee) {
         <div class="tiles-grid" style="margin-top:12px;">
             <a href="add-restaurant-item.php" class="tile">
                 <div class="tile-text"><strong>Add item</strong><span>Add new food item</span></div>
+            </a>
+            <a href="manage_restaurant_items.php" class="tile">
+                <div class="tile-text"><strong>Remove item</strong><span>Delete menu items</span></div>
             </a>
             <a href="add-restaurant-order.php" class="tile">
                 <div class="tile-text"><strong>Record sale</strong><span>Log a customer restaurant purchase</span></div>
