@@ -476,17 +476,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
                 <?php endif; ?>
 
-                <div class="section-label">Photo &amp; Page Generation</div>
-
-                <div class="form-group full">
-                    <label>Animal Photo</label>
-                    <input type="file" name="photo" accept="image/jpeg,image/png,image/gif,image/webp">
-                    <span class="photo-hint">
-                        Optional. A detail page is always created under <code>animals/</code> — uploading a photo
-                        replaces the placeholder image on that page. Supported: JPG, PNG, GIF, WEBP · Max 8 MB.
-                    </span>
-                </div>
-
             </div>
             <button type="submit" class="submit-btn">Add Animal</button>
         </form>
