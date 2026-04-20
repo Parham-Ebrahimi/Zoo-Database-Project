@@ -18,42 +18,46 @@ try {
     ");
     $hasSlugCol = (bool) $chk->fetchColumn();
 
-    if ($hasSlugCol) {
+    /* Fetch all DB animals regardless of whether Page_Slug is populated —
+       mirrors how giftshop.php reads every row from shop_items directly.
+       If Page_Slug is missing or NULL we derive the slug from Name on the fly. */
+    $selectSlug  = $hasSlugCol ? 'a.Page_Slug' : 'NULL AS Page_Slug';
+    $selectPhoto = $hasSlugCol ? "COALESCE(a.Photo_Path, '') AS Photo_Path" : "'' AS Photo_Path";
+    try {
         $rows = $pdo->query("
-            SELECT DISTINCT
-                a.Name,
-                a.Species,
-                a.Category,
-                a.Page_Slug,
-                COALESCE(a.Photo_Path, '') AS Photo_Path
-            FROM animal a
-            WHERE a.Page_Slug IS NOT NULL
-              AND a.Page_Slug != ''
-            ORDER BY a.Name
+            SELECT DISTINCT a.Name, a.Species, a.Category,
+                   {$selectSlug}, {$selectPhoto}
+            FROM animal a ORDER BY a.Name
         ")->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Throwable $ignored) { $rows = []; }
 
-        foreach ($rows as $r) {
-            // If the .php file is missing but the folder is now writable, regenerate it automatically.
-            $filePath = __DIR__ . '/animals/' . $r['Page_Slug'] . '.php';
-            if (!file_exists($filePath) && is_writable(__DIR__ . '/animals/')) {
-                if (!function_exists('generate_animal_page')) {
-                    require_once __DIR__ . '/generate_animal_page.php';
-                }
-                $photoRel = $r['Photo_Path'] ?? '';
-                @file_put_contents($filePath, generate_animal_page($r['Name'], $r['Species'], $r['Category'], $photoRel));
+    foreach ($rows as $r) {
+        // Derive slug from Name if Page_Slug not stored yet (same fallback add-animal.php uses)
+        $slug = (string) ($r['Page_Slug'] ?? '');
+        if ($slug === '') {
+            $slug = trim(preg_replace('/[^a-z0-9]+/', '-', strtolower((string) $r['Name'])), '-');
+        }
+
+        // Generate the .php file if it is missing but the folder is writable
+        $filePath = __DIR__ . '/animals/' . $slug . '.php';
+        if (!file_exists($filePath) && is_writable(__DIR__ . '/animals/')) {
+            if (!function_exists('generate_animal_page')) {
+                require_once __DIR__ . '/generate_animal_page.php';
             }
+            $photoRel = $r['Photo_Path'] ?? '';
+            @file_put_contents($filePath, generate_animal_page($r['Name'], $r['Species'], $r['Category'], $photoRel));
+        }
 
-            $dbAnimals[] = [
-                'name' => $r['Name'],
-                'slug' => $r['Page_Slug'],
-                'blurb' => htmlspecialchars($r['Category']) . ' · ' . htmlspecialchars($r['Species']),
-                'img'  => !empty($r['Photo_Path'])
+        $dbAnimals[] = [
+            'name'    => $r['Name'],
+            'slug'    => $slug,
+            'blurb'   => htmlspecialchars($r['Category']) . ' · ' . htmlspecialchars($r['Species']),
+            'img'     => !empty($r['Photo_Path'])
                             ? 'animals/' . htmlspecialchars($r['Photo_Path'])
                             : 'https://images.unsplash.com/photo-1607326957431-29d25d2b386f?auto=format&fit=crop&w=800&q=80',
-                'alt'  => $r['Name'] . ' at Greenwood Zoo',
-                'dynamic' => true,
-            ];
-        }
+            'alt'     => $r['Name'] . ' at Greenwood Zoo',
+            'dynamic' => true,
+        ];
     }
 } catch (Throwable $ignored) {}
 

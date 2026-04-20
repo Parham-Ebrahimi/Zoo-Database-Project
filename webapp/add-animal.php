@@ -44,6 +44,21 @@ $hasVetCol       = animal_table_has_column($pdo, 'Vet_EmployeeID');
 $hasDietCol      = animal_table_has_column($pdo, 'Diet_ID');
 $isAdmin         = strtolower((string) ($_SESSION['role'] ?? '')) === 'admin';
 
+/* ── Ensure Page_Slug and Photo_Path columns exist (like gift shop ensures its table is ready) ── */
+if (!animal_table_has_column($pdo, 'Page_Slug')) {
+    try {
+        $pdo->exec("ALTER TABLE animal ADD COLUMN Page_Slug VARCHAR(255) NULL DEFAULT NULL");
+        // Reset the static cache so subsequent calls see the new column
+        $chkStmt = $pdo->prepare("SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'animal' AND COLUMN_NAME = 'Page_Slug' LIMIT 1");
+        $chkStmt->execute();
+    } catch (Throwable $ignored) {}
+}
+if (!animal_table_has_column($pdo, 'Photo_Path')) {
+    try {
+        $pdo->exec("ALTER TABLE animal ADD COLUMN Photo_Path VARCHAR(500) NULL DEFAULT NULL");
+    } catch (Throwable $ignored) {}
+}
+
 $error   = '';
 $success = '';
 
@@ -219,11 +234,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'Detail page file could not be written to animals/ — check permissions.';
         }
 
+        /* Always save the slug — just like gift shop always saves its item record.
+           The ALTER TABLE above ensures the column exists before we get here. */
         try {
-            if (animal_table_has_column($pdo, 'Page_Slug')) {
-                $pdo->prepare("UPDATE animal SET Page_Slug=? WHERE Animal_ID=?")
-                    ->execute([basename($pagePath, '.php'), $newAnimalId]);
-            }
+            $pdo->prepare("UPDATE animal SET Page_Slug=? WHERE Animal_ID=?")
+                ->execute([$slug, $newAnimalId]);
         } catch (Throwable $ignored) {}
 
         if (empty($error)) {
