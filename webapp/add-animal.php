@@ -59,6 +59,22 @@ if ($hasDietCol) {
 
 $enclosures = $pdo->query("SELECT Enclosure_ID, Enclosure_Name FROM enclosure")->fetchAll();
 
+$climateTypes = [];
+try {
+    $climateTypes = $pdo->query("SELECT ClimateType_ID, ClimateType_Name FROM climatetype ORDER BY ClimateType_Name")->fetchAll();
+} catch (Throwable $e) {
+    // Try alternate column name
+    try {
+        $climateTypes = $pdo->query("SELECT ClimateType_ID, Climate_Name FROM climatetype ORDER BY Climate_Name")->fetchAll();
+        $climateTypes = array_map(fn($r) => [
+            'ClimateType_ID'   => $r['ClimateType_ID'],
+            'ClimateType_Name' => $r['Climate_Name'],
+        ], $climateTypes);
+    } catch (Throwable $e2) {
+        $climateTypes = [];
+    }
+}
+
 $assignableCaretakers = [];
 if ($hasCaretakerCol) {
     $assignableCaretakers = $pdo->query("
@@ -89,12 +105,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Handle "Add New Enclosure" option
     if ($enclosure === '__new__') {
-        $newEncName = trim($_POST['new_enclosure_name'] ?? '');
-        if (!empty($newEncName)) {
-            $insEnc = $pdo->prepare("INSERT INTO enclosure (Enclosure_Name) VALUES (?)");
-            $insEnc->execute([$newEncName]);
-            $enclosure = (string) $pdo->lastInsertId();
+        $newEncName    = trim($_POST['new_enclosure_name'] ?? '');
+        $newClimateId  = $_POST['new_climate_id'] ?? '';
+        if (!empty($newEncName) && $newClimateId !== '') {
+            $insEnc = $pdo->prepare("INSERT INTO enclosure (Enclosure_Name, ClimateType_ID) VALUES (?, ?)");
+            $insEnc->execute([$newEncName, (int) $newClimateId]);
+            $enclosure  = (string) $pdo->lastInsertId();
             $enclosures = $pdo->query("SELECT Enclosure_ID, Enclosure_Name FROM enclosure")->fetchAll();
+        } elseif (!empty($newEncName) && $newClimateId === '') {
+            $error = 'Please select a Climate Type for the new enclosure.';
         } else {
             $enclosure = '';
         }
@@ -534,6 +553,19 @@ TEMPLATE;
                     <input type="text" name="new_enclosure_name" id="new_enclosure_name" placeholder="e.g. Bat Cave Enclosure">
                 </div>
 
+                <div class="form-group" id="new-climate-group" style="display:none">
+                    <label>Climate Type *</label>
+                    <select name="new_climate_id" id="new_climate_id">
+                        <option value="">-- Select climate --</option>
+                        <?php foreach ($climateTypes as $ct): ?>
+                            <option value="<?= (int) $ct['ClimateType_ID'] ?>"><?= htmlspecialchars($ct['ClimateType_Name']) ?></option>
+                        <?php endforeach; ?>
+                        <?php if (empty($climateTypes)): ?>
+                            <option value="" disabled>No climate types found in database</option>
+                        <?php endif; ?>
+                    </select>
+                </div>
+
                 <?php if ($hasDietCol && !empty($dietRows)): ?>
                 <div class="section-label">Diet</div>
                 <div class="form-group full">
@@ -589,15 +621,22 @@ TEMPLATE;
 </div>
 <script>
 function toggleNewEnclosure(val) {
-    var grp   = document.getElementById('new-enclosure-group');
-    var input = document.getElementById('new_enclosure_name');
+    var encGrp    = document.getElementById('new-enclosure-group');
+    var climGrp   = document.getElementById('new-climate-group');
+    var nameInput = document.getElementById('new_enclosure_name');
+    var climSel   = document.getElementById('new_climate_id');
     if (val === '__new__') {
-        grp.style.display = 'flex';
-        input.required    = true;
+        encGrp.style.display  = 'flex';
+        climGrp.style.display = 'flex';
+        nameInput.required    = true;
+        climSel.required      = true;
     } else {
-        grp.style.display = 'none';
-        input.required    = false;
-        input.value       = '';
+        encGrp.style.display  = 'none';
+        climGrp.style.display = 'none';
+        nameInput.required    = false;
+        climSel.required      = false;
+        nameInput.value       = '';
+        climSel.value         = '';
     }
 }
 </script>
