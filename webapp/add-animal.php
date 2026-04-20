@@ -1,5 +1,8 @@
 <?php
 require_once __DIR__ . '/session_bootstrap.php';
+
+require_once __DIR__ . '/generate_animal_page.php';
+
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.html');
     exit;
@@ -63,7 +66,6 @@ $climateTypes = [];
 try {
     $climateTypes = $pdo->query("SELECT ClimateType_ID, ClimateType_Name FROM climatetype ORDER BY ClimateType_Name")->fetchAll();
 } catch (Throwable $e) {
-    // Try alternate column name
     try {
         $climateTypes = $pdo->query("SELECT ClimateType_ID, Climate_Name FROM climatetype ORDER BY Climate_Name")->fetchAll();
         $climateTypes = array_map(fn($r) => [
@@ -103,7 +105,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $dietId    = $_POST['diet_id']        ?? '';
     $vetId     = $_POST['vet_id']         ?? '';
 
-    // Handle "Add New Enclosure" option
     if ($enclosure === '__new__') {
         $newEncName    = trim($_POST['new_enclosure_name'] ?? '');
         $newClimateId  = $_POST['new_climate_id'] ?? '';
@@ -153,16 +154,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute($vals);
         $newAnimalId = (int) $pdo->lastInsertId();
 
-        /* ── Photo upload & page generation ── */
         $pageGenerated = false;
         $pagePath      = '';
         $photoRelPath  = '';
-        $photoError    = ''; // separate from $error so page still generates
+        $photoError    = ''; 
 
         $slug = preg_replace('/[^a-z0-9]+/', '-', strtolower($name));
         $slug = trim($slug, '-');
 
-        // Handle optional photo upload
         if (!empty($_FILES['photo']['tmp_name'])) {
             $uploadDir = __DIR__ . '/animals/images/';
             if (!is_dir($uploadDir)) {
@@ -177,7 +176,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } elseif ($_FILES['photo']['size'] > 8 * 1024 * 1024) {
                 $photoError = 'Photo upload failed: file too large (max 8 MB).';
             } elseif (!is_dir($uploadDir)) {
-                $photoError = 'Photo upload failed: images folder could not be created (check folder permissions).';
+                $photoError = 'Photo upload failed: images folder could not be created.';
             } else {
                 $filename = $slug . '.' . $ext;
                 $destPath = $uploadDir . $filename;
@@ -196,32 +195,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
                     } catch (Throwable $ignored) {}
                 } else {
-                    $photoError = 'Photo upload failed: could not move file (check folder permissions on animals/images/).';
+                    $photoError = 'Photo upload failed: could not move file.';
                 }
             }
         }
 
-        // Always generate the detail page regardless of photo outcome
         $pagePath = __DIR__ . '/animals/' . $slug . '.php';
         $pi = 1;
         while (file_exists($pagePath)) {
             $pagePath = __DIR__ . '/animals/' . $slug . '-' . $pi . '.php';
             $pi++;
         }
+        
+        // This call is now safe because the file was required at the top
         $pageContent = generate_animal_page($name, $species, $category, $photoRelPath);
         $fileWritten = @file_put_contents($pagePath, $pageContent);
 
         if ($fileWritten !== false) {
             $pageGenerated = true;
         } else {
-            // File write failed — most likely a permissions issue on the animals/ folder.
-            // Still save the Page_Slug so the animal appears on animals.php once permissions are fixed.
             $photoError .= ($photoError ? ' Also: ' : '') .
-                'Detail page file could not be written to animals/ — check that the folder is writable by the web server. ' .
-                'Run: chmod 755 ' . __DIR__ . '/animals/  in Terminal.';
+                'Detail page file could not be written to animals/ — Check permissions.';
         }
 
-        // Always save Page_Slug regardless of whether file write succeeded
         try {
             if (animal_table_has_column($pdo, 'Page_Slug')) {
                 $pdo->prepare("UPDATE animal SET Page_Slug=? WHERE Animal_ID=?")
@@ -240,9 +236,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
-
-/* ══ Page generator (shared with animals.php) ══ */
-require_once __DIR__ . '/generate_animal_page.php';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -282,58 +275,28 @@ require_once __DIR__ . '/generate_animal_page.php';
             margin-bottom: 4px;
             color: var(--text-color);
             font-size: 0.9rem;
-            width: auto; height: auto;
-            background: none;
-            border-radius: 0;
-            text-align: left;
         }
-        .form-group input,
-        .form-group select {
+        .form-group input, .form-group select {
             width: 100%;
             padding: 9px 12px;
             border: 2px solid #ddd;
             border-radius: 8px;
             font: inherit;
             font-size: 0.95rem;
-            box-sizing: border-box;
-            background-color: white;
-            height: auto;
-            flex-grow: 0;
         }
-        .form-group input[type="file"] {
-            padding: 6px 10px;
-            background-color: #fafafa;
-        }
-        .form-group input:focus,
-        .form-group select:focus { outline: none; border-color: var(--accent-color); }
-        form > div { width: auto; display: block; justify-content: unset; }
-        .submit-btn {
-            margin-top: 16px;
+        .submit-btn, .logout-btn {
             padding: 10px 28px;
             background-color: var(--accent-color);
             border: none;
             border-radius: 1000px;
-            font: inherit;
-            font-weight: 600;
-            cursor: pointer;
-            color: var(--text-color);
-        }
-        .submit-btn:hover { background-color: var(--text-color); color: white; }
-        .logout-btn {
-            padding: 9px 22px;
-            background-color: var(--accent-color);
-            border: none;
-            border-radius: 1000px;
-            font: inherit;
             font-weight: 600;
             cursor: pointer;
             color: var(--text-color);
             text-decoration: none;
         }
-        .logout-btn:hover { background-color: var(--text-color); color: white; }
+        .submit-btn:hover, .logout-btn:hover { background-color: var(--text-color); color: white; }
         .back-btn {
             display: inline-block;
-            margin-bottom: 15px;
             padding: 8px 18px;
             background-color: var(--base-color);
             border-radius: 8px;
@@ -341,23 +304,19 @@ require_once __DIR__ . '/generate_animal_page.php';
             font-weight: 600;
             text-decoration: none;
             border: 2px solid var(--accent-color);
-            font-size: 0.9rem;
         }
-        .back-btn:hover { background-color: var(--accent-color); }
-        .msg-error   { color: #e74c3c; font-weight: 600; margin-bottom: 12px; }
+        .msg-error { color: #e74c3c; font-weight: 600; margin-bottom: 12px; }
         .msg-success { color: #27ae60; font-weight: 600; margin-bottom: 12px; }
         .section-label {
             grid-column: 1 / -1;
             font-size: 0.78rem;
             font-weight: 700;
-            letter-spacing: 0.08em;
             text-transform: uppercase;
             color: #888;
             margin: 6px 0 2px;
             padding-bottom: 4px;
             border-bottom: 1px solid #eee;
         }
-        .photo-hint { font-size: 0.78rem; color: #888; margin-top: 3px; }
     </style>
 </head>
 <body>
@@ -370,8 +329,8 @@ require_once __DIR__ . '/generate_animal_page.php';
     </div>
 
     <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px">
-        <a href="<?= htmlspecialchars($staffHome) ?>" class="back-btn" style="margin-bottom:0">← Back to dashboard</a>
-        <a href="animals_report.php" class="back-btn" style="margin-bottom:0">Animals report</a>
+        <a href="<?= htmlspecialchars($staffHome) ?>" class="back-btn">← Back to dashboard</a>
+        <a href="animals_report.php" class="back-btn">Animals report</a>
     </div>
 
     <div class="form-card">
@@ -380,9 +339,7 @@ require_once __DIR__ . '/generate_animal_page.php';
 
         <form method="POST" enctype="multipart/form-data">
             <div class="form-grid">
-
                 <div class="section-label">Basic Information</div>
-
                 <div class="form-group">
                     <label>Name *</label>
                     <input type="text" name="name" required>
@@ -391,7 +348,6 @@ require_once __DIR__ . '/generate_animal_page.php';
                     <label>Species *</label>
                     <input type="text" name="species" required>
                 </div>
-
                 <div class="form-group">
                     <label>Category *</label>
                     <select name="category" required>
@@ -405,7 +361,6 @@ require_once __DIR__ . '/generate_animal_page.php';
                     <label>Age</label>
                     <input type="number" name="age" min="0">
                 </div>
-
                 <div class="form-group">
                     <label>Sex *</label>
                     <select name="sex" required>
@@ -427,9 +382,8 @@ require_once __DIR__ . '/generate_animal_page.php';
 
                 <div class="form-group" id="new-enclosure-group" style="display:none">
                     <label>New Enclosure Name *</label>
-                    <input type="text" name="new_enclosure_name" id="new_enclosure_name" placeholder="e.g. Bat Cave Enclosure">
+                    <input type="text" name="new_enclosure_name" id="new_enclosure_name">
                 </div>
-
                 <div class="form-group" id="new-climate-group" style="display:none">
                     <label>Climate Type *</label>
                     <select name="new_climate_id" id="new_climate_id">
@@ -437,15 +391,11 @@ require_once __DIR__ . '/generate_animal_page.php';
                         <?php foreach ($climateTypes as $ct): ?>
                             <option value="<?= (int) $ct['ClimateType_ID'] ?>"><?= htmlspecialchars($ct['ClimateType_Name']) ?></option>
                         <?php endforeach; ?>
-                        <?php if (empty($climateTypes)): ?>
-                            <option value="" disabled>No climate types found in database</option>
-                        <?php endif; ?>
                     </select>
                 </div>
-
                 <div class="form-group" id="new-capacity-group" style="display:none">
                     <label>Max Capacity *</label>
-                    <input type="number" name="new_max_capacity" id="new_max_capacity" min="1" placeholder="e.g. 10">
+                    <input type="number" name="new_max_capacity" id="new_max_capacity" min="1">
                 </div>
 
                 <?php if ($hasDietCol && !empty($dietRows)): ?>
@@ -462,7 +412,6 @@ require_once __DIR__ . '/generate_animal_page.php';
                 <?php endif; ?>
 
                 <div class="section-label">Staff Assignment</div>
-
                 <div class="form-group full">
                     <label>Assigned Vet</label>
                     <select name="vet_id">
@@ -486,16 +435,10 @@ require_once __DIR__ . '/generate_animal_page.php';
                 <?php endif; ?>
 
                 <div class="section-label">Photo &amp; Page Generation</div>
-
                 <div class="form-group full">
                     <label>Animal Photo</label>
-                    <input type="file" name="photo" accept="image/jpeg,image/png,image/gif,image/webp">
-                    <span class="photo-hint">
-                        Optional. A detail page is always created under <code>animals/</code> — uploading a photo
-                        replaces the placeholder image on that page. Supported: JPG, PNG, GIF, WEBP · Max 8 MB.
-                    </span>
+                    <input type="file" name="photo" accept="image/*">
                 </div>
-
             </div>
             <button type="submit" class="submit-btn">Add Animal</button>
         </form>
@@ -503,30 +446,12 @@ require_once __DIR__ . '/generate_animal_page.php';
 </div>
 <script>
 function toggleNewEnclosure(val) {
-    var encGrp    = document.getElementById('new-enclosure-group');
-    var climGrp   = document.getElementById('new-climate-group');
-    var capGrp    = document.getElementById('new-capacity-group');
-    var nameInput = document.getElementById('new_enclosure_name');
-    var climSel   = document.getElementById('new_climate_id');
-    var capInput  = document.getElementById('new_max_capacity');
-    if (val === '__new__') {
-        encGrp.style.display  = 'flex';
-        climGrp.style.display = 'flex';
-        capGrp.style.display  = 'flex';
-        nameInput.required    = true;
-        climSel.required      = true;
-        capInput.required     = true;
-    } else {
-        encGrp.style.display  = 'none';
-        climGrp.style.display = 'none';
-        capGrp.style.display  = 'none';
-        nameInput.required    = false;
-        climSel.required      = false;
-        capInput.required     = false;
-        nameInput.value       = '';
-        climSel.value         = '';
-        capInput.value        = '';
-    }
+    var grps = ['new-enclosure-group', 'new-climate-group', 'new-capacity-group'];
+    var inputs = ['new_enclosure_name', 'new_climate_id', 'new_max_capacity'];
+    var isNew = (val === '__new__');
+    
+    grps.forEach(id => document.getElementById(id).style.display = isNew ? 'flex' : 'none');
+    inputs.forEach(id => document.getElementById(id).required = isNew);
 }
 </script>
 </body>
