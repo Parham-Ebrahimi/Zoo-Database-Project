@@ -107,17 +107,38 @@ $caretakerJoinSql = $hasCaretakerCol
     ? 'LEFT JOIN employees ck ON a.Caretaker_EmployeeID = ck.EmployeeID'
     : '';
 
+// Check if Vet_EmployeeID column exists on the animal table
+$hasVetCol = false;
+try {
+    $chkVet = $pdo->query("
+        SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME   = 'animal'
+          AND COLUMN_NAME  = 'Vet_EmployeeID'
+        LIMIT 1
+    ");
+    $hasVetCol = (bool) $chkVet->fetchColumn();
+} catch (Throwable $ignored) {}
+
+$assignedVetJoinSql = $hasVetCol
+    ? "LEFT JOIN employees av ON a.Vet_EmployeeID = av.EmployeeID"
+    : '';
+$assignedVetSelect = $hasVetCol
+    ? "CONCAT(av.FirstName,' ',av.LastName) AS AssignedVetName,"
+    : "NULL AS AssignedVetName,";
+
 // Latest health record per animal
 $sql = "
-    SELECT a.Animal_ID, a.Name, a.Species, a.Category, a.Age, a.Sex, a.Daily_Calories, a.food_stock, e.Enclosure_Name, e.Enclosure_ID, d.Diet_Type, d.Restrictions, hr.Record_Date 
-    AS LastCheckup, CONCAT(emp.FirstName,' ',emp.LastName) 
-    AS LastVisitVet, " . ($hasCaretakerCol ? "CONCAT(ck.FirstName,' ',ck.LastName) 
-    AS CaretakerName" : 'NULL AS CaretakerName') . ", (SELECT COUNT(*) 
+    SELECT a.Animal_ID, a.Name, a.Species, a.Category, a.Age, a.Sex, a.Daily_Calories, a.food_stock, e.Enclosure_Name, e.Enclosure_ID, d.Diet_Type, d.Restrictions, hr.Record_Date
+    AS LastCheckup, CONCAT(emp.FirstName,' ',emp.LastName)
+    AS LastVisitVet, $assignedVetSelect " . ($hasCaretakerCol ? "CONCAT(ck.FirstName,' ',ck.LastName)
+    AS CaretakerName" : 'NULL AS CaretakerName') . ", (SELECT COUNT(*)
     FROM health_record WHERE Animal_ID = a.Animal_ID) AS CheckupCount
     FROM animal a
     LEFT JOIN enclosure e    ON a.Enclosure_ID    = e.Enclosure_ID
     LEFT JOIN diet d         ON a.Diet_ID         = d.Diet_ID
     $caretakerJoinSql
+    $assignedVetJoinSql
     LEFT JOIN (
         SELECT hr1.*
         FROM health_record hr1
@@ -551,7 +572,7 @@ function sortLink(string $col, string $label, string $current, string $dir): str
             <?php if ($hasCaretakerCol): ?>
             <th>Assigned caretaker</th>
             <?php endif; ?>
-            <th>Vet</th>
+            <th>Assigned Vet</th>
             <th>Actions</th>
         </tr>
     </thead>
@@ -597,9 +618,18 @@ function sortLink(string $col, string $label, string $current, string $dir): str
             <?php endif; ?>
 
             <td>
-                <?= !empty($a['LastVisitVet']) 
-                    ? htmlspecialchars($a['LastVisitVet']) 
-                    : '<span style="color:#aaa">—</span>' ?>
+                <?php
+                $assignedVet = $a['AssignedVetName'] ?? '';
+                $lastVet     = $a['LastVisitVet']    ?? '';
+                // Show assigned vet if set; otherwise fall back to last-visit vet with a note
+                if (!empty(trim($assignedVet)) && trim($assignedVet) !== ' ') {
+                    echo htmlspecialchars($assignedVet);
+                } elseif (!empty(trim($lastVet)) && trim($lastVet) !== ' ') {
+                    echo '<span title="Last visit vet (no assigned vet set)">' . htmlspecialchars($lastVet) . '</span>';
+                } else {
+                    echo '<span style="color:#aaa">—</span>';
+                }
+                ?>
             </td>
             <td>
                 <div class="action-btns">

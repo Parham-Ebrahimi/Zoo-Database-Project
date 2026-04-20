@@ -87,6 +87,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $dietId    = $_POST['diet_id']        ?? '';
     $vetId     = $_POST['vet_id']         ?? '';
 
+    // Handle "Add New Enclosure" option
+    if ($enclosure === '__new__') {
+        $newEncName = trim($_POST['new_enclosure_name'] ?? '');
+        if (!empty($newEncName)) {
+            $insEnc = $pdo->prepare("INSERT INTO enclosure (Enclosure_Name) VALUES (?)");
+            $insEnc->execute([$newEncName]);
+            $enclosure = (string) $pdo->lastInsertId();
+            $enclosures = $pdo->query("SELECT Enclosure_ID, Enclosure_Name FROM enclosure")->fetchAll();
+        } else {
+            $enclosure = '';
+        }
+    }
+
     $caretakerId = null;
     if ($hasCaretakerCol && $isAdmin) {
         $cr = $_POST['caretaker_id'] ?? '';
@@ -121,7 +134,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         /* ── Photo upload & page generation ── */
         $pageGenerated = false;
         $pagePath      = '';
+        $photoRelPath  = '';
 
+        $slug = preg_replace('/[^a-z0-9]+/', '-', strtolower($name));
+        $slug = trim($slug, '-');
+
+        // Handle optional photo upload
         if (!empty($_FILES['photo']['tmp_name'])) {
             $uploadDir = __DIR__ . '/animals/images/';
             if (!is_dir($uploadDir)) {
@@ -136,44 +154,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } elseif ($_FILES['photo']['size'] > 8 * 1024 * 1024) {
                 $error = 'Animal added, but photo is too large (max 8 MB).';
             } else {
-                $slug     = preg_replace('/[^a-z0-9]+/', '-', strtolower($name));
-                $slug     = trim($slug, '-');
                 $filename = $slug . '.' . $ext;
                 $destPath = $uploadDir . $filename;
-
                 $i = 1;
                 while (file_exists($destPath)) {
                     $filename = $slug . '-' . $i . '.' . $ext;
                     $destPath = $uploadDir . $filename;
                     $i++;
                 }
-
                 if (move_uploaded_file($_FILES['photo']['tmp_name'], $destPath)) {
                     $photoRelPath = 'images/' . $filename;
-                    $pagePath     = __DIR__ . '/animals/' . $slug . '.php';
-                    $pi = 1;
-                    while (file_exists($pagePath)) {
-                        $pagePath = __DIR__ . '/animals/' . $slug . '-' . $pi . '.php';
-                        $pi++;
-                    }
-
-                    file_put_contents($pagePath, generate_animal_page($name, $species, $category, $photoRelPath));
-                    $pageGenerated = true;
-
                     try {
                         if (animal_table_has_column($pdo, 'Photo_Path')) {
                             $pdo->prepare("UPDATE animal SET Photo_Path=? WHERE Animal_ID=?")
                                 ->execute([$photoRelPath, $newAnimalId]);
-                        }
-                        if (animal_table_has_column($pdo, 'Page_Slug')) {
-                            $pdo->prepare("UPDATE animal SET Page_Slug=? WHERE Animal_ID=?")
-                                ->execute([basename($pagePath, '.php'), $newAnimalId]);
                         }
                     } catch (Throwable $ignored) {}
                 } else {
                     $error = 'Animal added, but photo could not be saved.';
                 }
             }
+        }
+
+        // Always generate the detail page (photo is optional — a placeholder is used if none)
+        if (empty($error) || $error === '') {
+            $pagePath = __DIR__ . '/animals/' . $slug . '.php';
+            $pi = 1;
+            while (file_exists($pagePath)) {
+                $pagePath = __DIR__ . '/animals/' . $slug . '-' . $pi . '.php';
+                $pi++;
+            }
+            file_put_contents($pagePath, generate_animal_page($name, $species, $category, $photoRelPath));
+            $pageGenerated = true;
+            try {
+                if (animal_table_has_column($pdo, 'Page_Slug')) {
+                    $pdo->prepare("UPDATE animal SET Page_Slug=? WHERE Animal_ID=?")
+                        ->execute([basename($pagePath, '.php'), $newAnimalId]);
+                }
+            } catch (Throwable $ignored) {}
         }
 
         if (empty($error)) {
@@ -192,6 +210,10 @@ function generate_animal_page(string $name, string $species, string $category, s
     $eSpecies  = addslashes($species);
     $eCategory = addslashes($category);
     $ePhoto    = addslashes($photoRelPath);
+    // If no photo was uploaded, use a neutral placeholder via placehold.co
+    $heroImgTag = $ePhoto !== ''
+        ? "<img src=\"{$ePhoto}\" alt=\"{$eName} at Greenwood Zoo\">"
+        : "<img src=\"https://placehold.co/1200x420/c8e6c9/2d6a2d?text=" . rawurlencode($name) . "\" alt=\"{$eName} at Greenwood Zoo\" style=\"object-fit:contain;background:#c8e6c9\">";
 
     return <<<TEMPLATE
 <?php require_once __DIR__ . '/../session_bootstrap.php';
@@ -244,7 +266,7 @@ require_once __DIR__ . '/../db.php'; ?>
     </header>
 
     <div class="animal-hero">
-        <img src="{$ePhoto}" alt="{$eName} at Greenwood Zoo">
+        {$heroImgTag}
         <div class="animal-hero-text">
             <h1>{$eName}</h1>
             <p>{$eCategory} · <em>{$eSpecies}</em></p>
@@ -447,7 +469,6 @@ TEMPLATE;
     <div class="dashboard-header">
         <h1>Add Animal</h1>
         <div class="admin-header-actions-inline">
-            <?php include __DIR__ . '/admin_header_cart_profile.inc.php'; ?>
             <a href="logout.php" class="logout-btn">Logout</a>
         </div>
     </div>
@@ -499,12 +520,18 @@ TEMPLATE;
                 </div>
                 <div class="form-group">
                     <label>Enclosure</label>
-                    <select name="enclosure_id">
+                    <select name="enclosure_id" id="enclosure_select" onchange="toggleNewEnclosure(this.value)">
                         <option value="">-- None --</option>
                         <?php foreach ($enclosures as $enc): ?>
                             <option value="<?= $enc['Enclosure_ID'] ?>"><?= htmlspecialchars($enc['Enclosure_Name']) ?></option>
                         <?php endforeach; ?>
+                        <option value="__new__">＋ Add new enclosure…</option>
                     </select>
+                </div>
+
+                <div class="form-group" id="new-enclosure-group" style="display:none">
+                    <label>New Enclosure Name *</label>
+                    <input type="text" name="new_enclosure_name" id="new_enclosure_name" placeholder="e.g. Bat Cave Enclosure">
                 </div>
 
                 <?php if ($hasDietCol && !empty($dietRows)): ?>
@@ -550,8 +577,8 @@ TEMPLATE;
                     <label>Animal Photo</label>
                     <input type="file" name="photo" accept="image/jpeg,image/png,image/gif,image/webp">
                     <span class="photo-hint">
-                        Uploading a photo automatically creates a clickable detail page for this animal
-                        under <code>animals/</code>. Supported: JPG, PNG, GIF, WEBP · Max 8 MB.
+                        Optional. A detail page is always created under <code>animals/</code> — uploading a photo
+                        replaces the placeholder image on that page. Supported: JPG, PNG, GIF, WEBP · Max 8 MB.
                     </span>
                 </div>
 
@@ -560,5 +587,19 @@ TEMPLATE;
         </form>
     </div>
 </div>
+<script>
+function toggleNewEnclosure(val) {
+    var grp   = document.getElementById('new-enclosure-group');
+    var input = document.getElementById('new_enclosure_name');
+    if (val === '__new__') {
+        grp.style.display = 'flex';
+        input.required    = true;
+    } else {
+        grp.style.display = 'none';
+        input.required    = false;
+        input.value       = '';
+    }
+}
+</script>
 </body>
 </html>
