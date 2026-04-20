@@ -1,6 +1,3 @@
-Animals · PHP
-Copy
-
 <?php
 require_once __DIR__ . '/session_bootstrap.php';
 $isCustomer = isset($_SESSION['customer_id']);
