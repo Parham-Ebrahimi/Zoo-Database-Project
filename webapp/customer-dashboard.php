@@ -412,7 +412,7 @@ $animalFallbackImage = 'https://images.unsplash.com/photo-1564349683136-77e08dba
                     <div class="dash-card">
                         <h2>Tickets</h2>
                         <a href="buy_tickets.php" class="primary">Buy tickets</a>
-                        <a href="customer_tickets_report.php">Purchase history</a>
+                        <a href="customer_tickets_report.php">My ticket history</a>
                     </div>
 
                     <div class="dash-card">
@@ -448,8 +448,8 @@ $animalFallbackImage = 'https://images.unsplash.com/photo-1564349683136-77e08dba
                                     $nameLower = strtolower(trim((string) $a['Name']));
                                     $speciesLower = strtolower($species);
 
-                                    // Match species or name against the image map
-                                    $imgUrl = $animalFallbackImage;
+                                    // Match species or name against the image map — skip if no match
+                                    $imgUrl = null;
                                     $slug   = null;
                                     foreach ($animalImageMap as $keyword => [$mapImg, $mapSlug]) {
                                         if (str_contains($speciesLower, $keyword) || str_contains($nameLower, $keyword)) {
@@ -458,6 +458,7 @@ $animalFallbackImage = 'https://images.unsplash.com/photo-1564349683136-77e08dba
                                             break;
                                         }
                                     }
+                                    if ($slug === null) continue; // not a featured species — skip entirely
 
                                     $desc = 'Meet ' . htmlspecialchars($a['Name']) . ', one of our ';
                                     $desc .= $category !== '' ? htmlspecialchars($category) . ' ambassadors' : 'animal ambassadors';
