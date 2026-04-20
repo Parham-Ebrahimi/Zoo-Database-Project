@@ -1,7 +1,6 @@
 <?php
 require_once __DIR__ . '/session_bootstrap.php';
 
-// 1. FUNCTIONALITY FIX: Load the generator before the POST handler runs
 require_once __DIR__ . '/generate_animal_page.php';
 
 if (!isset($_SESSION['user_id'])) {
@@ -355,13 +354,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </style>
 </head>
 <body>
-    <div class="dashboard-wrapper">
-        <div class="dashboard-header">
-            <h1>Add Animal</h1>
-            <div class="admin-header-actions-inline">
-                <?php include __DIR__ . '/admin_header_cart_profile.inc.php'; ?>
-                <a href="logout.php" class="logout-btn">Logout</a>
-            </div>
+<div class="dashboard-wrapper">
+    <div class="dashboard-header">
+        <h1>Add Animal</h1>
+        <div class="admin-header-actions-inline">
+            <?php include __DIR__ . '/admin_header_cart_profile.inc.php'; ?>
+            <a href="logout.php" class="logout-btn">Logout</a>
         </div>
     </div>
 
