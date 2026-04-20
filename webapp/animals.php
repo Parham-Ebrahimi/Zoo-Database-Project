@@ -1,6 +1,199 @@
+Animals · PHP
+Copy
+
 <?php
 require_once __DIR__ . '/session_bootstrap.php';
 $isCustomer = isset($_SESSION['customer_id']);
+ 
+/* ── Pull DB animals that have a Page_Slug (auto-generated pages) ── */
+$dbAnimals = [];
+try {
+    require_once __DIR__ . '/db.php';
+    /* Only fetch animals that have a Page_Slug stored (i.e. auto-generated pages),
+       or if that column doesn't exist yet, fetch none from DB.              */
+    $hasSlugCol = false;
+    $chk = $pdo->query("
+        SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = 'animal'
+          AND COLUMN_NAME = 'Page_Slug'
+        LIMIT 1
+    ");
+    $hasSlugCol = (bool) $chk->fetchColumn();
+ 
+    if ($hasSlugCol) {
+        $rows = $pdo->query("
+            SELECT DISTINCT
+                a.Name,
+                a.Species,
+                a.Category,
+                a.Page_Slug,
+                COALESCE(a.Photo_Path, '') AS Photo_Path
+            FROM animal a
+            WHERE a.Page_Slug IS NOT NULL
+              AND a.Page_Slug != ''
+            ORDER BY a.Name
+        ")->fetchAll(PDO::FETCH_ASSOC);
+ 
+        foreach ($rows as $r) {
+            // If the .php file is missing but the folder is now writable, regenerate it automatically.
+            $filePath = __DIR__ . '/animals/' . $r['Page_Slug'] . '.php';
+            if (!file_exists($filePath) && is_writable(__DIR__ . '/animals/')) {
+                if (!function_exists('generate_animal_page')) {
+                    require_once __DIR__ . '/generate_animal_page.php';
+                }
+                $photoRel = $r['Photo_Path'] ?? '';
+                @file_put_contents($filePath, generate_animal_page($r['Name'], $r['Species'], $r['Category'], $photoRel));
+            }
+ 
+            $dbAnimals[] = [
+                'name' => $r['Name'],
+                'slug' => $r['Page_Slug'],
+                'blurb' => htmlspecialchars($r['Category']) . ' · ' . htmlspecialchars($r['Species']),
+                'img'  => !empty($r['Photo_Path'])
+                            ? 'animals/' . htmlspecialchars($r['Photo_Path'])
+                            : 'https://images.unsplash.com/photo-1607326957431-29d25d2b386f?auto=format&fit=crop&w=800&q=80',
+                'alt'  => $r['Name'] . ' at Greenwood Zoo',
+                'dynamic' => true,
+            ];
+        }
+    }
+} catch (Throwable $ignored) {}
+ 
+/* Hardcoded animals (existing pages) */
+$staticAnimals = [
+    [
+        "name"  => "Elephants",
+        "slug"  => "elephants",
+        "blurb" => "The largest land animals on Earth, known for their memory and intelligence.",
+        "img"   => "https://images.unsplash.com/photo-1771341398737-b2467b6776a7?auto=format&fit=crop&w=800&q=80",
+        "alt"   => "Baby elephant in a grassy field",
+    ],
+    [
+        "name"  => "Giraffes",
+        "slug"  => "giraffes",
+        "blurb" => "The tallest living terrestrial animals, with distinctive long necks.",
+        "img"   => "https://images.unsplash.com/photo-1737738736083-838af5116f95?auto=format&fit=crop&w=800&q=80",
+        "alt"   => "Giraffe silhouette at sunset",
+    ],
+    [
+        "name"  => "Penguins",
+        "slug"  => "penguins",
+        "blurb" => "Flightless seabirds perfectly adapted to life in and around cold water.",
+        "img"   => "https://images.unsplash.com/photo-1737498352674-aadc9f986eea?auto=format&fit=crop&w=800&q=80",
+        "alt"   => "Penguin on a rocky beach",
+    ],
+    [
+        "name"  => "Red Pandas",
+        "slug"  => "red-pandas",
+        "blurb" => "Adorable, tree-dwelling mammals native to the eastern Himalayas.",
+        "img"   => "https://images.unsplash.com/photo-1656899367542-3fc106faa104?auto=format&fit=crop&w=800&q=80",
+        "alt"   => "Red panda in a tree",
+    ],
+    [
+        "name"  => "Lion",
+        "slug"  => "lion",
+        "blurb" => "The iconic apex predator of the African savanna, known for its powerful roar.",
+        "img"   => "https://images.unsplash.com/photo-1546182990-dffeafbe841d?auto=format&fit=crop&w=800&q=80",
+        "alt"   => "Lion resting in the grass",
+    ],
+    [
+        "name"  => "Polar Bear",
+        "slug"  => "polar-bear",
+        "blurb" => "The world's largest land carnivore, perfectly adapted to Arctic life.",
+        "img"   => "https://images.unsplash.com/photo-1589656966895-2f33e7653819?auto=format&fit=crop&w=1600&q=80",
+        "alt"   => "Polar bear in a snowy landscape",
+    ],
+    [
+        "name"  => "Jaguar",
+        "slug"  => "jaguar",
+        "blurb" => "The Americas' largest cat, built for power with a beautifully spotted coat.",
+        "img"   => "https://images.unsplash.com/photo-1616128417743-c3a6992a65e7?q=80&w=2072&auto=format&fit=crop",
+        "alt"   => "Jaguar with spotted coat",
+    ],
+    [
+        "name"  => "Seals",
+        "slug"  => "seal",
+        "blurb" => "Playful and graceful marine mammals at home in both water and on land.",
+        "img"   => "https://images.unsplash.com/photo-1572880393162-0518ac760495?q=80&w=1674&auto=format&fit=crop",
+        "alt"   => "Seal resting on a rock",
+    ],
+    [
+        "name"  => "Anaconda",
+        "slug"  => "anaconda",
+        "blurb" => "The world's heaviest snake, a stealthy constrictor of South American rivers.",
+        "img"   => "https://images.unsplash.com/photo-1600682322637-95c40966e79f?q=80&w=2100&auto=format&fit=crop",
+        "alt"   => "Large green anaconda",
+    ],
+    [
+        "name"  => "Crocodile",
+        "slug"  => "crocodile",
+        "blurb" => "Ancient reptiles that have outlasted the dinosaurs, unchanged for millions of years.",
+        "img"   => "https://images.unsplash.com/photo-1611069648374-733e7bb73e5c?q=80&w=2070&auto=format&fit=crop",
+        "alt"   => "Crocodile with open jaws",
+    ],
+    [
+        "name"  => "Caiman",
+        "slug"  => "caiman",
+        "blurb" => "A formidable crocodilian and apex predator of South American river systems.",
+        "img"   => "https://images.unsplash.com/photo-1557868363-8d9d44d5b9e4?q=80&w=2070&auto=format&fit=crop",
+        "alt"   => "Caiman on a riverbank",
+    ],
+    [
+        "name"  => "Shark",
+        "slug"  => "shark",
+        "blurb" => "Ocean's ultimate predator, evolving virtually unchanged for over 450 million years.",
+        "img"   => "https://images.unsplash.com/photo-1586115457457-b3753fe50cf1?q=80&w=1688&auto=format&fit=crop",
+        "alt"   => "Shark swimming underwater",
+    ],
+    [
+        "name"  => "Otter",
+        "slug"  => "otter",
+        "blurb" => "Playful and intelligent river mammals with a love for water and fish.",
+        "img"   => "https://images.unsplash.com/photo-1633967920376-33b2d94f091f?q=80&w=2070&auto=format&fit=crop",
+        "alt"   => "Otter floating in water",
+    ],
+    [
+        "name"  => "Macaw",
+        "slug"  => "macaw",
+        "blurb" => "Brilliantly colored parrots renowned for their intelligence and long lifespans.",
+        "img"   => "https://images.unsplash.com/photo-1664545141018-c70ca9e78a76?q=80&w=1625&auto=format&fit=crop",
+        "alt"   => "Colorful macaw perched on a branch",
+    ],
+    [
+        "name"  => "Monkey",
+        "slug"  => "monkey",
+        "blurb" => "Curious and acrobatic primates that thrive high in the jungle canopy.",
+        "img"   => "https://images.unsplash.com/photo-1540573133985-87b6da6d54a9?auto=format&fit=crop&w=800&q=80",
+        "alt"   => "Monkey in a tree",
+    ],
+    [
+        "name"  => "Capybara",
+        "slug"  => "capybara",
+        "blurb" => "The world's largest rodent — gentle, sociable, and surprisingly good swimmers.",
+        "img"   => "https://images.unsplash.com/photo-1701772164869-dfb2cac483dc?q=80&w=2070&auto=format&fit=crop",
+        "alt"   => "Capybara resting near water",
+    ],
+    [
+        "name"  => "Tapir",
+        "slug"  => "tapir",
+        "blurb" => "A living fossil with a prehensile snout, unchanged for tens of millions of years.",
+        "img"   => "https://images.unsplash.com/photo-1712938548647-8f92b804eb82?q=80&w=2070&auto=format&fit=crop",
+        "alt"   => "Tapir in a jungle setting",
+    ],
+    [
+        "name"  => "Camel",
+        "slug"  => "camel",
+        "blurb" => "Desert survivors built to endure extreme heat and long stretches without water.",
+        "img"   => "https://images.unsplash.com/photo-1598113972215-96c018fb1a0b?q=80&w=2070&auto=format&fit=crop",
+        "alt"   => "Camel in a desert landscape",
+    ],
+];
+ 
+/* Merge: static first, then any new DB animals not already listed */
+$staticSlugs = array_column($staticAnimals, 'slug');
+$newDbAnimals = array_filter($dbAnimals, fn($a) => !in_array($a['slug'], $staticSlugs, true));
+$animals = array_merge($staticAnimals, array_values($newDbAnimals));
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -15,9 +208,7 @@ $isCustomer = isset($_SESSION['customer_id']);
             margin: 0 auto;
             padding: 0 1rem 2.5rem;
         }
-        .animals-back {
-            margin: 0 0 0.75rem;
-        }
+        .animals-back { margin: 0 0 0.75rem; }
         .animals-back a {
             display: inline-block;
             font-size: 0.9rem;
@@ -25,9 +216,7 @@ $isCustomer = isset($_SESSION['customer_id']);
             color: var(--cr-accent, #2d6a2d);
             text-decoration: none;
         }
-        .animals-back a:hover {
-            text-decoration: underline;
-        }
+        .animals-back a:hover { text-decoration: underline; }
         .animals-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -53,18 +242,25 @@ $isCustomer = isset($_SESSION['customer_id']);
             height: 200px;
             object-fit: cover;
         }
-        .animal-tile-caption {
-            padding: 14px;
-        }
+        .animal-tile-caption { padding: 14px; }
         .animal-tile-caption h3 {
             margin: 0 0 4px;
             color: #2d6a2d;
             font-size: 1.1rem;
         }
-        .animal-tile-caption p {
-            margin: 0;
-            font-size: 0.85rem;
-            color: #555;
+        .animal-tile-caption p { margin: 0; font-size: 0.85rem; color: #555; }
+        /* Badge for newly added animals */
+        .animal-tile-caption .new-badge {
+            display: inline-block;
+            background: #e8f5e9;
+            color: #2d6a2d;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 2px 7px;
+            border-radius: 20px;
+            margin-bottom: 4px;
         }
         .page-hero {
             background: #e8f5e9;
@@ -110,149 +306,21 @@ $isCustomer = isset($_SESSION['customer_id']);
     </header>
     <div class="animals-page-inner">
 <?php endif; ?>
-
+ 
     <div class="page-hero">
         <h1>Our Animals</h1>
         <p>Discover the incredible wildlife that calls Greenwood home.</p>
     </div>
-
-    <?php
-    $animals = [
-        [
-            "name" => "Elephants",
-            "slug" => "elephants",
-            "blurb" => "The largest land animals on Earth, known for their memory and intelligence.",
-            "img" => "https://images.unsplash.com/photo-1771341398737-b2467b6776a7?auto=format&fit=crop&w=800&q=80",
-            "alt" => "Baby elephant in a grassy field"
-        ],
-        [
-            "name" => "Giraffes",
-            "slug" => "giraffes",
-            "blurb" => "The tallest living terrestrial animals, with distinctive long necks.",
-            "img" => "https://images.unsplash.com/photo-1737738736083-838af5116f95?auto=format&fit=crop&w=800&q=80",
-            "alt" => "Giraffe silhouette at sunset"
-        ],
-        [
-            "name" => "Penguins",
-            "slug" => "penguins",
-            "blurb" => "Flightless seabirds perfectly adapted to life in and around cold water.",
-            "img" => "https://images.unsplash.com/photo-1737498352674-aadc9f986eea?auto=format&fit=crop&w=800&q=80",
-            "alt" => "Penguin on a rocky beach"
-        ],
-        [
-            "name" => "Red Pandas",
-            "slug" => "red-pandas",
-            "blurb" => "Adorable, tree-dwelling mammals native to the eastern Himalayas.",
-            "img" => "https://images.unsplash.com/photo-1656899367542-3fc106faa104?auto=format&fit=crop&w=800&q=80",
-            "alt" => "Red panda in a tree"
-        ],
-        [
-            "name" => "Lion",
-            "slug" => "lion",
-            "blurb" => "The iconic apex predator of the African savanna, known for its powerful roar.",
-            "img" => "https://images.unsplash.com/photo-1546182990-dffeafbe841d?auto=format&fit=crop&w=800&q=80",
-            "alt" => "Lion resting in the grass"
-        ],
-        [
-            "name" => "Polar Bear",
-            "slug" => "polar-bear",
-            "blurb" => "The world's largest land carnivore, perfectly adapted to Arctic life.",
-            "img" => "https://images.unsplash.com/photo-1589656966895-2f33e7653819?auto=format&fit=crop&w=1600&q=80",
-            "alt" => "Polar bear in a snowy landscape"
-        ],
-        [
-            "name" => "Jaguar",
-            "slug" => "jaguar",
-            "blurb" => "The Americas' largest cat, built for power with a beautifully spotted coat.",
-            "img" => "https://images.unsplash.com/photo-1616128417743-c3a6992a65e7?q=80&w=2072&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-            "alt" => "Jaguar with spotted coat"
-        ],
-        [
-            "name" => "Seals",
-            "slug" => "seal",
-            "blurb" => "Playful and graceful marine mammals at home in both water and on land.",
-            "img" => "https://images.unsplash.com/photo-1572880393162-0518ac760495?q=80&w=1674&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-            "alt" => "Seal resting on a rock"
-        ],
-        [
-            "name" => "Anaconda",
-            "slug" => "anaconda",
-            "blurb" => "The world's heaviest snake, a stealthy constrictor of South American rivers.",
-            "img" => "https://images.unsplash.com/photo-1600682322637-95c40966e79f?q=80&w=2100&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-            "alt" => "Large green anaconda"
-        ],
-        [
-            "name" => "Crocodile",
-            "slug" => "crocodile",
-            "blurb" => "Ancient reptiles that have outlasted the dinosaurs, unchanged for millions of years.",
-            "img" => "https://images.unsplash.com/photo-1611069648374-733e7bb73e5c?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-            "alt" => "Crocodile with open jaws"
-        ],
-        [
-            "name" => "Caiman",
-            "slug" => "caiman",
-            "blurb" => "A formidable crocodilian and apex predator of South American river systems.",
-            "img" => "https://images.unsplash.com/photo-1557868363-8d9d44d5b9e4?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-            "alt" => "Caiman on a riverbank"
-        ],
-        [
-            "name" => "Shark",
-            "slug" => "shark",
-            "blurb" => "Ocean's ultimate predator, evolving virtually unchanged for over 450 million years.",
-            "img" => "https://images.unsplash.com/photo-1586115457457-b3753fe50cf1?q=80&w=1688&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-            "alt" => "Shark swimming underwater"
-        ],
-        [
-            "name" => "Otter",
-            "slug" => "otter",
-            "blurb" => "Playful and intelligent river mammals with a love for water and fish.",
-            "img" => "https://images.unsplash.com/photo-1633967920376-33b2d94f091f?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-            "alt" => "Otter floating in water"
-        ],
-        [
-            "name" => "Macaw",
-            "slug" => "macaw",
-            "blurb" => "Brilliantly colored parrots renowned for their intelligence and long lifespans.",
-            "img" => "https://images.unsplash.com/photo-1664545141018-c70ca9e78a76?q=80&w=1625&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-            "alt" => "Colorful macaw perched on a branch"
-        ],
-        [
-            "name" => "Monkey",
-            "slug" => "monkey",
-            "blurb" => "Curious and acrobatic primates that thrive high in the jungle canopy.",
-            "img" => "https://images.unsplash.com/photo-1540573133985-87b6da6d54a9?auto=format&fit=crop&w=800&q=80",
-            "alt" => "Monkey in a tree"
-        ],
-        [
-            "name" => "Capybara",
-            "slug" => "capybara",
-            "blurb" => "The world's largest rodent — gentle, sociable, and surprisingly good swimmers.",
-            "img" => "https://images.unsplash.com/photo-1701772164869-dfb2cac483dc?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-            "alt" => "Capybara resting near water"
-        ],
-        [
-            "name" => "Tapir",
-            "slug" => "tapir",
-            "blurb" => "A living fossil with a prehensile snout, unchanged for tens of millions of years.",
-            "img" => "https://images.unsplash.com/photo-1712938548647-8f92b804eb82?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-            "alt" => "Tapir in a jungle setting"
-        ],
-        [
-            "name" => "Camel",
-            "slug" => "camel",
-            "blurb" => "Desert survivors built to endure extreme heat and long stretches without water.",
-            "img" => "https://images.unsplash.com/photo-1598113972215-96c018fb1a0b?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-            "alt" => "Camel in a desert landscape"
-        ],
-    ];
-    ?>
-
+ 
     <main>
         <div class="animals-grid">
             <?php foreach ($animals as $a): ?>
             <a class="animal-tile" href="animals/<?= htmlspecialchars($a['slug']) ?>.php">
                 <img src="<?= htmlspecialchars($a['img']) ?>" alt="<?= htmlspecialchars($a['alt']) ?>" loading="lazy">
                 <div class="animal-tile-caption">
+                    <?php if (!empty($a['dynamic'])): ?>
+                        <span class="new-badge">New</span>
+                    <?php endif; ?>
                     <h3><?= htmlspecialchars($a['name']) ?></h3>
                     <p><?= htmlspecialchars($a['blurb']) ?></p>
                 </div>
@@ -265,14 +333,14 @@ $isCustomer = isset($_SESSION['customer_id']);
             </p>
         <?php endif; ?>
     </main>
-
+ 
 <?php if ($isCustomer): ?>
         </div>
     </div>
 <?php else: ?>
     </div>
     <footer class="site-footer">
-        <p>&copy; 2026 Team 9 COSC 3380 Zoo Database Systems Project.</p>
+        <p>&copy; <?= date('Y') ?> Team 9 COSC 3380 Zoo Database Systems Project.</p>
         <p><a href="login.html">Login</a> · <a href="signup.html">Sign up</a></p>
     </footer>
 <?php endif; ?>

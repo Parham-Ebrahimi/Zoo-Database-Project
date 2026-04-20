@@ -79,12 +79,14 @@ $sql = "
            hr.Diagnosis, hr.Treatment, hr.Notes,
            hr.Record_Date AS LastCheckup,
            hr.Cured_Date,
-           CONCAT(vet.FirstName,' ',vet.LastName) AS VetName,
+           CONCAT(vet.FirstName,' ',vet.LastName) AS LastVisitVetName,
+           CONCAT(av.FirstName,' ',av.LastName)   AS AssignedVetName,
            (SELECT COUNT(*) FROM health_record WHERE Animal_ID = a.Animal_ID) AS TotalRecords,
            (SELECT COUNT(*) FROM health_record WHERE Animal_ID = a.Animal_ID AND Health_Status = 'Sick') AS SickCount
     FROM animal a
     LEFT JOIN enclosure e ON a.Enclosure_ID = e.Enclosure_ID
     LEFT JOIN employees ck ON a.Caretaker_EmployeeID = ck.EmployeeID
+    LEFT JOIN employees av ON a.Vet_EmployeeID = av.EmployeeID
     LEFT JOIN (
         SELECT hr1.* FROM health_record hr1
         INNER JOIN (
@@ -490,7 +492,13 @@ tbody tr:hover td { background:rgba(187,223,158,.15); }
         <td><span class="badge badge-<?= $hs ?>"><?= htmlspecialchars($a['Health_Status']) ?></span></td>
         <td><?= htmlspecialchars($a['Enclosure_Name'] ?? 'Unassigned') ?></td>
         <td style="font-size:.8rem"><?= !empty($a['CaretakerName']) ? htmlspecialchars($a['CaretakerName']) : '<span style="color:#aaa">—</span>' ?></td>
-        <td style="font-size:.8rem"><?= !empty($a['VetName']) ? htmlspecialchars($a['VetName']) : '<span style="color:#aaa">—</span>' ?></td>
+        <td style="font-size:.8rem"><?php
+            $av = trim($a['AssignedVetName']  ?? '');
+            $lv = trim($a['LastVisitVetName'] ?? '');
+            if ($av && $av !== ' ') echo htmlspecialchars($av);
+            elseif ($lv && $lv !== ' ') echo '<span title="Last visit vet">' . htmlspecialchars($lv) . '</span>';
+            else echo '<span style="color:#aaa">—</span>';
+        ?></td>
         <td>
             <div class="food-bar-wrap">
                 <div class="food-bar"><div class="food-fill <?= $bc ?>" style="width:<?= $stock ?>%"></div></div>
@@ -511,7 +519,13 @@ tbody tr:hover td { background:rgba(187,223,158,.15); }
                 <div class="detail-item"><strong>Past sick episodes</strong><?= $a['SickCount'] ?></div>
                 <div class="detail-item"><strong>Total health records</strong><?= $a['TotalRecords'] ?></div>
                 <div class="detail-item"><strong>Cured date</strong><?= $a['Cured_Date'] ? '<span style="color:#27ae60;font-weight:600">'.date('M j, Y',strtotime($a['Cured_Date'])).'</span>' : '—' ?></div>
-                <div class="detail-item"><strong>Last vet</strong><?= !empty($a['VetName']) ? htmlspecialchars($a['VetName']) : '—' ?></div>
+                <div class="detail-item"><strong>Vet</strong><?php
+                    $av = trim($a['AssignedVetName']  ?? '');
+                    $lv = trim($a['LastVisitVetName'] ?? '');
+                    if ($av && $av !== ' ') echo htmlspecialchars($av);
+                    elseif ($lv && $lv !== ' ') echo htmlspecialchars($lv);
+                    else echo '—';
+                ?></div>
                 <div class="detail-item" style="grid-column:span 2"><strong>Diagnosis</strong><?= $a['Diagnosis'] ? htmlspecialchars($a['Diagnosis']) : '<span style="color:#aaa">None on record</span>' ?></div>
                 <div class="detail-item" style="grid-column:span 2"><strong>Treatment</strong><?= $a['Treatment'] ? htmlspecialchars($a['Treatment']) : '<span style="color:#aaa">None on record</span>' ?></div>
                 <div class="detail-item" style="grid-column:span 2"><strong>Notes</strong><?= $a['Notes'] ? htmlspecialchars($a['Notes']) : '<span style="color:#aaa">No notes</span>' ?></div>
