@@ -38,10 +38,10 @@ try {
 // Species-specific images and page slugs for known animals
 $animalImageMap = [
     // keyword (lowercase) => [image_url, slug]
-    'elephant'   => ['https://images.unsplash.com/photo-1474511320723-9a56873867b5?w=800&q=80',  'elephants'],
+    'elephant'   => ['https://images.unsplash.com/photo-1771341398737-b2467b6776a7?auto=format&fit=crop&w=1600&q=80',  'elephants'],
     'giraffe'    => ['https://images.unsplash.com/photo-1547721064-da6cfb341d50?w=800&q=80',      'giraffes'],
     'penguin'    => ['https://images.unsplash.com/photo-1551986782-d0169b3f8fa7?w=800&q=80',      'penguins'],
-    'red panda'  => ['https://images.unsplash.com/photo-1525382455947-f319bc5f446a?w=800&q=80',   'red-pandas'],
+    'red panda'  => ['https://images.unsplash.com/photo-1656899367542-3fc106faa104?auto=format&fit=crop&w=1600&q=80',   'red-pandas'],
     'lion'       => ['https://images.unsplash.com/photo-1546182990-dffeafbe841d?w=800&q=80',      'lion'],
     'polar bear' => ['https://images.unsplash.com/photo-1589656966895-2f33e7653819?w=800&q=80',   'polar-bear'],
     'jaguar'     => ['https://images.unsplash.com/photo-1616128417743-c3a6992a65e7?w=800&q=80',   'jaguar'],
@@ -51,7 +51,7 @@ $animalImageMap = [
     'caiman'     => ['https://images.unsplash.com/photo-1557868363-8d9d44d5b9e4?w=800&q=80',      'caiman'],
     'shark'      => ['https://images.unsplash.com/photo-1586115457457-b3753fe50cf1?w=800&q=80',   'shark'],
     'otter'      => ['https://images.unsplash.com/photo-1633967920376-33b2d94f091f?w=800&q=80',   'otter'],
-    'macaw'      => ['https://images.unsplash.com/photo-1548767797-d8c844163c4a?w=800&q=80',      'macaw'],
+    'macaw'      => ['https://images.unsplash.com/photo-1664545141018-c70ca9e78a76?q=80&w=1625&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',      'macaw'],
     'monkey'     => ['https://images.unsplash.com/photo-1540573133985-87b6da6d54a9?w=800&q=80',   'monkey'],
     'capybara'   => ['https://images.unsplash.com/photo-1701772164869-dfb2cac483dc?w=800&q=80',   'capybara'],
     'tapir'      => ['https://images.unsplash.com/photo-1712938548647-8f92b804eb82?w=800&q=80',   'tapir'],
@@ -412,7 +412,7 @@ $animalFallbackImage = 'https://images.unsplash.com/photo-1564349683136-77e08dba
                     <div class="dash-card">
                         <h2>Tickets</h2>
                         <a href="buy_tickets.php" class="primary">Buy tickets</a>
-                        <a href="customer_tickets_report.php">My ticket history</a>
+                        <a href="customer_tickets_report.php">Purchase history</a>
                     </div>
 
                     <div class="dash-card">
