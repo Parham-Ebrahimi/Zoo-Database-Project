@@ -56,6 +56,18 @@ $flashErr = isset($_GET['error']) ? (string) $_GET['error'] : '';
         .btn-del:hover { background: #962d22; }
         .gs-header-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
         .empty-hint { color: #666; margin: 0; }
+        .ui-modal[hidden] { display: none !important; }
+        .ui-modal { position: fixed; inset: 0; z-index: 1200; display: grid; place-items: center; padding: 16px; }
+        .ui-modal__backdrop { position: absolute; inset: 0; background: rgba(15, 29, 11, 0.45); backdrop-filter: blur(2px); }
+        .ui-modal__card { position: relative; width: min(460px, 100%); background: #fff; border: 1px solid rgba(46, 90, 26, 0.18); border-radius: 14px; box-shadow: 0 16px 45px rgba(26, 61, 28, 0.28); padding: 18px 18px 14px; text-align: left; }
+        .ui-modal__title { margin: 0; font-size: 1.02rem; color: #163a1a; font-weight: 800; }
+        .ui-modal__text { margin: 10px 0 0; color: #4a5d45; font-size: 0.9rem; line-height: 1.45; }
+        .ui-modal__text strong { color: #1a3d1c; }
+        .ui-modal__actions { margin-top: 16px; display: flex; justify-content: flex-end; gap: 10px; }
+        .ui-btn { border: none; border-radius: 9px; padding: 8px 14px; font: inherit; font-size: 0.86rem; font-weight: 700; cursor: pointer; }
+        .ui-btn--cancel { background: #eef3ec; color: #2f472f; }
+        .ui-btn--confirm { background: #b9322a; color: #fff; }
+        .ui-btn--confirm:hover { background: #932720; }
     </style>
 </head>
 <body>
@@ -111,7 +123,7 @@ $flashErr = isset($_GET['error']) ? (string) $_GET['error'] : '';
                                     <td>$<?= number_format((float) $row['Price'], 2) ?></td>
                                     <td><?= (int) $row['StockQty'] ?></td>
                                     <td>
-                                        <form method="post" action="delete_restaurant_item.php" class="js-del-food-item" style="display:inline;margin:0">
+                                        <form method="post" action="delete_restaurant_item.php" class="js-del-food-item" data-item-name="<?= htmlspecialchars($row['FoodName']) ?>" style="display:inline;margin:0">
                                             <input type="hidden" name="food_id" value="<?= (int) $row['FoodID'] ?>">
                                             <button type="submit" class="btn-del">Remove</button>
                                         </form>
@@ -126,14 +138,59 @@ $flashErr = isset($_GET['error']) ? (string) $_GET['error'] : '';
             </div>
         </div>
     </div>
+    <div id="delete-food-modal" class="ui-modal" hidden role="dialog" aria-modal="true" aria-labelledby="delete-food-modal-title">
+        <div class="ui-modal__backdrop" data-close-delete-modal></div>
+        <div class="ui-modal__card">
+            <h2 id="delete-food-modal-title" class="ui-modal__title">Remove menu item?</h2>
+            <p id="delete-food-modal-text" class="ui-modal__text"></p>
+            <div class="ui-modal__actions">
+                <button type="button" class="ui-btn ui-btn--cancel" data-close-delete-modal>Cancel</button>
+                <button type="button" class="ui-btn ui-btn--confirm" id="delete-food-modal-confirm">Remove item</button>
+            </div>
+        </div>
+    </div>
     <script>
-        document.querySelectorAll('.js-del-food-item').forEach(function (form) {
-            form.addEventListener('submit', function (e) {
-                if (!confirm('Remove this item from the restaurant menu? This cannot be undone if the item has no orders yet.')) {
+        (function () {
+            var modal = document.getElementById('delete-food-modal');
+            var textEl = document.getElementById('delete-food-modal-text');
+            var confirmBtn = document.getElementById('delete-food-modal-confirm');
+            if (!modal || !textEl || !confirmBtn) return;
+            var activeForm = null;
+
+            function openModal(form) {
+                activeForm = form;
+                var name = form.getAttribute('data-item-name') || 'this item';
+                textEl.innerHTML = 'You are about to remove <strong>' + name.replace(/</g, '&lt;') + '</strong> from the restaurant menu. This cannot be undone.';
+                modal.hidden = false;
+                document.body.style.overflow = 'hidden';
+                confirmBtn.focus();
+            }
+
+            function closeModal() {
+                modal.hidden = true;
+                document.body.style.overflow = '';
+                activeForm = null;
+            }
+
+            document.querySelectorAll('.js-del-food-item').forEach(function (form) {
+                form.addEventListener('submit', function (e) {
                     e.preventDefault();
-                }
+                    openModal(form);
+                });
             });
-        });
+
+            modal.querySelectorAll('[data-close-delete-modal]').forEach(function (el) {
+                el.addEventListener('click', closeModal);
+            });
+
+            confirmBtn.addEventListener('click', function () {
+                if (activeForm) activeForm.submit();
+            });
+
+            document.addEventListener('keydown', function (e) {
+                if (!modal.hidden && e.key === 'Escape') closeModal();
+            });
+        })();
     </script>
 </body>
 </html>
