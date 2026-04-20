@@ -157,6 +157,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pageGenerated = false;
         $pagePath      = '';
         $photoRelPath  = '';
+        $photoError    = ''; // separate from $error so page still generates
 
         $slug = preg_replace('/[^a-z0-9]+/', '-', strtolower($name));
         $slug = trim($slug, '-');
@@ -165,16 +166,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!empty($_FILES['photo']['tmp_name'])) {
             $uploadDir = __DIR__ . '/animals/images/';
             if (!is_dir($uploadDir)) {
-                mkdir($uploadDir, 0755, true);
+                @mkdir($uploadDir, 0755, true);
             }
 
             $ext     = strtolower(pathinfo($_FILES['photo']['name'], PATHINFO_EXTENSION));
             $allowed = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
 
             if (!in_array($ext, $allowed, true)) {
-                $error = 'Animal added, but photo upload failed: unsupported file type.';
+                $photoError = 'Photo upload failed: unsupported file type.';
             } elseif ($_FILES['photo']['size'] > 8 * 1024 * 1024) {
-                $error = 'Animal added, but photo is too large (max 8 MB).';
+                $photoError = 'Photo upload failed: file too large (max 8 MB).';
+            } elseif (!is_dir($uploadDir)) {
+                $photoError = 'Photo upload failed: images folder could not be created (check folder permissions).';
             } else {
                 $filename = $slug . '.' . $ext;
                 $destPath = $uploadDir . $filename;
@@ -184,7 +187,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $destPath = $uploadDir . $filename;
                     $i++;
                 }
-                if (move_uploaded_file($_FILES['photo']['tmp_name'], $destPath)) {
+                if (@move_uploaded_file($_FILES['photo']['tmp_name'], $destPath)) {
                     $photoRelPath = 'images/' . $filename;
                     try {
                         if (animal_table_has_column($pdo, 'Photo_Path')) {
@@ -193,20 +196,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
                     } catch (Throwable $ignored) {}
                 } else {
-                    $error = 'Animal added, but photo could not be saved.';
+                    $photoError = 'Photo upload failed: could not move file (check folder permissions on animals/images/).';
                 }
             }
         }
 
-        // Always generate the detail page (photo is optional — a placeholder is used if none)
-        if (empty($error) || $error === '') {
-            $pagePath = __DIR__ . '/animals/' . $slug . '.php';
-            $pi = 1;
-            while (file_exists($pagePath)) {
-                $pagePath = __DIR__ . '/animals/' . $slug . '-' . $pi . '.php';
-                $pi++;
-            }
-            file_put_contents($pagePath, generate_animal_page($name, $species, $category, $photoRelPath));
+        // Always generate the detail page regardless of photo outcome
+        $pagePath = __DIR__ . '/animals/' . $slug . '.php';
+        $pi = 1;
+        while (file_exists($pagePath)) {
+            $pagePath = __DIR__ . '/animals/' . $slug . '-' . $pi . '.php';
+            $pi++;
+        }
+        if (@file_put_contents($pagePath, generate_animal_page($name, $species, $category, $photoRelPath)) !== false) {
             $pageGenerated = true;
             try {
                 if (animal_table_has_column($pdo, 'Page_Slug')) {
@@ -220,6 +222,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $success = 'Animal added successfully!';
             if ($pageGenerated) {
                 $success .= ' Detail page created: animals/' . basename($pagePath);
+            }
+            if (!empty($photoError)) {
+                // Animal and page were still created — surface photo issue as a soft warning
+                $error = $photoError . ' The animal page was still created using a placeholder image.';
             }
         }
     }
