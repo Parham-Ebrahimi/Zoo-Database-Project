@@ -19,6 +19,29 @@ if (!$isAdmin && !$isCaretakerSide && !$isVet) {
 require_once 'db.php';
 require_once __DIR__ . '/vet_alerts_helpers.php';
 
+try {
+    $pdo->query("ALTER TABLE animal ADD COLUMN last_fed_at DATETIME NULL DEFAULT NULL");
+} catch (PDOException $e) {}
+
+$decayPerHour = 100 / 8;
+try {
+    $pdo->prepare("
+        UPDATE animal
+        SET
+            food_stock = GREATEST(0, ROUND(
+                COALESCE(food_stock, 50)
+                - (TIMESTAMPDIFF(SECOND, COALESCE(last_fed_at, NOW() - INTERVAL 0 SECOND), NOW()) / 3600.0)
+                * ?
+            , 1)),
+            last_fed_at = CASE
+                WHEN last_fed_at IS NULL THEN NOW()
+                ELSE last_fed_at
+            END
+        WHERE last_fed_at IS NOT NULL
+    ")->execute([$decayPerHour]);
+    $pdo->query("UPDATE animal SET last_fed_at = NOW() WHERE last_fed_at IS NULL");
+} catch (PDOException $e) {}
+
 if ($isVet)        $pageTitle = 'Animal care board';
 elseif ($isAdmin)  $pageTitle = 'Caretaker tools';
 else               $pageTitle = 'Caretaker dashboard';
@@ -26,15 +49,8 @@ else               $pageTitle = 'Caretaker dashboard';
 $message     = '';
 $messageType = '';
 
-// ── Handle POST actions ───────────────────────────────────────────────────────
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
-    // Update health status
-    // The SQL trigger (trg_animal_sick_alert_after_update) fires automatically:
-    //   • Sick        → inserts/refreshes a row in vet_alerts (IsResolved = 0)
-    //   • Healthy/Pending (was Sick) → sets IsResolved = 1 in vet_alerts
-    // If an older resolved SICK row still exists, that trigger step can violate
-    // uq_open_vet_alert; vet_alerts_clear_stale_resolved_sick() removes stale rows first.
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     if ($_POST['action'] === 'update_health') {
         $animalId      = (int)($_POST['animal_id'] ?? 0);
         $allowedHealth = ['Healthy', 'Sick', 'Pending'];
@@ -42,65 +58,75 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                          ? $_POST['health_status'] : 'Healthy';
 
         if ($animalId > 0) {
-            try {
-                $pdo->beginTransaction();
-                if ($healthStatus !== 'Sick') {
-                    $prevStmt = $pdo->prepare('SELECT Health_Status FROM animal WHERE Animal_ID = ?');
-                    $prevStmt->execute([$animalId]);
-                    $prevHealth = $prevStmt->fetchColumn();
-                    if ($prevHealth === 'Sick') {
-                        vet_alerts_clear_stale_resolved_sick($pdo, $animalId);
-                    }
-                }
-                $stmt = $pdo->prepare("UPDATE animal SET Health_Status = ? WHERE Animal_ID = ?");
-                $stmt->execute([$healthStatus, $animalId]);
-                $pdo->commit();
-            } catch (Throwable $e) {
-                if ($pdo->inTransaction()) {
-                    $pdo->rollBack();
-                }
-                $message     = 'Could not update health status. Please try again or contact an administrator.';
-                $messageType = 'warning';
-            }
+            $openAlertStmt = $pdo->prepare("
+                SELECT COUNT(*) FROM vet_alerts
+                WHERE Animal_ID = ? AND AlertType = 'SICK' AND IsResolved = 0
+            ");
+            $openAlertStmt->execute([$animalId]);
+            $hasOpenVetAlert = (int)$openAlertStmt->fetchColumn() > 0;
 
-            if ($message !== '') {
-                // error path: skip success copy below
-            } elseif ($healthStatus === 'Sick') {
-                $message     = 'Health status updated to Sick. A vet alert has been automatically raised.';
+            if ($hasOpenVetAlert && $isCaretakerSide) {
+                $message     = 'This animal has an open vet alert. Only the veterinarian can update its health status while it is under review.';
                 $messageType = 'warning';
-            } elseif ($healthStatus === 'Healthy') {
-                $message     = 'Health status updated to Healthy. Any open vet alert for this animal has been resolved.';
-                $messageType = 'success';
             } else {
-                $message     = 'Health status updated to Pending.';
-                $messageType = 'success';
+                try {
+                    $pdo->beginTransaction();
+                    if ($healthStatus !== 'Sick') {
+                        $prevStmt = $pdo->prepare('SELECT Health_Status FROM animal WHERE Animal_ID = ?');
+                        $prevStmt->execute([$animalId]);
+                        $prevHealth = $prevStmt->fetchColumn();
+                        if ($prevHealth === 'Sick') {
+                            vet_alerts_clear_stale_resolved_sick($pdo, $animalId);
+                        }
+                    }
+                    $stmt = $pdo->prepare("UPDATE animal SET Health_Status = ? WHERE Animal_ID = ?");
+                    $stmt->execute([$healthStatus, $animalId]);
+                    $pdo->commit();
+                } catch (Throwable $e) {
+                    if ($pdo->inTransaction()) {
+                        $pdo->rollBack();
+                    }
+                    $message     = 'Could not update health status. Please try again or contact an administrator.';
+                    $messageType = 'warning';
+                }
+
+                if ($message !== '') {
+                    
+                } elseif ($healthStatus === 'Sick') {
+                    $message     = 'Health status updated to Sick. A vet alert has been automatically raised.';
+                    $messageType = 'warning';
+                } elseif ($healthStatus === 'Healthy') {
+                    $message     = 'Health status updated to Healthy. Any open vet alert for this animal has been resolved.';
+                    $messageType = 'success';
+                } else {
+                    $message     = 'Health status updated to Pending.';
+                    $messageType = 'success';
+                }
             }
         }
 
-    // Restock food
+    
     } elseif ($_POST['action'] === 'restock_food') {
         if ($isVet) {
             $message     = 'Veterinarians cannot update food stock here. Use animal care staff for feeding inventory.';
             $messageType = 'warning';
         } else {
-            $animalId   = (int)($_POST['animal_id']   ?? 0);
-            $restockQty = max(1, (int)($_POST['restock_qty'] ?? 10));
-
+            $animalId = (int)($_POST['animal_id'] ?? 0);
             if ($animalId > 0) {
                 $stmt = $pdo->prepare("
                     UPDATE animal
-                    SET food_stock = LEAST(COALESCE(food_stock, 0) + ?, 100)
+                    SET food_stock = 100, last_fed_at = NOW()
                     WHERE Animal_ID = ?
                 ");
-                $stmt->execute([$restockQty, $animalId]);
-                $message     = 'Food restocked successfully.';
+                $stmt->execute([$animalId]);
+                $message     = 'Food restocked to 100%.';
                 $messageType = 'success';
             }
         }
     }
 }
 
-// ── Fetch animals ─────────────────────────────────────────────────────────────
+
 $animals = $pdo->query("
     SELECT
         a.Animal_ID,
@@ -151,7 +177,7 @@ $lowFoodAnimals = count(array_filter($animals, static fn($a) => (int)$a['food_st
             padding: 20px clamp(12px, 2.4vw, 18px);
         }
 
-        /* ── Header ──────────────────────────────────────────── */
+        
         .dashboard-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 20px; border-bottom: 3px solid var(--accent-color); padding-bottom: 14px; flex-wrap: wrap; }
         .dashboard-header h1 { margin: 0; font-size: clamp(1.35rem, 2.5vw, 1.75rem); font-weight: 800; color: var(--text-color); }
         .dashboard-header .dash-meta { margin: 6px 0 0; font-size: 0.9rem; color: #666; font-weight: 500; }
@@ -163,12 +189,12 @@ $lowFoodAnimals = count(array_filter($animals, static fn($a) => (int)$a['food_st
         .logout-btn { padding: 10px 22px; background-color: var(--accent-color); border: none; border-radius: 1000px; font: inherit; font-weight: 600; cursor: pointer; color: var(--text-color); text-decoration: none; display: inline-block; }
         .logout-btn:hover { background-color: var(--text-color); color: white; text-decoration: none; }
 
-        /* ── Alerts ──────────────────────────────────────────── */
+        
         .alert { padding: 14px 20px; border-radius: 10px; margin-bottom: 22px; font-weight: 600; font-size: 0.95rem; }
         .alert-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
         .alert-warning { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
 
-        /* ── Section & tiles ─────────────────────────────────── */
+        
         .section-title { font-size: 1rem; margin: 22px 0 10px; border-bottom: 1px solid #e0e0e0; padding-bottom: 6px; color: var(--text-color); font-weight: 700; }
         .section-title:first-of-type { margin-top: 0; }
         .tiles-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-bottom: 22px; }
@@ -178,7 +204,7 @@ $lowFoodAnimals = count(array_filter($animals, static fn($a) => (int)$a['food_st
         .tile-text strong { display: block; font-size: 0.9rem; font-weight: 700; margin-bottom: 3px; }
         .tile-text span   { font-size: 0.8rem; color: #666; }
 
-        /* ── Stat cards ──────────────────────────────────────── */
+        
         .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 22px; }
         .stat-card { background: white; border-radius: 12px; padding: 18px; box-shadow: 0 3px 8px rgba(0,0,0,0.05); border-left: 4px solid var(--accent-color); text-align: left; }
         .stat-card.danger  { border-left-color: #e74c3c; }
@@ -188,7 +214,7 @@ $lowFoodAnimals = count(array_filter($animals, static fn($a) => (int)$a['food_st
         .stat-card.danger  .stat-value { color: #e74c3c; }
         .stat-card.warning .stat-value { color: #f39c12; }
 
-        /* ── Table ───────────────────────────────────────────── */
+        
         .table-wrap { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 3px 8px rgba(0,0,0,0.05); scroll-margin-top: 1.25rem; }
         table { width: 100%; border-collapse: collapse; }
         th { background-color: var(--accent-color); color: white; padding: 13px 15px; text-align: left; font-size: 0.88rem; text-transform: uppercase; letter-spacing: 0.04em; }
@@ -201,7 +227,7 @@ $lowFoodAnimals = count(array_filter($animals, static fn($a) => (int)$a['food_st
         .badge-sick    { background-color: #f8d7da; color: #721c24; }
         .badge-pending { background-color: #fff3cd; color: #856505; }
 
-        /* food bar */
+        
         .food-bar-wrap { display: flex; align-items: center; gap: 8px; min-width: 130px; }
         .food-bar      { flex: 1; height: 10px; border-radius: 5px; background: #eee; overflow: hidden; }
         .food-bar-fill { height: 100%; border-radius: 5px; }
@@ -211,7 +237,7 @@ $lowFoodAnimals = count(array_filter($animals, static fn($a) => (int)$a['food_st
         .food-pct     { font-size: 0.8rem; font-weight: 700; min-width: 34px; text-align: right; }
         .food-pct.low { color: #e74c3c; }
 
-        /* action cells */
+        
         .action-cell { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
         .health-select { padding: 5px 10px; border: 2px solid #ddd; border-radius: 8px; font: inherit; font-size: 0.83rem; font-weight: 600; cursor: pointer; background: white; color: var(--text-color); }
         .health-select:focus { outline: none; border-color: var(--accent-color); }
@@ -227,7 +253,7 @@ $lowFoodAnimals = count(array_filter($animals, static fn($a) => (int)$a['food_st
         tr.low-food td:first-child { border-left: 4px solid #e74c3c; }
         .empty-state { padding: 50px 20px; text-align: center; color: #888; }
 
-        /* ── Vet alert indicator in the table ────────────────── */
+        
         .vet-alert-badge {
             display: inline-flex; align-items: center; gap: 4px;
             background: #f8d7da; color: #721c24;
@@ -250,7 +276,7 @@ $lowFoodAnimals = count(array_filter($animals, static fn($a) => (int)$a['food_st
 <div class="dashboard-wrapper">
 <div class="dashboard-inner">
 
-    <!-- ── Header ────────────────────────────────────────────── -->
+    
     <div class="dashboard-header">
         <div>
             <h1><?= htmlspecialchars($pageTitle) ?></h1>
@@ -272,7 +298,7 @@ $lowFoodAnimals = count(array_filter($animals, static fn($a) => (int)$a['food_st
         </div>
     </div>
 
-    <!-- ── Flash messages ────────────────────────────────────── -->
+    
     <?php if ($message): ?>
         <div class="alert alert-<?= htmlspecialchars($messageType) ?>"><?= htmlspecialchars($message) ?></div>
     <?php endif; ?>
@@ -284,7 +310,7 @@ $lowFoodAnimals = count(array_filter($animals, static fn($a) => (int)$a['food_st
         </div>
     <?php endif; ?>
 
-    <!-- ── Tiles ─────────────────────────────────────────────── -->
+    
     <div class="section-title">Animals &amp; enclosures</div>
     <div class="tiles-grid">
         <a href="add-animal.php" class="tile">
@@ -305,7 +331,7 @@ $lowFoodAnimals = count(array_filter($animals, static fn($a) => (int)$a['food_st
         </a>
     </div>
 
-    <!-- ── Stat cards ────────────────────────────────────────── -->
+    
     <div class="stats-row">
         <div class="stat-card">
             <div class="stat-label">Total animals</div>
@@ -325,7 +351,7 @@ $lowFoodAnimals = count(array_filter($animals, static fn($a) => (int)$a['food_st
         </div>
     </div>
 
-    <!-- ── Animal care table ──────────────────────────────────── -->
+    
     <div class="table-wrap" id="care-table">
         <?php if (empty($animals)): ?>
             <div class="empty-state">No animals found in the database.</div>
@@ -350,7 +376,7 @@ $lowFoodAnimals = count(array_filter($animals, static fn($a) => (int)$a['food_st
                     $pct      = max(0, min(100, $stock));
                     $barClass = $pct > 40 ? 'high' : ($pct > 10 ? 'medium' : 'low');
                     $isLow    = $pct <= 10;
-                    $hasOpenAlert = !empty($a['VetAlertID']); // from the LEFT JOIN on vet_alerts
+                    $hasOpenAlert = !empty($a['VetAlertID']); 
                 ?>
                     <tr class="<?= $isLow ? 'low-food' : '' ?>">
                         <td><?= (int)$a['Animal_ID'] ?></td>
@@ -361,7 +387,6 @@ $lowFoodAnimals = count(array_filter($animals, static fn($a) => (int)$a['food_st
                         <td><?= htmlspecialchars($a['Sex']) ?></td>
                         <td><?= htmlspecialchars($a['Enclosure_Name'] ?? 'N/A') ?></td>
 
-                        <!-- Health status + vet alert indicator -->
                         <td>
                             <form method="POST" action="caretaker_dashboard.php">
                                 <input type="hidden" name="action"    value="update_health">
@@ -370,24 +395,29 @@ $lowFoodAnimals = count(array_filter($animals, static fn($a) => (int)$a['food_st
                                     <span class="badge badge-<?= strtolower($a['Health_Status']) ?>">
                                         <?= htmlspecialchars($a['Health_Status']) ?>
                                     </span>
-                                    <select name="health_status" class="health-select">
-                                        <option value="Healthy" <?= $a['Health_Status'] === 'Healthy' ? 'selected' : '' ?>>Healthy</option>
-                                        <option value="Sick"    <?= $a['Health_Status'] === 'Sick'    ? 'selected' : '' ?>>Sick</option>
-                                        <option value="Pending" <?= $a['Health_Status'] === 'Pending' ? 'selected' : '' ?>>Pending</option>
-                                    </select>
-                                    <button type="submit" class="btn-sm btn-health">Update</button>
+                                    <?php if ($hasOpenAlert && $isCaretakerSide): ?>
+                                        
+                                        <span style="font-size:0.78rem;color:#c0392b;font-weight:600;padding:4px 8px;background:#fff0f0;border:1px solid #f5c6cb;border-radius:6px;">
+                                            Vet review in progress
+                                        </span>
+                                    <?php else: ?>
+                                        <select name="health_status" class="health-select">
+                                            <option value="Healthy" <?= $a['Health_Status'] === 'Healthy' ? 'selected' : '' ?>>Healthy</option>
+                                            <option value="Sick"    <?= $a['Health_Status'] === 'Sick'    ? 'selected' : '' ?>>Sick</option>
+                                            <option value="Pending" <?= $a['Health_Status'] === 'Pending' ? 'selected' : '' ?>>Pending</option>
+                                        </select>
+                                        <button type="submit" class="btn-sm btn-health">Update</button>
+                                    <?php endif; ?>
                                 </div>
                                 <?php if ($hasOpenAlert): ?>
-                                    <!-- Open alert exists in vet_alerts for this animal -->
-                                    <div class="vet-alert-badge">🔴 Vet alert open</div>
+                                    <div class="vet-alert-badge">Vet alert open</div>
                                 <?php elseif ($a['Health_Status'] === 'Healthy' || $a['Health_Status'] === 'Pending'): ?>
-                                    <!-- No open alert — either never sick or trigger auto-resolved it -->
-                                    <?php /* No badge needed — clean state */ ?>
+                                    <?php  ?>
                                 <?php endif; ?>
                             </form>
                         </td>
 
-                        <!-- Food stock -->
+                        
                         <td>
                             <div class="food-bar-wrap">
                                 <div class="food-bar">
@@ -399,8 +429,6 @@ $lowFoodAnimals = count(array_filter($animals, static fn($a) => (int)$a['food_st
                             <form method="POST" action="caretaker_dashboard.php" class="restock-form">
                                 <input type="hidden" name="action"    value="restock_food">
                                 <input type="hidden" name="animal_id" value="<?= (int)$a['Animal_ID'] ?>">
-                                <input type="number" name="restock_qty" class="restock-qty"
-                                       value="20" min="1" max="100" title="Amount to add">
                                 <button type="submit" class="btn-sm btn-restock">Restock</button>
                             </form>
                             <?php endif; ?>
@@ -412,7 +440,7 @@ $lowFoodAnimals = count(array_filter($animals, static fn($a) => (int)$a['food_st
         <?php endif; ?>
     </div>
 
-</div><!-- /.dashboard-inner -->
-</div><!-- /.dashboard-wrapper -->
+</div>
+</div>
 </body>
 </html>

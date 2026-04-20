@@ -49,9 +49,9 @@ function fetchAnimal(PDO $pdo, int $id): ?array {
             SELECT hr1.*
             FROM health_record hr1
             INNER JOIN (
-                SELECT Animal_ID, MAX(Record_Date) AS MaxDate
+                SELECT Animal_ID, MAX(HealthRecord_ID) AS MaxID
                 FROM health_record GROUP BY Animal_ID
-            ) latest ON hr1.Animal_ID = latest.Animal_ID AND hr1.Record_Date = latest.MaxDate
+            ) latest ON hr1.Animal_ID = latest.Animal_ID AND hr1.HealthRecord_ID = latest.MaxID
         ) hr ON hr.Animal_ID = a.Animal_ID
         WHERE a.Animal_ID = ?
     ");
@@ -78,7 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!in_array($vetStatus, $allowedStatuses, true)) {
         $vetStatus = 'Pending';
     }
-    // "Under Treatment" is a friendly label — maps to Sick in the database
+    
     $animalHealthStatus = ($vetStatus === 'Under Treatment') ? 'Sick' : $vetStatus;
 
     if ($animalHealthStatus === 'Healthy' && stripos($newDiagnosis, 'cured') === false) {
@@ -96,7 +96,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $curedDate = ($animalHealthStatus === 'Healthy') ? $today : null;
 
-            if (!empty($animal['HealthRecord_ID'])) {
+            
+            
+            
+            $wasPreviouslyCured = !empty($animal['Cured_Date']);
+            $startingFreshIllness = $wasPreviouslyCured && $animalHealthStatus !== 'Healthy';
+
+            if (!empty($animal['HealthRecord_ID']) && !$startingFreshIllness) {
                 $pdo->prepare("
                     UPDATE health_record
                     SET Diagnosis=?, Treatment=?, Record_Date=?, Health_Status=?, Cured_Date=?
@@ -110,6 +116,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     (int)$animal['HealthRecord_ID']
                 ]);
             } else {
+                
+                
                 try {
                     $pdo->prepare("
                         INSERT INTO health_record
@@ -140,8 +148,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $isCuredAndRecorded = !empty($animal['Cured_Date']) && $animal['Health_Status'] === 'Healthy';
 
-// Map DB status to vet dropdown value
-// Sick shows as "Under Treatment" in the dropdown
+if (!empty($animal['Cured_Date']) && $animal['Health_Status'] !== 'Healthy') {
+    $animal['Diagnosis'] = '';
+    $animal['Treatment'] = '';
+}
+
+
 $dbToVetStatus = [
     'Sick'    => 'Under Treatment',
     'Pending' => 'Pending',
@@ -345,7 +357,7 @@ $badgeClass = strtolower($animal['Health_Status']);
                 <strong><?= htmlspecialchars($animal['Name']) ?></strong>
                 (<?= htmlspecialchars($animal['Species']) ?>)
                 is currently marked as <strong><?= htmlspecialchars($animal['Health_Status']) ?></strong>.
-                <?php if (!empty($animal['Diagnosis'])): ?>
+                <?php if (!empty($animal['Diagnosis']) && empty($animal['Cured_Date'])): ?>
                     <br><br>Current diagnosis: <strong><?= htmlspecialchars($animal['Diagnosis']) ?></strong>
                 <?php endif; ?>
                 <br><br>Please update the medical report below.

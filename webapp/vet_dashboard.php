@@ -74,14 +74,17 @@ $openCount = count($openAlerts);
 
 $sickList = $pdo->query("
     SELECT a.Animal_ID, a.Name, a.Species,
-           hr.Diagnosis
+           hr.Diagnosis,
+           hr.Cured_Date
     FROM animal a
     LEFT JOIN (
-        SELECT hr1.Animal_ID, hr1.Diagnosis
+        SELECT hr1.Animal_ID, hr1.Diagnosis, hr1.Cured_Date
         FROM health_record hr1
         INNER JOIN (
-            SELECT Animal_ID, MAX(Record_Date) AS MaxDate FROM health_record GROUP BY Animal_ID
-        ) latest ON hr1.Animal_ID = latest.Animal_ID AND hr1.Record_Date = latest.MaxDate
+            SELECT Animal_ID, MAX(HealthRecord_ID) AS MaxID
+            FROM health_record
+            GROUP BY Animal_ID
+        ) latest ON hr1.Animal_ID = latest.Animal_ID AND hr1.HealthRecord_ID = latest.MaxID
     ) hr ON hr.Animal_ID = a.Animal_ID
     WHERE COALESCE(a.Health_Status,'Pending') = 'Sick'
     ORDER BY a.Name
@@ -290,7 +293,7 @@ $defaultUpdateAnimalHref = !empty($sickList)
             <div class="sqr-left">
                 <div class="sqr-name"><?= htmlspecialchars($s['Name']) ?></div>
                 <div class="sqr-sub"><?= htmlspecialchars($s['Species']) ?></div>
-                <?php if (!empty($s['Diagnosis'])): ?>
+                <?php if (!empty($s['Diagnosis']) && empty($s['Cured_Date'])): ?>
                     <div class="sqr-diag"><?= htmlspecialchars($s['Diagnosis']) ?></div>
                 <?php endif; ?>
             </div>
@@ -319,7 +322,7 @@ $defaultUpdateAnimalHref = !empty($sickList)
                     <div>
                         <div class="san-name"><?= htmlspecialchars($s['Name']) ?></div>
                         <div class="san-species"><?= htmlspecialchars($s['Species']) ?></div>
-                        <?php if (!empty($s['Diagnosis'])): ?>
+                        <?php if (!empty($s['Diagnosis']) && empty($s['Cured_Date'])): ?>
                             <div class="san-diag"><?= htmlspecialchars($s['Diagnosis']) ?></div>
                         <?php endif; ?>
                     </div>
