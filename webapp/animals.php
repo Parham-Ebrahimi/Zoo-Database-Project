@@ -33,6 +33,16 @@ try {
         ")->fetchAll(PDO::FETCH_ASSOC);
 
         foreach ($rows as $r) {
+            // If the .php file is missing but the folder is now writable, regenerate it automatically.
+            $filePath = __DIR__ . '/animals/' . $r['Page_Slug'] . '.php';
+            if (!file_exists($filePath) && is_writable(__DIR__ . '/animals/')) {
+                if (!function_exists('generate_animal_page')) {
+                    require_once __DIR__ . '/generate_animal_page.php';
+                }
+                $photoRel = $r['Photo_Path'] ?? '';
+                @file_put_contents($filePath, generate_animal_page($r['Name'], $r['Species'], $r['Category'], $photoRel));
+            }
+
             $dbAnimals[] = [
                 'name' => $r['Name'],
                 'slug' => $r['Page_Slug'],
