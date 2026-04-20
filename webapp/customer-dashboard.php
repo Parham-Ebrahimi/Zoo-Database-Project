@@ -35,13 +35,29 @@ try {
     $featuredAnimals = [];
 }
 
-// Rotating stock photos (Unsplash) — one per card; not species-specific but varied scenery
-$animalSpotlightImages = [
-    'https://images.unsplash.com/photo-1564349683136-77e08dba1ef7?w=800&q=80',
-    'https://images.unsplash.com/photo-1549366021-9f761d450615?w=800&q=80',
-    'https://images.unsplash.com/photo-1456926631375-92c8ce872def?w=800&q=80',
-    'https://images.unsplash.com/photo-1474511320723-9a56873867b5?w=800&q=80',
+// Species-specific images and page slugs for known animals
+$animalImageMap = [
+    // keyword (lowercase) => [image_url, slug]
+    'elephant'   => ['https://images.unsplash.com/photo-1474511320723-9a56873867b5?w=800&q=80',  'elephants'],
+    'giraffe'    => ['https://images.unsplash.com/photo-1547721064-da6cfb341d50?w=800&q=80',      'giraffes'],
+    'penguin'    => ['https://images.unsplash.com/photo-1551986782-d0169b3f8fa7?w=800&q=80',      'penguins'],
+    'red panda'  => ['https://images.unsplash.com/photo-1525382455947-f319bc5f446a?w=800&q=80',   'red-pandas'],
+    'lion'       => ['https://images.unsplash.com/photo-1546182990-dffeafbe841d?w=800&q=80',      'lion'],
+    'polar bear' => ['https://images.unsplash.com/photo-1589656966895-2f33e7653819?w=800&q=80',   'polar-bear'],
+    'jaguar'     => ['https://images.unsplash.com/photo-1616128417743-c3a6992a65e7?w=800&q=80',   'jaguar'],
+    'seal'       => ['https://images.unsplash.com/photo-1572880393162-0518ac760495?w=800&q=80',   'seal'],
+    'anaconda'   => ['https://images.unsplash.com/photo-1600682322637-95c40966e79f?w=800&q=80',   'anaconda'],
+    'crocodile'  => ['https://images.unsplash.com/photo-1611069648374-733e7bb73e5c?w=800&q=80',   'crocodile'],
+    'caiman'     => ['https://images.unsplash.com/photo-1557868363-8d9d44d5b9e4?w=800&q=80',      'caiman'],
+    'shark'      => ['https://images.unsplash.com/photo-1586115457457-b3753fe50cf1?w=800&q=80',   'shark'],
+    'otter'      => ['https://images.unsplash.com/photo-1633967920376-33b2d94f091f?w=800&q=80',   'otter'],
+    'macaw'      => ['https://images.unsplash.com/photo-1548767797-d8c844163c4a?w=800&q=80',      'macaw'],
+    'monkey'     => ['https://images.unsplash.com/photo-1540573133985-87b6da6d54a9?w=800&q=80',   'monkey'],
+    'capybara'   => ['https://images.unsplash.com/photo-1701772164869-dfb2cac483dc?w=800&q=80',   'capybara'],
+    'tapir'      => ['https://images.unsplash.com/photo-1712938548647-8f92b804eb82?w=800&q=80',   'tapir'],
+    'camel'      => ['https://images.unsplash.com/photo-1598113972215-96c018fb1a0b?w=800&q=80',   'camel'],
 ];
+$animalFallbackImage = 'https://images.unsplash.com/photo-1564349683136-77e08dba1ef7?w=800&q=80';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -199,6 +215,28 @@ $animalSpotlightImages = [
             object-fit: cover;
             display: block;
             background: #e2e8dc;
+            transition: transform 0.25s ease;
+        }
+        .animal-card--link {
+            text-decoration: none;
+            color: inherit;
+            cursor: pointer;
+            transition: box-shadow 0.2s ease, transform 0.2s ease;
+        }
+        .animal-card--link:hover {
+            box-shadow: 0 6px 24px rgba(26, 92, 43, 0.18);
+            transform: translateY(-3px);
+            text-decoration: none;
+        }
+        .animal-card--link:hover img {
+            transform: scale(1.04);
+        }
+        .animal-card-cta {
+            display: inline-block;
+            margin-top: 0.6rem;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--cr-accent);
         }
         .animal-card-body {
             padding: 1rem 1.1rem 1.15rem;
@@ -403,27 +441,41 @@ $animalSpotlightImages = [
                         <p class="attr-sub">A rotating selection from our collection. Photos are representative of the experience; visit the habitat to see who is out today.</p>
                         <?php if (count($featuredAnimals) > 0): ?>
                             <div class="animal-card-grid">
-                                <?php foreach ($featuredAnimals as $idx => $a):
-                                    $imgUrl = $animalSpotlightImages[$idx % count($animalSpotlightImages)];
+                                <?php foreach ($featuredAnimals as $a):
                                     $category = trim((string) ($a['Category'] ?? ''));
                                     $enclosure = trim((string) ($a['Enclosure_Name'] ?? ''));
+                                    $species   = trim((string) ($a['Species'] ?? ''));
+                                    $nameLower = strtolower(trim((string) $a['Name']));
+                                    $speciesLower = strtolower($species);
+
+                                    // Match species or name against the image map
+                                    $imgUrl = $animalFallbackImage;
+                                    $slug   = null;
+                                    foreach ($animalImageMap as $keyword => [$mapImg, $mapSlug]) {
+                                        if (str_contains($speciesLower, $keyword) || str_contains($nameLower, $keyword)) {
+                                            $imgUrl = $mapImg;
+                                            $slug   = $mapSlug;
+                                            break;
+                                        }
+                                    }
+
                                     $desc = 'Meet ' . htmlspecialchars($a['Name']) . ', one of our ';
                                     $desc .= $category !== '' ? htmlspecialchars($category) . ' ambassadors' : 'animal ambassadors';
-                                    $desc .= '. This ' . htmlspecialchars($a['Species']) . ' is part of our conservation storytelling along the main loop';
-                                    if ($enclosure !== '') {
-                                        $desc .= '—find them at ' . htmlspecialchars($enclosure) . '.';
-                                    } else {
-                                        $desc .= '.';
-                                    }
+                                    $desc .= '. This ' . htmlspecialchars($species) . ' is part of our conservation storytelling along the main loop';
+                                    $desc .= $enclosure !== '' ? '—find them at ' . htmlspecialchars($enclosure) . '.' : '.';
+
+                                    $cardTag  = $slug ? 'a' : 'article';
+                                    $cardHref = $slug ? ' href="animals/' . htmlspecialchars($slug) . '.php"' : '';
                                     ?>
-                                <article class="animal-card">
-                                    <img src="<?= htmlspecialchars($imgUrl) ?>" alt="<?= htmlspecialchars('Photo highlight: ' . $a['Name']) ?>" width="800" height="600" loading="lazy" decoding="async">
+                                <<?= $cardTag ?> class="animal-card<?= $slug ? ' animal-card--link' : '' ?>"<?= $cardHref ?>>
+                                    <img src="<?= htmlspecialchars($imgUrl) ?>" alt="<?= htmlspecialchars($a['Name']) ?> at Greenwood Zoo" width="800" height="600" loading="lazy" decoding="async">
                                     <div class="animal-card-body">
                                         <strong><?= htmlspecialchars($a['Name']) ?></strong>
-                                        <span class="animal-card-meta"><?= htmlspecialchars($a['Species']) ?><?= $category !== '' ? ' · ' . htmlspecialchars($category) : '' ?></span>
+                                        <span class="animal-card-meta"><?= htmlspecialchars($species) ?><?= $category !== '' ? ' · ' . htmlspecialchars($category) : '' ?></span>
                                         <p class="animal-card-desc"><?= $desc ?></p>
+                                        <?php if ($slug): ?><span class="animal-card-cta">View profile →</span><?php endif; ?>
                                     </div>
-                                </article>
+                                </<?= $cardTag ?>>
                                 <?php endforeach; ?>
                             </div>
                             <div class="featured-more">
