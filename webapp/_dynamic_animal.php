@@ -1,5 +1,16 @@
 <?php
 require_once __DIR__ . '/../session_bootstrap.php';
+
+// Guard: must be logged in as a customer
+if (!isset($_SESSION['customer_id'])) {
+    if (!empty($_SESSION['user_id'])) {
+        header('Location: ../dashboard.php');
+        exit;
+    }
+    header('Location: ../login.html');
+    exit;
+}
+
 require_once __DIR__ . '/../db.php';
 
 // Read slug from query string
