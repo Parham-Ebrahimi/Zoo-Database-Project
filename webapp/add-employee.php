@@ -9,8 +9,18 @@ if (!in_array(strtolower($_SESSION['role']), ['admin'])) {
 }
 require_once 'db.php';
 
+/** OMB-style race categories (single choice; optional field). */
+$raceEthnicityOptions = [
+    'American Indian or Alaska Native',
+    'Asian',
+    'Black or African American',
+    'Native Hawaiian or Other Pacific Islander',
+    'White',
+];
+
 $error   = '';
 $success = '';
+$create_user = false;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $firstname   = trim($_POST['firstname']  ?? '');
@@ -27,9 +37,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $status      = $_POST['status']          ?? 'Active';
     $username    = trim($_POST['username']   ?? '');
     $password    = $_POST['password']        ?? '';
-    $create_user = isset($_POST['create_user']);
+    $create_user = !empty($_POST['create_user']);
 
     $errors = [];
+
+    if ($race !== '' && !in_array($race, $raceEthnicityOptions, true)) {
+        $errors[] = 'Please choose a valid race / ethnicity option, or leave it blank.';
+    }
 
     if (empty($firstname))  $errors[] = 'First name is required.';
     if (empty($lastname))   $errors[] = 'Last name is required.';
@@ -174,8 +188,12 @@ $enclosures = $pdo->query("SELECT Enclosure_ID, Enclosure_Name FROM enclosure OR
             max-width:780px; 
             box-shadow:0 4px 10px rgba(0,0,0,0.05); 
         }
-        .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
-        .form-group { display:flex; flex-direction:column; gap:4px; }
+        .form-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 14px;
+        }
+        .form-group { display:flex; flex-direction:column; gap:4px; min-width:0; }
         .form-group.full { grid-column:1/-1; }
         .form-group label { 
             font-weight:600; 
@@ -187,6 +205,39 @@ $enclosures = $pdo->query("SELECT Enclosure_ID, Enclosure_Name FROM enclosure OR
             background:none; 
             border-radius:0; 
         }
+        /* Global style.css `form label` is a 50×50 login icon — reset for this staff form row */
+        #empForm label.login-toggle-header {
+            width: auto !important;
+            max-width: 100%;
+            height: auto !important;
+            min-height: 0;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px 14px;
+            box-sizing: border-box;
+            background: none !important;
+            background-color: transparent !important;
+            color: var(--text-color) !important;
+            fill: none;
+            border-radius: 0;
+            font-size: inherit;
+            font-weight: inherit;
+            justify-content: flex-start;
+            flex-shrink: 1;
+            padding: 0;
+            margin: 0;
+            cursor: pointer;
+            overflow-wrap: break-word;
+            line-height: 1.45;
+            text-align: left;
+        }
+        #empForm label.login-toggle-header .login-toggle-text {
+            flex: 1;
+            min-width: 0;
+        }
+        #empForm label.login-toggle-header .login-toggle-title {
+            overflow-wrap: break-word;
+        }
         .form-group input, .form-group select {
             width:100%; padding:9px 12px; border:2px solid #ddd; border-radius:8px;
             font:inherit; font-size:0.92rem; box-sizing:border-box; background:white; height:auto; flex-grow:0;
@@ -195,7 +246,6 @@ $enclosures = $pdo->query("SELECT Enclosure_ID, Enclosure_Name FROM enclosure OR
         .form-group input.error, .form-group select.error { border-color:#e74c3c; }
         form > div { width:auto; display:block; }
 
-        /* Section headers inside form */
         .form-section { grid-column:1/-1; margin:8px 0 2px; padding-bottom:6px; border-bottom:2px solid var(--base-color); }
         .form-section h3 { 
             font-size:0.88rem; 
@@ -206,29 +256,63 @@ $enclosures = $pdo->query("SELECT Enclosure_ID, Enclosure_Name FROM enclosure OR
             margin:0; 
         }
 
-        /* Login account toggle */
-        .login-toggle { 
-            grid-column:1/-1; 
-            background:#f0faf0;
-            border:2px solid var(--accent-color); 
-            border-radius:10px; 
-            padding:14px 16px; 
+        .login-toggle {
+            grid-column: 1 / -1;
+            background: #f0faf0;
+            border: 2px solid var(--accent-color);
+            border-radius: 12px;
+            padding: clamp(14px, 2.5vw, 20px) clamp(14px, 2.5vw, 22px);
+            box-sizing: border-box;
+            min-width: 0;
+            transition: background-color 0.2s, border-color 0.2s;
         }
-        .login-toggle-header { display:flex; align-items:center; gap:10px; cursor:pointer; }
-        .login-toggle-header input[type="checkbox"] { width:18px; height:18px; cursor:pointer; accent-color:var(--accent-color); }
-        .login-toggle-header label { 
-            font-weight:700; 
-            font-size:0.92rem; 
-            color:var(--text-color); 
-            cursor:pointer; 
-            margin:0; 
-            background:none; 
-            height:auto; 
-            width:auto; 
+        .login-toggle:hover {
+            background-color: #e8f7e8;
         }
-        .login-toggle-header .hint { font-size:0.78rem; color:#888; }
-        .login-fields { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px; display:none; }
-        .login-fields.visible { display:grid; }
+        .login-toggle.active {
+            background-color: #e0f5e0;
+            border-color: var(--text-color);
+        }
+        #empForm label.login-toggle-header input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin-top: 3px;
+            flex-shrink: 0;
+            cursor: pointer;
+            accent-color: var(--accent-color);
+        }
+        .login-toggle-header .login-toggle-title {
+            font-weight: 700;
+            font-size: 0.98rem;
+            color: var(--text-color);
+            display: block;
+            line-height: 1.45;
+            margin-bottom: 6px;
+        }
+        .login-toggle-header .hint-text {
+            display: block;
+            margin-top: 0;
+            font-size: 0.8rem;
+            color: #666;
+            line-height: 1.45;
+            overflow-wrap: break-word;
+        }
+        .login-fields {
+            display: none;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 14px 16px;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid rgba(26, 92, 43, 0.22);
+        }
+        .login-fields.visible {
+            display: grid;
+        }
+        @media (max-width: 640px) {
+            .login-fields.visible {
+                grid-template-columns: minmax(0, 1fr);
+            }
+        }
 
         .submit-btn { 
             margin-top:18px; 
@@ -350,7 +434,13 @@ $enclosures = $pdo->query("SELECT Enclosure_ID, Enclosure_Name FROM enclosure OR
                 </div>
                 <div class="form-group">
                     <label>Race / Ethnicity</label>
-                    <input type="text" name="race" value="<?= htmlspecialchars($race ?? '') ?>" placeholder="Optional">
+                    <select name="race" id="raceSelect">
+                        <option value="">Select</option>
+                        <?php foreach ($raceEthnicityOptions as $raceOpt): ?>
+                            <option value="<?= htmlspecialchars($raceOpt) ?>"<?= (($race ?? '') === $raceOpt) ? ' selected' : '' ?>><?= htmlspecialchars($raceOpt) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+    
                 </div>
                 <div class="form-group full">
                     <label>Address</label>
@@ -400,15 +490,15 @@ $enclosures = $pdo->query("SELECT Enclosure_ID, Enclosure_Name FROM enclosure OR
                     <span class="hint-text">Must be greater than $0</span>
                 </div>
 
-                <!-- Login account -->
-                <div class="login-toggle">
-                    <div class="login-toggle-header">
-                        <input type="checkbox" name="create_user" id="createUserCheck"
-                               onchange="toggleLoginFields()"
-                               <?= isset($create_user) && $create_user ? 'checked' : '' ?>>
-                        <label for="createUserCheck">Create login account for this employee</label>
-                        <span class="hint-text">Allows them to log into the system</span>
-                    </div>
+                <div class="login-toggle" id="loginToggleWrap">
+                    <label class="login-toggle-header" for="createUserCheck">
+                        <input type="checkbox" name="create_user" id="createUserCheck" value="1"
+                               <?= !empty($create_user) ? 'checked' : '' ?>>
+                        <span class="login-toggle-text">
+                            <span class="login-toggle-title">Create login account for this employee</span>
+                            <span class="hint-text">Allows them to log into the system</span>
+                        </span>
+                    </label>
                     <div class="login-fields" id="loginFields">
                         <div class="form-group">
                             <label>Username <span class="required">*</span></label>
@@ -454,59 +544,50 @@ function syncDepartment() {
             }
         }
     }
-    // Also auto-suggest username from first/last name
     autoUsername();
 }
 
-// Auto-suggest username from name fields
+/** If “create login” is checked and username is empty, suggest first initial + last name. */
 function autoUsername() {
-    if (!document.getElementById('createUserCheck').checked) return;
-    const first = document.querySelector('[name="firstname"]').value.trim().toLowerCase();
-    const last  = document.querySelector('[name="lastname"]').value.trim().toLowerCase();
+    const cb = document.getElementById('createUserCheck');
+    if (!cb || !cb.checked) return;
+    const form = document.getElementById('empForm');
+    const firstEl = form ? form.querySelector('[name="firstname"]') : null;
+    const lastEl = form ? form.querySelector('[name="lastname"]') : null;
     const input = document.getElementById('usernameInput');
+    if (!firstEl || !lastEl || !input) return;
+    const first = firstEl.value.trim().toLowerCase();
+    const last = lastEl.value.trim().toLowerCase();
     if (first && last && !input.value) {
-        input.value = first.charAt(0) + last.replace(/\s/g,'');
+        input.value = first.charAt(0) + last.replace(/\s/g, '');
     }
 }
 
-document.querySelector('[name="firstname"]').addEventListener('blur', autoUsername);
-document.querySelector('[name="lastname"]').addEventListener('blur', autoUsername);
-
-function toggleLoginFields() {
+function syncLoginFields() {
+    const cb = document.getElementById('createUserCheck');
     const fields = document.getElementById('loginFields');
-    fields.classList.toggle('visible', document.getElementById('createUserCheck').checked);
+    const wrap = document.getElementById('loginToggleWrap');
+    if (!cb || !fields || !wrap) return;
+    fields.classList.toggle('visible', cb.checked);
+    wrap.classList.toggle('active', cb.checked);
     autoUsername();
 }
 
-// Password strength indicator
-function checkStrength(pw) {
-    const bar  = document.getElementById('pwBar');
-    const hint = document.getElementById('pwHint');
-    let score = 0;
-    if (pw.length >= 6)  score++;
-    if (pw.length >= 10) score++;
-    if (/[A-Z]/.test(pw)) score++;
-    if (/[0-9]/.test(pw)) score++;
-    if (/[^A-Za-z0-9]/.test(pw)) score++;
-    const levels = [
-        { w:0,   color:'#eee',     label:''},
-        { w:20,  color:'#e74c3c',  label:'Too short'},
-        { w:40,  color:'#e67e22',  label:'Weak'},
-        { w:60,  color:'#f39c12',  label:'Fair'},
-        { w:80,  color:'#2ecc71',  label:'Good'},
-        { w:100, color:'#27ae60',  label:'Strong'},
-    ];
-    const lvl = levels[Math.min(score, 5)];
-    bar.style.width   = lvl.w + '%';
-    bar.style.background = lvl.color;
-    hint.textContent  = lvl.label || 'Min 6 characters';
-    hint.style.color  = lvl.color === '#eee' ? '#aaa' : lvl.color;
-}
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('empForm');
+    const first = form ? form.querySelector('[name="firstname"]') : null;
+    const last = form ? form.querySelector('[name="lastname"]') : null;
+    if (first) first.addEventListener('blur', autoUsername);
+    if (last) last.addEventListener('blur', autoUsername);
 
-// Init on page load if checkbox was checked (e.g. after error)
-if (document.getElementById('createUserCheck').checked) {
-    document.getElementById('loginFields').classList.add('visible');
-}
+    const cb = document.getElementById('createUserCheck');
+    if (cb) {
+        cb.addEventListener('change', syncLoginFields);
+        syncLoginFields();
+    }
+});
+
+
 </script>
 </body>
 </html>

@@ -374,7 +374,7 @@ $animalSpotlightImages = [
                     <div class="dash-card">
                         <h2>Tickets</h2>
                         <a href="buy_tickets.php" class="primary">Buy tickets</a>
-                        <a href="customer_tickets_report.php">My ticket history</a>
+                        <a href="customer_tickets_report.php">Purchase history</a>
                     </div>
 
                     <div class="dash-card">
