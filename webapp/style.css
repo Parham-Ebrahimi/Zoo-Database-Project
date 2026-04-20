@@ -366,11 +366,70 @@ form div.incorrect input{
     width: 100%;
     justify-content: flex-start;
 }
+/* Global form > div { display: flex } breaks .gs-grid — restore grid and left-align copy */
+.gs-shell,
+.gs-shell .gs-card {
+    text-align: left;
+}
+.gs-shell form#record-sale-form > div.gs-grid,
+.gs-shell form#record-restaurant-sale-form > div.gs-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px 18px;
+    align-items: start;
+    justify-items: stretch;
+}
+@media (max-width: 760px) {
+    .gs-shell form#record-sale-form > div.gs-grid,
+    .gs-shell form#record-restaurant-sale-form > div.gs-grid {
+        grid-template-columns: 1fr;
+    }
+}
+.gs-shell form#record-sale-form .gs-field--full,
+.gs-shell form#record-restaurant-sale-form .gs-field--full {
+    grid-column: 1 / -1;
+}
+.gs-shell form#record-sale-form .gs-field,
+.gs-shell form#record-restaurant-sale-form .gs-field {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    min-width: 0;
+    width: 100%;
+}
+.gs-shell form#record-sale-form .gs-field input,
+.gs-shell form#record-sale-form .gs-field select,
+.gs-shell form#record-restaurant-sale-form .gs-field input,
+.gs-shell form#record-restaurant-sale-form .gs-field select {
+    flex: none;
+    flex-grow: 0;
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    height: auto;
+    min-height: 46px;
+    border-radius: 10px;
+    padding: 11px 14px;
+    box-sizing: border-box;
+    background: #fbfcfa;
+    border: 2px solid #d5e5cd;
+}
+.gs-shell form#record-sale-form .gs-field input:focus,
+.gs-shell form#record-sale-form .gs-field select:focus,
+.gs-shell form#record-restaurant-sale-form .gs-field input:focus,
+.gs-shell form#record-restaurant-sale-form .gs-field select:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(76, 145, 65, 0.2);
+}
 .gs-shell .gs-section-title {
-    text-align: center;
+    text-align: left;
 }
 .gs-shell .gs-actions {
     justify-content: center;
+    width: 100%;
 }
 .gs-shell .gs-field label {
     flex-shrink: 0;
@@ -396,6 +455,14 @@ form div.incorrect input{
 .gs-shell .gs-field:has(:focus) > label {
     background: linear-gradient(180deg, #d4edc4 0%, #b8d9a6 100%);
     color: var(--text-color);
+}
+.gs-shell form#record-sale-form .gs-field label,
+.gs-shell form#record-restaurant-sale-form .gs-field label {
+    display: block;
+    width: 100%;
+    max-width: none;
+    align-self: stretch;
+    box-sizing: border-box;
 }
 .gs-shell label.gs-file-label {
     display: flex;

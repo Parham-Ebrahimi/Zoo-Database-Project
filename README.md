@@ -27,7 +27,7 @@ Open a terminal, go into the webapp folder, and run:
 cd webapp
 php -S localhost:8080
 
-Open http://localhost:8080/login.html for staff or http://localhost:8080/customer-login.html for customers.
+Open http://localhost:8080/index.html for the main site, http://localhost:8080/login.html for staff login, or http://localhost:8080/customer-login.html for customer login.
 
 First admin user for local testing: after the database works, visit create-admin.php once in the browser, then log in with the username and password defined in that file (change them after). create_test_users.php can add more demo staff if you use it the same way.
 
@@ -37,7 +37,7 @@ PHP, MySQL, PDO, plain HTML forms, some JavaScript. Hosted demo was on Azure App
 
 Deployed site (may change over time)
 
-https://team9zooproject-ctfjc8b7fzhcggeh.eastus2-01.azurewebsites.net/webapp/login.html
+https://team9zooproject-ctfjc8b7fzhcggeh.eastus2-01.azurewebsites.net/webapp/index.html
 
 If something fails
 
