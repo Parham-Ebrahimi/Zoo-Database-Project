@@ -441,7 +441,10 @@ tfoot td{background:var(--base-color);font-weight:700;padding:10px 13px;border-t
         <h1>Employee report</h1>
         <p style="margin:4px 0 0;font-size:.85rem;color:#666;font-weight:500">Welcome, <?= htmlspecialchars($_SESSION['firstname'] ?? '') ?> · <?= $totalEmp ?> employee<?= $totalEmp !== 1 ? 's' : '' ?> shown</p>
     </div>
-    <a href="logout.php" class="logout-btn">Logout</a>
+    <div class="admin-header-actions-inline">
+        <?php include __DIR__ . '/admin_header_cart_profile.inc.php'; ?>
+        <a href="logout.php" class="logout-btn">Logout</a>
+    </div>
 </div>
 
 <a href="dashboard.php" class="back-btn">← Back to dashboard</a>

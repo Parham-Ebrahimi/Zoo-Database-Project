@@ -230,6 +230,9 @@ $badgeClass = strtolower($animal['Health_Status']);
             <span style="font-size:0.88rem;font-weight:600;color:var(--text-color)">
                 <?= htmlspecialchars($_SESSION['firstname'] ?? '') ?>
             </span>
+            <?php if ($isAdmin): ?>
+            <?php include __DIR__ . '/admin_header_cart_profile.inc.php'; ?>
+            <?php endif; ?>
             <a href="logout.php" class="logout-btn">Logout</a>
         </div>
     </div>

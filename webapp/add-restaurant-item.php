@@ -111,7 +111,7 @@ $dashboardBackHref = $role === 'Restaurant Employee'
             background: linear-gradient(165deg, rgba(187, 223, 158, 0.55) 0%, rgba(187, 223, 158, 0.92) 42%, var(--base-color) 100%);
         }
         .gs-inner {
-            max-width: 760px;
+            max-width: 840px;
             margin: 0 auto;
         }
         .gs-header {
@@ -214,11 +214,6 @@ $dashboardBackHref = $role === 'Restaurant Employee'
         }
         .gs-field--full {
             grid-column: 1 / -1;
-        }
-        .gs-field label {
-            font-size: 0.86rem;
-            font-weight: 700;
-            color: var(--text-color);
         }
         .gs-field input,
         .gs-field select {
@@ -342,7 +337,13 @@ $dashboardBackHref = $role === 'Restaurant Employee'
                     <h1>Add restaurant item</h1>
                     <p class="gs-meta">Signed in as <?= $firstname ?></p>
                 </div>
-                <a class="gs-back" href="<?= htmlspecialchars($dashboardBackHref) ?>">← Back to dashboard</a>
+                <div class="gs-header-actions">
+                    <?php include __DIR__ . '/admin_header_cart_profile.inc.php'; ?>
+                    <?php if ($role === 'admin'): ?>
+                    <a href="logout.php" class="gs-back">Logout</a>
+                    <?php endif; ?>
+                    <a class="gs-back" href="<?= htmlspecialchars($dashboardBackHref) ?>">← Back to dashboard</a>
+                </div>
             </header>
 
             <div class="gs-card">

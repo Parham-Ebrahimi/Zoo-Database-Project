@@ -279,7 +279,10 @@ $hasFilters = array_filter([$f_category,$f_payment,$f_customer,$f_order_from,$f_
 <div class="dashboard-wrapper">
     <div class="dashboard-header">
         <h1>Tickets Report</h1>
-        <a href="logout.php" class="logout-btn">Logout</a>
+        <div class="admin-header-actions-inline">
+            <?php include __DIR__ . '/admin_header_cart_profile.inc.php'; ?>
+            <a href="logout.php" class="logout-btn">Logout</a>
+        </div>
     </div>
 
     <a href="dashboard.php" class="back-btn">← Back to Dashboard</a>

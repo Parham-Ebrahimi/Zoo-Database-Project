@@ -429,7 +429,10 @@ function sortLink(string $col, string $label, string $current, string $dir): str
 
     <div class="dashboard-header">
         <h1>Animals Report</h1>
-        <a href="logout.php" class="logout-btn">Logout</a>
+        <div class="admin-header-actions-inline">
+            <?php include __DIR__ . '/admin_header_cart_profile.inc.php'; ?>
+            <a href="logout.php" class="logout-btn">Logout</a>
+        </div>
     </div>
 
     <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px">

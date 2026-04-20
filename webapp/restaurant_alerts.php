@@ -56,7 +56,17 @@ $alerts = $alertsStmt->fetchAll(PDO::FETCH_ASSOC);
         <p style="margin:.45rem 0 0; padding:.55rem .8rem; border-radius:8px; background:#fff1f1; color:#8a1111; font-weight:700;">
             Auto-triggered alerts: any restaurant item at stock ≤ 3 appears here.
         </p>
-        <p><a href="dashboard.php#restaurant-staff">Back to Dashboard</a> | <a href="restaurant_sales_report.php">Restaurant Sales Report</a></p>
+        <p class="top-actions" style="display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;margin:.5rem 0 0">
+            <?php include __DIR__ . '/admin_header_cart_profile.inc.php'; ?>
+            <?php if ($role === 'admin'): ?>
+            <a href="logout.php" style="font-weight:700;color:#1a3d1c">Logout</a>
+            <?php endif; ?>
+            <a href="<?= $role === 'admin' ? 'dashboard.php#restaurant-shop-admin' : 'dashboard.php#restaurant-staff' ?>">Back to Dashboard</a>
+            <?php if ($role === 'admin'): ?>
+            <span>|</span>
+            <a href="restaurant_sales_report.php">Restaurant Sales Report</a>
+            <?php endif; ?>
+        </p>
 
         <div class="panel">
             <?php if (count($alerts) === 0): ?>

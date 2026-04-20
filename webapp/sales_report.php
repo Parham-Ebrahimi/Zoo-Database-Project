@@ -7,13 +7,11 @@ if (!isset($_SESSION['user_id'])) {
 require_once 'db.php';
 
 $role = $_SESSION['role'] ?? '';
-if (!in_array($role, ['admin', 'Gift Shop Employee'], true)) {
+if (($role ?? '') !== 'admin') {
     header('Location: dashboard.php');
     exit;
 }
-$dashboardBackHref = $role === 'Gift Shop Employee'
-    ? 'dashboard.php#gift-shop'
-    : 'dashboard.php#gift-shop-admin';
+$dashboardBackHref = 'dashboard.php#gift-shop-admin';
 
 $paymentModes = ['Credit Card', 'Debit Card', 'Cash', 'PayPal'];
 
@@ -285,11 +283,11 @@ $shopRevenueChartJson = json_encode([
     <div class="page-wrap">
         <h1>Gift Shop Sales report</h1>
         <p class="report-nav">
-            <a class="back-dash-pill" href="<?= htmlspecialchars($dashboardBackHref) ?>">Back to dashboard</a>
-            <?php if ($role === 'Gift Shop Employee'): ?>
-                <span class="nav-sep">|</span>
-                <a class="nav-link-record" href="add-order.php">Record sale</a>
+            <?php include __DIR__ . '/admin_header_cart_profile.inc.php'; ?>
+            <?php if ($role === 'admin'): ?>
+            <a class="back-dash-pill" href="logout.php">Logout</a>
             <?php endif; ?>
+            <a class="back-dash-pill" href="<?= htmlspecialchars($dashboardBackHref) ?>">Back to dashboard</a>
         </p>
 
         <div class="filter-card">

@@ -355,11 +355,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </style>
 </head>
 <body>
-<div class="dashboard-wrapper">
-    <div class="dashboard-header">
-        <h1>Add Animal</h1>
-        <div class="admin-header-actions-inline">
-            <a href="logout.php" class="logout-btn">Logout</a>
+    <div class="dashboard-wrapper">
+        <div class="dashboard-header">
+            <h1>Add Animal</h1>
+            <div class="admin-header-actions-inline">
+                <?php include __DIR__ . '/admin_header_cart_profile.inc.php'; ?>
+                <a href="logout.php" class="logout-btn">Logout</a>
+            </div>
         </div>
     </div>
 

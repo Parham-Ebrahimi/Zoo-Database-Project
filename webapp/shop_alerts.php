@@ -181,6 +181,10 @@ $alerts = $alertsStmt->fetchAll(PDO::FETCH_ASSOC);
             <p style="background:#ffeaea;color:#8a1111;padding:.65rem 1rem;border-radius:8px;font-weight:600;margin:.75rem 0 0;"><?= htmlspecialchars($restockError) ?></p>
         <?php endif; ?>
         <div class="top-actions">
+            <?php include __DIR__ . '/admin_header_cart_profile.inc.php'; ?>
+            <?php if ($role === 'admin'): ?>
+            <a href="logout.php" class="back-dash-pill">Logout</a>
+            <?php endif; ?>
             <a class="back-dash-pill" href="<?= htmlspecialchars($dashboardBackHref) ?>">Back to dashboard</a>
             <a href="giftshop.php?preview=1">Customer Gift Shop</a>
         </div>

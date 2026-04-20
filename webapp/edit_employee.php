@@ -150,7 +150,10 @@ $assignedAsVet = array_column(
 <div class="dashboard-wrapper">
     <div class="dashboard-header">
         <h1>Edit Employee — <?= htmlspecialchars(($emp['FirstName'] ?? '').' '.($emp['LastName'] ?? '')) ?></h1>
-        <a href="logout.php" class="logout-btn">Logout</a>
+        <div class="admin-header-actions-inline">
+            <?php include __DIR__ . '/admin_header_cart_profile.inc.php'; ?>
+            <a href="logout.php" class="logout-btn">Logout</a>
+        </div>
     </div>
 
     <a href="employees_report.php" class="back-btn">← Back to Employees</a>
