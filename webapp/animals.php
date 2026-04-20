@@ -1,7 +1,10 @@
+Animals · PHP
+Copy
+
 <?php
 require_once __DIR__ . '/session_bootstrap.php';
 $isCustomer = isset($_SESSION['customer_id']);
-
+ 
 /* ── Pull DB animals that have a Page_Slug (auto-generated pages) ── */
 $dbAnimals = [];
 try {
@@ -17,47 +20,46 @@ try {
         LIMIT 1
     ");
     $hasSlugCol = (bool) $chk->fetchColumn();
-
-    /* Fetch ALL animals from DB; derive slug from Name if Page_Slug not stored yet */
-    $selectSlug  = $hasSlugCol ? 'a.Page_Slug' : 'NULL AS Page_Slug';
-    $selectPhoto = $hasSlugCol ? "COALESCE(a.Photo_Path, '') AS Photo_Path" : "'' AS Photo_Path";
-    try {
+ 
+    if ($hasSlugCol) {
         $rows = $pdo->query("
-            SELECT DISTINCT a.Name, a.Species, a.Category,
-                   {$selectSlug}, {$selectPhoto}
-            FROM animal a ORDER BY a.Name
+            SELECT DISTINCT
+                a.Name,
+                a.Species,
+                a.Category,
+                a.Page_Slug,
+                COALESCE(a.Photo_Path, '') AS Photo_Path
+            FROM animal a
+            WHERE a.Page_Slug IS NOT NULL
+              AND a.Page_Slug != ''
+            ORDER BY a.Name
         ")->fetchAll(PDO::FETCH_ASSOC);
-    } catch (Throwable $ignored) { $rows = []; }
-
-    foreach ($rows as $r) {
-        $slug = (string) ($r['Page_Slug'] ?? '');
-        if ($slug === '') {
-            $slug = trim(preg_replace('/[^a-z0-9]+/', '-', strtolower((string) $r['Name'])), '-');
-        }
-
-        // Regenerate the .php file if missing and folder is writable
-        $filePath = __DIR__ . '/animals/' . $slug . '.php';
-        if (!file_exists($filePath) && is_writable(__DIR__ . '/animals/')) {
-            if (!function_exists('generate_animal_page')) {
-                require_once __DIR__ . '/generate_animal_page.php';
+ 
+        foreach ($rows as $r) {
+            // If the .php file is missing but the folder is now writable, regenerate it automatically.
+            $filePath = __DIR__ . '/animals/' . $r['Page_Slug'] . '.php';
+            if (!file_exists($filePath) && is_writable(__DIR__ . '/animals/')) {
+                if (!function_exists('generate_animal_page')) {
+                    require_once __DIR__ . '/generate_animal_page.php';
+                }
+                $photoRel = $r['Photo_Path'] ?? '';
+                @file_put_contents($filePath, generate_animal_page($r['Name'], $r['Species'], $r['Category'], $photoRel));
             }
-            $photoRel = $r['Photo_Path'] ?? '';
-            @file_put_contents($filePath, generate_animal_page($r['Name'], $r['Species'], $r['Category'], $photoRel));
-        }
-
-        $dbAnimals[] = [
-            'name'    => $r['Name'],
-            'slug'    => $slug,
-            'blurb'   => htmlspecialchars($r['Category']) . ' · ' . htmlspecialchars($r['Species']),
-            'img'     => !empty($r['Photo_Path'])
+ 
+            $dbAnimals[] = [
+                'name' => $r['Name'],
+                'slug' => $r['Page_Slug'],
+                'blurb' => htmlspecialchars($r['Category']) . ' · ' . htmlspecialchars($r['Species']),
+                'img'  => !empty($r['Photo_Path'])
                             ? 'animals/' . htmlspecialchars($r['Photo_Path'])
                             : 'https://images.unsplash.com/photo-1607326957431-29d25d2b386f?auto=format&fit=crop&w=800&q=80',
-            'alt'     => $r['Name'] . ' at Greenwood Zoo',
-            'dynamic' => true,
-        ];
+                'alt'  => $r['Name'] . ' at Greenwood Zoo',
+                'dynamic' => true,
+            ];
+        }
     }
 } catch (Throwable $ignored) {}
-
+ 
 /* Hardcoded animals (existing pages) */
 $staticAnimals = [
     [
@@ -187,7 +189,7 @@ $staticAnimals = [
         "alt"   => "Camel in a desert landscape",
     ],
 ];
-
+ 
 /* Merge: static first, then any new DB animals not already listed */
 $staticSlugs = array_column($staticAnimals, 'slug');
 $newDbAnimals = array_filter($dbAnimals, fn($a) => !in_array($a['slug'], $staticSlugs, true));
@@ -304,12 +306,12 @@ $animals = array_merge($staticAnimals, array_values($newDbAnimals));
     </header>
     <div class="animals-page-inner">
 <?php endif; ?>
-
+ 
     <div class="page-hero">
         <h1>Our Animals</h1>
         <p>Discover the incredible wildlife that calls Greenwood home.</p>
     </div>
-
+ 
     <main>
         <div class="animals-grid">
             <?php foreach ($animals as $a): ?>
@@ -331,7 +333,7 @@ $animals = array_merge($staticAnimals, array_values($newDbAnimals));
             </p>
         <?php endif; ?>
     </main>
-
+ 
 <?php if ($isCustomer): ?>
         </div>
     </div>

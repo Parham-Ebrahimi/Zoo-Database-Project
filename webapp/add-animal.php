@@ -1,6 +1,9 @@
 <?php
 require_once __DIR__ . '/session_bootstrap.php';
 
+// 1. FUNCTIONALITY FIX: Load the generator before the POST handler runs
+require_once __DIR__ . '/generate_animal_page.php';
+
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.html');
     exit;
@@ -40,18 +43,6 @@ $hasCaretakerCol = animal_table_has_column($pdo, 'Caretaker_EmployeeID');
 $hasVetCol       = animal_table_has_column($pdo, 'Vet_EmployeeID');
 $hasDietCol      = animal_table_has_column($pdo, 'Diet_ID');
 $isAdmin         = strtolower((string) ($_SESSION['role'] ?? '')) === 'admin';
-
-/* ── Ensure Page_Slug and Photo_Path columns exist ── */
-if (!animal_table_has_column($pdo, 'Page_Slug')) {
-    try {
-        $pdo->exec("ALTER TABLE animal ADD COLUMN Page_Slug VARCHAR(255) NULL DEFAULT NULL");
-    } catch (Throwable $ignored) {}
-}
-if (!animal_table_has_column($pdo, 'Photo_Path')) {
-    try {
-        $pdo->exec("ALTER TABLE animal ADD COLUMN Photo_Path VARCHAR(500) NULL DEFAULT NULL");
-    } catch (Throwable $ignored) {}
-}
 
 $error   = '';
 $success = '';
@@ -228,10 +219,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'Detail page file could not be written to animals/ — check permissions.';
         }
 
-        /* Always save the slug — ALTER TABLE above ensures the column exists. */
         try {
-            $pdo->prepare("UPDATE animal SET Page_Slug=? WHERE Animal_ID=?")
-                ->execute([$slug, $newAnimalId]);
+            if (animal_table_has_column($pdo, 'Page_Slug')) {
+                $pdo->prepare("UPDATE animal SET Page_Slug=? WHERE Animal_ID=?")
+                    ->execute([basename($pagePath, '.php'), $newAnimalId]);
+            }
         } catch (Throwable $ignored) {}
 
         if (empty($error)) {
