@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/session_bootstrap.php';
 
+// 1. FUNCTIONALITY FIX: Load the generator before the POST handler runs
 require_once __DIR__ . '/generate_animal_page.php';
 
 if (!isset($_SESSION['user_id'])) {
@@ -206,8 +207,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pagePath = __DIR__ . '/animals/' . $slug . '-' . $pi . '.php';
             $pi++;
         }
-        
-        // This call is now safe because the file was required at the top
+
+        // FUNCTIONALITY: generate_animal_page is now available here
         $pageContent = generate_animal_page($name, $species, $category, $photoRelPath);
         $fileWritten = @file_put_contents($pagePath, $pageContent);
 
@@ -215,7 +216,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pageGenerated = true;
         } else {
             $photoError .= ($photoError ? ' Also: ' : '') .
-                'Detail page file could not be written to animals/ — Check permissions.';
+                'Detail page file could not be written to animals/ — check permissions.';
         }
 
         try {
@@ -275,28 +276,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             margin-bottom: 4px;
             color: var(--text-color);
             font-size: 0.9rem;
+            width: auto; height: auto;
+            background: none;
+            border-radius: 0;
+            text-align: left;
         }
-        .form-group input, .form-group select {
+        .form-group input,
+        .form-group select {
             width: 100%;
             padding: 9px 12px;
             border: 2px solid #ddd;
             border-radius: 8px;
             font: inherit;
             font-size: 0.95rem;
+            box-sizing: border-box;
+            background-color: white;
+            height: auto;
+            flex-grow: 0;
         }
-        .submit-btn, .logout-btn {
+        .form-group input[type="file"] {
+            padding: 6px 10px;
+            background-color: #fafafa;
+        }
+        .form-group input:focus,
+        .form-group select:focus { outline: none; border-color: var(--accent-color); }
+        form > div { width: auto; display: block; justify-content: unset; }
+        .submit-btn {
+            margin-top: 16px;
             padding: 10px 28px;
             background-color: var(--accent-color);
             border: none;
             border-radius: 1000px;
+            font: inherit;
+            font-weight: 600;
+            cursor: pointer;
+            color: var(--text-color);
+        }
+        .submit-btn:hover { background-color: var(--text-color); color: white; }
+        .logout-btn {
+            padding: 9px 22px;
+            background-color: var(--accent-color);
+            border: none;
+            border-radius: 1000px;
+            font: inherit;
             font-weight: 600;
             cursor: pointer;
             color: var(--text-color);
             text-decoration: none;
         }
-        .submit-btn:hover, .logout-btn:hover { background-color: var(--text-color); color: white; }
+        .logout-btn:hover { background-color: var(--text-color); color: white; }
         .back-btn {
             display: inline-block;
+            margin-bottom: 15px;
             padding: 8px 18px;
             background-color: var(--base-color);
             border-radius: 8px;
@@ -304,19 +335,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             font-weight: 600;
             text-decoration: none;
             border: 2px solid var(--accent-color);
+            font-size: 0.9rem;
         }
-        .msg-error { color: #e74c3c; font-weight: 600; margin-bottom: 12px; }
+        .back-btn:hover { background-color: var(--accent-color); }
+        .msg-error   { color: #e74c3c; font-weight: 600; margin-bottom: 12px; }
         .msg-success { color: #27ae60; font-weight: 600; margin-bottom: 12px; }
         .section-label {
             grid-column: 1 / -1;
             font-size: 0.78rem;
             font-weight: 700;
+            letter-spacing: 0.08em;
             text-transform: uppercase;
             color: #888;
             margin: 6px 0 2px;
             padding-bottom: 4px;
             border-bottom: 1px solid #eee;
         }
+        .photo-hint { font-size: 0.78rem; color: #888; margin-top: 3px; }
     </style>
 </head>
 <body>
@@ -329,8 +364,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 
     <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px">
-        <a href="<?= htmlspecialchars($staffHome) ?>" class="back-btn">← Back to dashboard</a>
-        <a href="animals_report.php" class="back-btn">Animals report</a>
+        <a href="<?= htmlspecialchars($staffHome) ?>" class="back-btn" style="margin-bottom:0">← Back to dashboard</a>
+        <a href="animals_report.php" class="back-btn" style="margin-bottom:0">Animals report</a>
     </div>
 
     <div class="form-card">
@@ -339,7 +374,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <form method="POST" enctype="multipart/form-data">
             <div class="form-grid">
+
                 <div class="section-label">Basic Information</div>
+
                 <div class="form-group">
                     <label>Name *</label>
                     <input type="text" name="name" required>
@@ -348,6 +385,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <label>Species *</label>
                     <input type="text" name="species" required>
                 </div>
+
                 <div class="form-group">
                     <label>Category *</label>
                     <select name="category" required>
@@ -361,6 +399,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <label>Age</label>
                     <input type="number" name="age" min="0">
                 </div>
+
                 <div class="form-group">
                     <label>Sex *</label>
                     <select name="sex" required>
@@ -382,8 +421,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 <div class="form-group" id="new-enclosure-group" style="display:none">
                     <label>New Enclosure Name *</label>
-                    <input type="text" name="new_enclosure_name" id="new_enclosure_name">
+                    <input type="text" name="new_enclosure_name" id="new_enclosure_name" placeholder="e.g. Bat Cave Enclosure">
                 </div>
+
                 <div class="form-group" id="new-climate-group" style="display:none">
                     <label>Climate Type *</label>
                     <select name="new_climate_id" id="new_climate_id">
@@ -393,9 +433,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <?php endforeach; ?>
                     </select>
                 </div>
+
                 <div class="form-group" id="new-capacity-group" style="display:none">
                     <label>Max Capacity *</label>
-                    <input type="number" name="new_max_capacity" id="new_max_capacity" min="1">
+                    <input type="number" name="new_max_capacity" id="new_max_capacity" min="1" placeholder="e.g. 10">
                 </div>
 
                 <?php if ($hasDietCol && !empty($dietRows)): ?>
@@ -412,6 +453,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <?php endif; ?>
 
                 <div class="section-label">Staff Assignment</div>
+
                 <div class="form-group full">
                     <label>Assigned Vet</label>
                     <select name="vet_id">
@@ -435,10 +477,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <?php endif; ?>
 
                 <div class="section-label">Photo &amp; Page Generation</div>
+
                 <div class="form-group full">
                     <label>Animal Photo</label>
-                    <input type="file" name="photo" accept="image/*">
+                    <input type="file" name="photo" accept="image/jpeg,image/png,image/gif,image/webp">
+                    <span class="photo-hint">
+                        Optional. A detail page is always created under <code>animals/</code> — uploading a photo
+                        replaces the placeholder image on that page. Supported: JPG, PNG, GIF, WEBP · Max 8 MB.
+                    </span>
                 </div>
+
             </div>
             <button type="submit" class="submit-btn">Add Animal</button>
         </form>
@@ -446,12 +494,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </div>
 <script>
 function toggleNewEnclosure(val) {
-    var grps = ['new-enclosure-group', 'new-climate-group', 'new-capacity-group'];
-    var inputs = ['new_enclosure_name', 'new_climate_id', 'new_max_capacity'];
-    var isNew = (val === '__new__');
-    
-    grps.forEach(id => document.getElementById(id).style.display = isNew ? 'flex' : 'none');
-    inputs.forEach(id => document.getElementById(id).required = isNew);
+    var encGrp    = document.getElementById('new-enclosure-group');
+    var climGrp   = document.getElementById('new-climate-group');
+    var capGrp    = document.getElementById('new-capacity-group');
+    var nameInput = document.getElementById('new_enclosure_name');
+    var climSel   = document.getElementById('new_climate_id');
+    var capInput  = document.getElementById('new_max_capacity');
+    if (val === '__new__') {
+        encGrp.style.display  = 'flex';
+        climGrp.style.display = 'flex';
+        capGrp.style.display  = 'flex';
+        nameInput.required    = true;
+        climSel.required      = true;
+        capInput.required     = true;
+    } else {
+        encGrp.style.display  = 'none';
+        climGrp.style.display = 'none';
+        capGrp.style.display  = 'none';
+        nameInput.required    = false;
+        climSel.required      = false;
+        capInput.required     = false;
+        nameInput.value       = '';
+        climSel.value         = '';
+        capInput.value        = '';
+    }
 }
 </script>
 </body>
