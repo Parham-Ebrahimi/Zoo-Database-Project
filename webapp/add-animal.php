@@ -107,13 +107,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($enclosure === '__new__') {
         $newEncName    = trim($_POST['new_enclosure_name'] ?? '');
         $newClimateId  = $_POST['new_climate_id'] ?? '';
-        if (!empty($newEncName) && $newClimateId !== '') {
-            $insEnc = $pdo->prepare("INSERT INTO enclosure (Enclosure_Name, ClimateType_ID) VALUES (?, ?)");
-            $insEnc->execute([$newEncName, (int) $newClimateId]);
+        $newMaxCap     = $_POST['new_max_capacity'] ?? '';
+        if (!empty($newEncName) && $newClimateId !== '' && $newMaxCap !== '') {
+            $insEnc = $pdo->prepare("INSERT INTO enclosure (Enclosure_Name, ClimateType_ID, Max_Capacity) VALUES (?, ?, ?)");
+            $insEnc->execute([$newEncName, (int) $newClimateId, (int) $newMaxCap]);
             $enclosure  = (string) $pdo->lastInsertId();
             $enclosures = $pdo->query("SELECT Enclosure_ID, Enclosure_Name FROM enclosure")->fetchAll();
         } elseif (!empty($newEncName) && $newClimateId === '') {
             $error = 'Please select a Climate Type for the new enclosure.';
+        } elseif (!empty($newEncName) && $newMaxCap === '') {
+            $error = 'Please enter a Max Capacity for the new enclosure.';
         } else {
             $enclosure = '';
         }
@@ -566,6 +569,11 @@ TEMPLATE;
                     </select>
                 </div>
 
+                <div class="form-group" id="new-capacity-group" style="display:none">
+                    <label>Max Capacity *</label>
+                    <input type="number" name="new_max_capacity" id="new_max_capacity" min="1" placeholder="e.g. 10">
+                </div>
+
                 <?php if ($hasDietCol && !empty($dietRows)): ?>
                 <div class="section-label">Diet</div>
                 <div class="form-group full">
@@ -623,20 +631,27 @@ TEMPLATE;
 function toggleNewEnclosure(val) {
     var encGrp    = document.getElementById('new-enclosure-group');
     var climGrp   = document.getElementById('new-climate-group');
+    var capGrp    = document.getElementById('new-capacity-group');
     var nameInput = document.getElementById('new_enclosure_name');
     var climSel   = document.getElementById('new_climate_id');
+    var capInput  = document.getElementById('new_max_capacity');
     if (val === '__new__') {
         encGrp.style.display  = 'flex';
         climGrp.style.display = 'flex';
+        capGrp.style.display  = 'flex';
         nameInput.required    = true;
         climSel.required      = true;
+        capInput.required     = true;
     } else {
         encGrp.style.display  = 'none';
         climGrp.style.display = 'none';
+        capGrp.style.display  = 'none';
         nameInput.required    = false;
         climSel.required      = false;
+        capInput.required     = false;
         nameInput.value       = '';
         climSel.value         = '';
+        capInput.value        = '';
     }
 }
 </script>
