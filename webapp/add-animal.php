@@ -1,9 +1,6 @@
 <?php
 require_once __DIR__ . '/session_bootstrap.php';
 
-// 1. FUNCTIONALITY FIX: Load the generator before the POST handler runs
-require_once __DIR__ . '/generate_animal_page.php';
-
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.html');
     exit;
@@ -44,13 +41,10 @@ $hasVetCol       = animal_table_has_column($pdo, 'Vet_EmployeeID');
 $hasDietCol      = animal_table_has_column($pdo, 'Diet_ID');
 $isAdmin         = strtolower((string) ($_SESSION['role'] ?? '')) === 'admin';
 
-/* ── Ensure Page_Slug and Photo_Path columns exist (like gift shop ensures its table is ready) ── */
+/* ── Ensure Page_Slug and Photo_Path columns exist ── */
 if (!animal_table_has_column($pdo, 'Page_Slug')) {
     try {
         $pdo->exec("ALTER TABLE animal ADD COLUMN Page_Slug VARCHAR(255) NULL DEFAULT NULL");
-        // Reset the static cache so subsequent calls see the new column
-        $chkStmt = $pdo->prepare("SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'animal' AND COLUMN_NAME = 'Page_Slug' LIMIT 1");
-        $chkStmt->execute();
     } catch (Throwable $ignored) {}
 }
 if (!animal_table_has_column($pdo, 'Photo_Path')) {
@@ -234,8 +228,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'Detail page file could not be written to animals/ — check permissions.';
         }
 
-        /* Always save the slug — just like gift shop always saves its item record.
-           The ALTER TABLE above ensures the column exists before we get here. */
+        /* Always save the slug — ALTER TABLE above ensures the column exists. */
         try {
             $pdo->prepare("UPDATE animal SET Page_Slug=? WHERE Animal_ID=?")
                 ->execute([$slug, $newAnimalId]);

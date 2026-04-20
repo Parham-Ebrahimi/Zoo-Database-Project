@@ -1,39 +1,33 @@
 <?php
 require_once __DIR__ . '/session_bootstrap.php';
-
-// Guard: customers must be logged in; staff go to their dashboard
-if (!isset($_SESSION['customer_id'])) {
-    if (!empty($_SESSION['user_id'])) {
-        header('Location: dashboard.php');
-        exit;
-    }
-    header('Location: login.html');
-    exit;
-}
-
 $isCustomer = isset($_SESSION['customer_id']);
 
-/* ── Pull all DB animals; link them to the shared _dynamic_animal.php template ── */
+/* ── Pull DB animals that have a Page_Slug (auto-generated pages) ── */
 $dbAnimals = [];
 try {
     require_once __DIR__ . '/db.php';
-
-    $hasSlugCol = (bool) $pdo->query("
+    /* Only fetch animals that have a Page_Slug stored (i.e. auto-generated pages),
+       or if that column doesn't exist yet, fetch none from DB.              */
+    $hasSlugCol = false;
+    $chk = $pdo->query("
         SELECT 1 FROM information_schema.COLUMNS
         WHERE TABLE_SCHEMA = DATABASE()
-          AND TABLE_NAME   = 'animal'
-          AND COLUMN_NAME  = 'Page_Slug'
+          AND TABLE_NAME = 'animal'
+          AND COLUMN_NAME = 'Page_Slug'
         LIMIT 1
-    ")->fetchColumn();
+    ");
+    $hasSlugCol = (bool) $chk->fetchColumn();
 
+    /* Fetch ALL animals from DB; derive slug from Name if Page_Slug not stored yet */
     $selectSlug  = $hasSlugCol ? 'a.Page_Slug' : 'NULL AS Page_Slug';
     $selectPhoto = $hasSlugCol ? "COALESCE(a.Photo_Path, '') AS Photo_Path" : "'' AS Photo_Path";
-
-    $rows = $pdo->query("
-        SELECT DISTINCT a.Name, a.Species, a.Category,
-               {$selectSlug}, {$selectPhoto}
-        FROM animal a ORDER BY a.Name
-    ")->fetchAll(PDO::FETCH_ASSOC);
+    try {
+        $rows = $pdo->query("
+            SELECT DISTINCT a.Name, a.Species, a.Category,
+                   {$selectSlug}, {$selectPhoto}
+            FROM animal a ORDER BY a.Name
+        ")->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Throwable $ignored) { $rows = []; }
 
     foreach ($rows as $r) {
         $slug = (string) ($r['Page_Slug'] ?? '');
@@ -41,15 +35,23 @@ try {
             $slug = trim(preg_replace('/[^a-z0-9]+/', '-', strtolower((string) $r['Name'])), '-');
         }
 
-        // All newly added animals point to the single shared template — no per-file generation needed
+        // Regenerate the .php file if missing and folder is writable
+        $filePath = __DIR__ . '/animals/' . $slug . '.php';
+        if (!file_exists($filePath) && is_writable(__DIR__ . '/animals/')) {
+            if (!function_exists('generate_animal_page')) {
+                require_once __DIR__ . '/generate_animal_page.php';
+            }
+            $photoRel = $r['Photo_Path'] ?? '';
+            @file_put_contents($filePath, generate_animal_page($r['Name'], $r['Species'], $r['Category'], $photoRel));
+        }
+
         $dbAnimals[] = [
             'name'    => $r['Name'],
             'slug'    => $slug,
-            'href'    => 'animals/_dynamic_animal.php?slug=' . urlencode($slug),
             'blurb'   => htmlspecialchars($r['Category']) . ' · ' . htmlspecialchars($r['Species']),
             'img'     => !empty($r['Photo_Path'])
                             ? 'animals/' . htmlspecialchars($r['Photo_Path'])
-                            : 'https://placehold.co/800x400/c8e6c9/2d6a2d?text=' . rawurlencode($r['Name']),
+                            : 'https://images.unsplash.com/photo-1607326957431-29d25d2b386f?auto=format&fit=crop&w=800&q=80',
             'alt'     => $r['Name'] . ' at Greenwood Zoo',
             'dynamic' => true,
         ];
@@ -311,7 +313,7 @@ $animals = array_merge($staticAnimals, array_values($newDbAnimals));
     <main>
         <div class="animals-grid">
             <?php foreach ($animals as $a): ?>
-            <a class="animal-tile" href="<?= htmlspecialchars($a['href'] ?? 'animals/' . $a['slug'] . '.php') ?>">
+            <a class="animal-tile" href="animals/<?= htmlspecialchars($a['slug']) ?>.php">
                 <img src="<?= htmlspecialchars($a['img']) ?>" alt="<?= htmlspecialchars($a['alt']) ?>" loading="lazy">
                 <div class="animal-tile-caption">
                     <?php if (!empty($a['dynamic'])): ?>
